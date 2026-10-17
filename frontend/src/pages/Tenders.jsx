@@ -19,6 +19,7 @@ import {
   CalendarX,
   ArrowUpDown,
   MapPin,
+  Globe,
   Layers,
   Building2,
   Calendar,
@@ -44,6 +45,14 @@ import { Button } from '@/components/ui/Button';
 // Comprehensive Filter Datasets Verified Against MongoDB Aggregation
 // =============================================================================
 
+// 0. Northern Region State Options
+export const STATE_OPTIONS = [
+  { label: 'All Northern States', value: '' },
+  { label: 'Jammu & Kashmir', value: 'Jammu & Kashmir' },
+  { label: 'Himachal Pradesh', value: 'Himachal Pradesh' },
+  { label: 'Punjab', value: 'Punjab' },
+];
+
 // 1. All 20 Verified Administrative Districts of Jammu & Kashmir
 const DISTRICT_OPTIONS = [
   { label: 'All Districts & Regions', value: '' },
@@ -68,6 +77,48 @@ const DISTRICT_OPTIONS = [
   { label: 'Srinagar', value: 'Srinagar' },
   { label: 'Udhampur', value: 'Udhampur' },
 ];
+
+const STATE_DISTRICT_OPTIONS = {
+  'Jammu & Kashmir': DISTRICT_OPTIONS,
+  'Himachal Pradesh': [
+    { label: 'All Himachal Districts', value: '' },
+    { label: 'Shimla', value: 'Shimla' },
+    { label: 'Kangra / Dharamshala', value: 'Kangra' },
+    { label: 'Mandi', value: 'Mandi' },
+    { label: 'Kullu', value: 'Kullu' },
+    { label: 'Solan', value: 'Solan' },
+    { label: 'Sirmaur', value: 'Sirmaur' },
+    { label: 'Chamba', value: 'Chamba' },
+    { label: 'Hamirpur', value: 'Hamirpur' },
+    { label: 'Una', value: 'Una' },
+    { label: 'Bilaspur', value: 'Bilaspur' },
+    { label: 'Kinnaur', value: 'Kinnaur' },
+    { label: 'Lahaul & Spiti', value: 'Lahaul' },
+  ],
+  'Punjab': [
+    { label: 'All Punjab Districts', value: '' },
+    { label: 'Amritsar', value: 'Amritsar' },
+    { label: 'Bathinda', value: 'Bathinda' },
+    { label: 'Faridkot', value: 'Faridkot' },
+    { label: 'Fatehgarh Sahib', value: 'Fatehgarh' },
+    { label: 'Fazilka', value: 'Fazilka' },
+    { label: 'Firozpur', value: 'Firozpur' },
+    { label: 'Gurdaspur', value: 'Gurdaspur' },
+    { label: 'Hoshiarpur', value: 'Hoshiarpur' },
+    { label: 'Jalandhar', value: 'Jalandhar' },
+    { label: 'Kapurthala', value: 'Kapurthala' },
+    { label: 'Ludhiana', value: 'Ludhiana' },
+    { label: 'Mansi / Mansa', value: 'Mansa' },
+    { label: 'Moga', value: 'Moga' },
+    { label: 'Mohali (SAS Nagar)', value: 'Mohali' },
+    { label: 'Muktsar', value: 'Muktsar' },
+    { label: 'Pathankot', value: 'Pathankot' },
+    { label: 'Patiala', value: 'Patiala' },
+    { label: 'Rupnagar (Ropar)', value: 'Rupnagar' },
+    { label: 'Sangrur', value: 'Sangrur' },
+    { label: 'Tarn Taran', value: 'Tarn Taran' },
+  ]
+};
 
 // 2. Nature of Procurement / Tender Category (Works, Goods, Services)
 const PROCUREMENT_TYPE_OPTIONS = [
@@ -278,10 +329,12 @@ export default function Tenders() {
   const initialCategory = searchParams.get('category') || '';
   const initialTenderCategory = searchParams.get('tenderCategory') || '';
   const initialContractType = searchParams.get('contractType') || '';
+  const initialState = searchParams.get('state') || '';
 
   const [advancedSearch, setAdvancedSearch] = useState(initialSearch);
   const debouncedSearch = useDebounce(advancedSearch, 500);
 
+  const [state, setState] = useState(initialState);
   const [tenderCategory, setTenderCategory] = useState(initialTenderCategory);
   const [category, setCategory] = useState(initialCategory);
   const [contractType, setContractType] = useState(initialContractType);
@@ -297,9 +350,15 @@ export default function Tenders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Dynamic District Options based on State
+  const activeDistrictOptions = state && STATE_DISTRICT_OPTIONS[state]
+    ? STATE_DISTRICT_OPTIONS[state]
+    : DISTRICT_OPTIONS;
+
   // Active filter count for badge
   const activeFilterCount = [
     Boolean(advancedSearch),
+    Boolean(state),
     Boolean(tenderCategory),
     Boolean(category),
     Boolean(contractType),
@@ -315,6 +374,7 @@ export default function Tenders() {
   // 2. Construct API Query
   const queryFilters = {
     search: debouncedSearch,
+    state: state || undefined,
     tenderCategory: tenderCategory,
     category: category,
     contractType: contractType,
@@ -340,6 +400,7 @@ export default function Tenders() {
   // 3. Handlers
   const handleReset = () => {
     setAdvancedSearch('');
+    setState('');
     setTenderCategory('');
     setCategory('');
     setContractType('');
@@ -518,11 +579,37 @@ export default function Tenders() {
                 </Select>
               </div>
 
+              {/* State / UT Selector */}
+              <div>
+                <label className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" /> State / Region
+                  </span>
+                  {state && (
+                    <button 
+                      onClick={() => { setState(''); setLocation(''); setCurrentPage(1); }}
+                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </label>
+                <Select value={state} onValueChange={(val) => { setState(val); setLocation(''); setCurrentPage(1); }}>
+                  <SelectTrigger className="text-xs">
+                    {STATE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectTrigger>
+                </Select>
+              </div>
+
               {/* District / Location Dropdown */}
               <div>
                 <label className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-chinarRed" /> District / Region
+                    <MapPin className="w-3.5 h-3.5 text-chinarRed" /> {state ? `District (${state})` : 'District / Region'}
                   </span>
                   {location && (
                     <button 
@@ -535,7 +622,7 @@ export default function Tenders() {
                 </label>
                 <Select value={location} onValueChange={(val) => { setLocation(val); setCurrentPage(1); }}>
                   <SelectTrigger className="text-xs">
-                    {DISTRICT_OPTIONS.map((opt) => (
+                    {activeDistrictOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>

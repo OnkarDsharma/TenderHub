@@ -6,7 +6,7 @@
 import { Worker } from 'bullmq';
 import pino from 'pino';
 import { env } from '../../../config/env.js';
-import { metaWhatsAppAdapter } from '../adapters/MetaWhatsAppAdapter.js';
+import { getWhatsAppProvider } from '../adapters/whatsappProvider.js';
 import ContractorPreference from '../models/ContractorPreference.js';
 
 const logger = pino();
@@ -27,8 +27,10 @@ export const whatsappWorker = new Worker(
 
     const { phone, tender, user, preferenceId } = job.data;
 
+    const provider = getWhatsAppProvider();
+
     if (job.name === 'send-tender-alert') {
-      const result = await metaWhatsAppAdapter.sendTenderAlert({
+      const result = await provider.sendTenderAlert({
         phone,
         tender,
         user,
@@ -48,7 +50,7 @@ export const whatsappWorker = new Worker(
 
     if (job.name === 'send-daily-digest') {
       const { tenders } = job.data;
-      const result = await metaWhatsAppAdapter.sendDailyDigest({
+      const result = await provider.sendDailyDigest({
         phone,
         tenders,
         user,

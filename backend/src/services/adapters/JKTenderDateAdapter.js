@@ -122,10 +122,12 @@ export function normalizeTargetDate(inputDate) {
 }
 
 export class JKTenderDateAdapter extends TenderSourceAdapter {
-  constructor() {
-    super('JK_TENDERS');
-    this.baseUrl = 'https://jktenders.gov.in';
-    this.departmentRootUrl = 'https://jktenders.gov.in/nicgep/app?page=FrontEndTendersByOrganisation&service=page';
+  constructor(portalName = 'JK_TENDERS', baseUrl = 'https://jktenders.gov.in', state = 'Jammu & Kashmir') {
+    super(portalName);
+    this.portalName = portalName;
+    this.baseUrl = baseUrl;
+    this.state = state;
+    this.departmentRootUrl = `${baseUrl}/nicgep/app?page=FrontEndTendersByOrganisation&service=page`;
     this.browser = null;
     this.context = null;
     this.lastCaptchaTime = null;
@@ -1344,7 +1346,8 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
     const folderKey = formatTenderStorageKey(item.sourceTenderId, publishedDate, deptCode);
 
     const docToSave = {
-      sourcePortal: 'JK_TENDERS',
+      sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
+      state: item.state || this.state || 'Jammu & Kashmir',
       sourceTenderId: item.sourceTenderId,
       title: item.title,
       departmentCode: deptCode,
@@ -1449,6 +1452,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       baseTenderId: item.baseTenderId || null,
       relatedTenderIds: Array.isArray(item.relatedTenderIds) ? item.relatedTenderIds : [],
       r2StorageKey: folderKey,
+      state: 'Jammu & Kashmir',
       status: 'ACTIVE',
       updatedAt: new Date()
     };

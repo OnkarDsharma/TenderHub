@@ -113,7 +113,15 @@ export class SchedulerService {
       timezone: 'Asia/Kolkata'
     });
 
-    logger.info('✅ [Scheduler] Office-hours polling, evening sweep, doc recovery, parity reconciliation, 09:30 AM WhatsApp digest & 03:00 AM purge crons registered successfully.');
+    // 9. Automated Daily GeM (Government e-Marketplace) Sweep (20:30 / 08:30 PM IST, Mon-Sat)
+    cron.schedule('30 20 * * 1-6', async () => {
+      logger.info('[Scheduler] ⏰ Running scheduled 08:30 PM GeM Jammu & Kashmir Sweep...');
+      await this.triggerGeMSync(10, 100);
+    }, {
+      timezone: 'Asia/Kolkata'
+    });
+
+    logger.info('✅ [Scheduler] Office-hours polling, evening sweep, doc recovery, GeM sweep, WhatsApp digest & 03:00 AM purge crons registered successfully.');
   }
 
   /**
@@ -389,6 +397,35 @@ export class SchedulerService {
       logger.info(`[WhatsAppDigest] ✅ Morning digest successfully sent to ${sentCount} contractors.`);
     } catch (err) {
       logger.error(`[WhatsAppDigest] Error generating daily digest: ${err.message}`);
+    }
+  }
+
+  /**
+   * Automated Daily GeM (Government e-Marketplace) Jammu & Kashmir Sweep
+   */
+  async triggerGeMSync(maxPages = 10, limit = 100) {
+    try {
+      logger.info(`[Scheduler] ⏰ Starting automated daily GeM Jammu & Kashmir sweep (MaxPages: ${maxPages}, Limit: ${limit})...`);
+      const { gemAdapter } = await import('./adapters/GeMAdapter.js');
+      const result = await gemAdapter.fetchList(1, {
+        limit,
+        maxPages,
+        delay: 1200,
+        headless: true
+      });
+      logger.info(`[Scheduler] Automated daily GeM sweep completed successfully: ${result.totalSaved} bids processed/saved.`);
+      await SystemLog.create({
+        level: 'INFO',
+        source: 'CRON',
+        message: `Automated daily GeM sweep completed: ${result.totalSaved} bids processed.`,
+      }).catch(() => {});
+    } catch (err) {
+      logger.error(`[Scheduler] Automated daily GeM sweep notice: ${err.message}`);
+      await SystemLog.create({
+        level: 'WARN',
+        source: 'CRON',
+        message: `Automated daily GeM sweep notice: ${err.message}`,
+      }).catch(() => {});
     }
   }
 }

@@ -95,6 +95,14 @@ export const sendTestAlert = async (req, res) => {
 
     const result = await whatsappNotificationService.sendTestMessage(targetPhone, user);
 
+    if (!result?.success && !result?.isMock) {
+      return res.status(400).json({
+        success: false,
+        message: result?.error || 'WhatsApp provider returned a failure.',
+        details: result?.details,
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Test alert dispatched to ${targetPhone}.`,

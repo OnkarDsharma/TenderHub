@@ -162,19 +162,32 @@ export class AiSensyWhatsAppAdapter extends IWhatsAppProvider {
       return { success: true, messageId: `mock_text_${Date.now()}`, isMock: true };
     }
 
-    const response = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey: this.apiKey,
-        campaignName: 'test_alert',
-        destination: formattedPhone,
-        userName: 'Contractor',
-        templateParams: [message],
-      }),
-    });
-    const data = await response.json();
-    return { success: response.ok, messageId: data.messageId };
+    try {
+      const response = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: this.apiKey,
+          campaignName: this.campaignName || 'test_alert',
+          destination: formattedPhone,
+          userName: 'Contractor',
+          templateParams: [message],
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || data.status === 'error' || data.errorCode) {
+        logger.error(`AiSensy test message failed: ${data.message || data.errorMessage || JSON.stringify(data)}`);
+        return { 
+          success: false, 
+          error: data.message || data.errorMessage || 'AiSensy delivery error',
+          details: data 
+        };
+      }
+      return { success: true, messageId: data.messageId };
+    } catch (err) {
+      logger.error(`AiSensy request exception: ${err.message}`);
+      return { success: false, error: err.message };
+    }
   }
 }
 

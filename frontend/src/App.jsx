@@ -14,6 +14,7 @@ import { ScrollToTop } from './components/layout/ScrollToTop';
 // Pages
 import Home from './pages/Home';
 import Tenders from './pages/Tenders';
+import GeMTenders from './pages/GeMTenders';
 import Profile from './pages/Profile';
 import Pricing from './pages/Pricing';
 import About from './pages/About';
@@ -44,6 +45,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/tenders" element={<Tenders />} />
+            <Route path="/gem-tenders" element={<GeMTenders />} />
             <Route path="/check-score" element={<CheckScore />} />
             <Route path="/check-score/:tenderId" element={<CheckScore />} />
             <Route path="/profile" element={<Profile />} />

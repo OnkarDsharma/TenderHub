@@ -14,6 +14,7 @@ const logger = pino();
 export class CaptchaService {
   constructor() {
     this.tesseractWorker = null;
+    this._hfDisabled = false;
   }
 
   get hfToken() {
@@ -53,49 +54,7 @@ export class CaptchaService {
       throw new Error('Invalid image input format for Captcha solver.');
     }
 
-    // Attempt 1: Hugging Face Router Vision (Up to 5 attempts before falling back)
-    if (
-      this.hfToken &&
-      this.hfToken.trim() !== '' &&
-      !this.hfToken.includes('your_huggingface_token')
-    ) {
-      for (let hfAttempt = 1; hfAttempt <= 5; hfAttempt++) {
-        try {
-          logger.info(`[CaptchaService] Dispatching image to Hugging Face Vision (${this.hfModel}) [Attempt ${hfAttempt}/5]...`);
-          const solution = await this.solveWithHuggingFace(base64Image);
-          const durationMs = Date.now() - startTime;
-
-          if (solution && solution.length >= 4) {
-            logger.info(`[CaptchaService] Hugging Face solved captcha on attempt ${hfAttempt}/5 in ${durationMs}ms with exact case: "${solution}"`);
-            return { text: solution, provider: 'HUGGINGFACE_VISION', durationMs };
-          } else {
-            logger.warn(`[CaptchaService] Hugging Face attempt ${hfAttempt}/5 returned invalid or short text: "${solution}"`);
-          }
-        } catch (hfErr) {
-          logger.warn(`[CaptchaService] Hugging Face attempt ${hfAttempt}/5 failed: ${hfErr.message}`);
-        }
-        if (hfAttempt < 5) {
-          await new Promise(r => setTimeout(r, 500));
-        }
-      }
-      logger.warn('[CaptchaService] Hugging Face failed after 5 attempts. Falling back to next method...');
-    }
-
-    // Attempt 2: Local Preprocessed Tesseract OCR (Ultra-fast ~280ms, 100% Case-Sensitive, $0 Cost)
-    try {
-      logger.info('[CaptchaService] Running local preprocessed OCR with color filtering...');
-      const tesseractResult = await this.solveWithTesseract(base64Image);
-      const durationMs = Date.now() - startTime;
-
-      if (tesseractResult && tesseractResult.length >= 5) {
-        logger.info(`[CaptchaService] Preprocessed OCR solved captcha in ${durationMs}ms with exact case: "${tesseractResult}"`);
-        return { text: tesseractResult, provider: 'TESSERACT_CLEANED', durationMs };
-      }
-    } catch (tessErr) {
-      logger.warn(`[CaptchaService] Preprocessed OCR failed: ${tessErr.message}. Falling back to Gemini Flash...`);
-    }
-
-    // Attempt 3: Google Gemini Flash Vision (Free tier fallback on cleaned image)
+    // Attempt 1: Google Gemini Flash Vision (Primary AI engine - High accuracy, case-sensitive, free tier)
     if (
       this.geminiApiKey &&
       this.geminiApiKey.trim() !== '' &&
@@ -104,7 +63,7 @@ export class CaptchaService {
     ) {
       try {
         logger.info('[CaptchaService] Dispatching image to Google Gemini Flash Vision...');
-        // Preprocess to eliminate blue noise dots before sending to Gemini
+        // Preprocess to eliminate noise dots before sending to Gemini
         const rawBuf = Buffer.from(base64Image, 'base64');
         const cleanBuf = await this.preprocessCaptchaImage(rawBuf);
         const solution = await this.solveWithGemini(cleanBuf.toString('base64'));
@@ -115,8 +74,55 @@ export class CaptchaService {
           return { text: solution, provider: 'GEMINI_FLASH', durationMs };
         }
       } catch (geminiErr) {
-        logger.warn(`[CaptchaService] Gemini Flash failed: ${geminiErr.message}.`);
+        logger.warn(`[CaptchaService] Gemini Flash attempt failed: ${geminiErr.message}. Trying next method...`);
       }
+    }
+
+    // Attempt 2: Hugging Face Router Vision (Fallback if active)
+    if (
+      !this._hfDisabled &&
+      this.hfToken &&
+      this.hfToken.trim() !== '' &&
+      !this.hfToken.includes('your_huggingface_token')
+    ) {
+      for (let hfAttempt = 1; hfAttempt <= 3; hfAttempt++) {
+        try {
+          logger.info(`[CaptchaService] Dispatching image to Hugging Face Vision (${this.hfModel}) [Attempt ${hfAttempt}/3]...`);
+          const solution = await this.solveWithHuggingFace(base64Image);
+          const durationMs = Date.now() - startTime;
+
+          if (solution && solution.length >= 4) {
+            logger.info(`[CaptchaService] Hugging Face solved captcha on attempt ${hfAttempt}/3 in ${durationMs}ms with exact case: "${solution}"`);
+            return { text: solution, provider: 'HUGGINGFACE_VISION', durationMs };
+          } else {
+            logger.warn(`[CaptchaService] Hugging Face attempt ${hfAttempt}/3 returned invalid or short text: "${solution}"`);
+          }
+        } catch (hfErr) {
+          if (hfErr.message.includes('402') || hfErr.message.includes('no remaining credits')) {
+            logger.warn('[CaptchaService] Hugging Face credits exhausted (HTTP 402). Disabling HF provider for this session.');
+            this._hfDisabled = true;
+            break;
+          }
+          logger.warn(`[CaptchaService] Hugging Face attempt ${hfAttempt}/3 failed: ${hfErr.message}`);
+        }
+        if (hfAttempt < 3 && !this._hfDisabled) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    }
+
+    // Attempt 3: Local Preprocessed Tesseract OCR (Offline Fallback)
+    try {
+      logger.info('[CaptchaService] Running local preprocessed OCR with color filtering...');
+      const tesseractResult = await this.solveWithTesseract(base64Image);
+      const durationMs = Date.now() - startTime;
+
+      if (tesseractResult && tesseractResult.length >= 5) {
+        logger.info(`[CaptchaService] Preprocessed OCR solved captcha in ${durationMs}ms with exact case: "${tesseractResult}"`);
+        return { text: tesseractResult, provider: 'TESSERACT_CLEANED', durationMs };
+      }
+    } catch (tessErr) {
+      logger.warn(`[CaptchaService] Preprocessed OCR failed: ${tessErr.message}`);
     }
 
     throw new Error('All automatic captcha solvers failed.');
@@ -179,7 +185,10 @@ export class CaptchaService {
    * Directly solves via Google Gemini Flash Vision (Free tier, ultra-fast, exact uppercase/lowercase preservation)
    */
   async solveWithGemini(base64Body) {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+    let model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    if (model === 'gemini-3.6-flash' || !model) {
+      model = 'gemini-1.5-flash';
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`;
 
     const response = await fetch(url, {

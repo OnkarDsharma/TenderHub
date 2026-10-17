@@ -2,6 +2,7 @@ import { contractorAgentService } from '../services/contractorAgent.service.js';
 import ContractorAgentProfile from '../models/ContractorAgentProfile.js';
 import TenderAiDossier from '../models/TenderAiDossier.js';
 import Tender from '../models/Tender.js';
+import mongoose from 'mongoose';
 import pino from 'pino';
 
 const logger = pino();
@@ -140,12 +141,32 @@ export const updateContractorProfile = async (req, res) => {
   }
 };
 
+/**
+ * Safely extracts tender identifier from body, query, splat array, or route param
+ */
+export function extractTenderId(req) {
+  if (req.body?.tenderId) return String(req.body.tenderId).trim();
+  if (req.query?.tenderId) return String(req.query.tenderId).trim();
+  if (req.params?.splat) {
+    const raw = Array.isArray(req.params.splat) ? req.params.splat.join('/') : String(req.params.splat);
+    return decodeURIComponent(raw).trim().replace(/^\/+|\/+$/g, '');
+  }
+  if (req.params?.tenderId) {
+    return decodeURIComponent(String(req.params.tenderId)).trim().replace(/^\/+|\/+$/g, '');
+  }
+  return '';
+}
+
 export const analyzeTender = async (req, res) => {
   try {
-    const { tenderId } = req.params;
+    const tenderId = extractTenderId(req);
     const userId = req.user?.userId || req.user?._id || '6abe2b7f4ec335668fdc702a';
 
-    const result = await contractorAgentService.getOrGenerateTenderDossier(tenderId, userId);
+    if (!tenderId) {
+      return res.status(400).json({ success: false, error: 'Tender identifier is required.' });
+    }
+
+    const result = await contractorAgentService.getOrGenerateTenderDossier(tenderId, userId, true);
     return res.status(200).json({
       success: true,
       dossier: result.dossier,
@@ -160,15 +181,36 @@ export const analyzeTender = async (req, res) => {
 
 export const getTenderDossier = async (req, res) => {
   try {
-    const { tenderId } = req.params;
+    const tenderId = extractTenderId(req);
     const userId = req.user?.userId || req.user?._id || '6abe2b7f4ec335668fdc702a';
 
-    const tender = await Tender.findById(tenderId);
+    if (!tenderId) {
+      return res.status(400).json({ success: false, error: 'Tender identifier is required.' });
+    }
+
+    let tender = null;
+    if (mongoose.isValidObjectId(tenderId)) {
+      tender = await Tender.findById(tenderId);
+    }
+    if (!tender) {
+      tender = await Tender.findOne({
+        $or: [
+          { sourceTenderId: tenderId },
+          { tenderReferenceNumber: tenderId }
+        ]
+      });
+    }
+
     if (!tender) {
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
 
-    const dossier = await TenderAiDossier.findOne({ tenderId });
+    const dossier = await TenderAiDossier.findOne({
+      $or: [
+        { tenderId: tender._id },
+        { sourceTenderId: tenderId }
+      ]
+    });
     if (!dossier) {
       return res.status(404).json({ success: false, error: 'No AI Dossier exists yet for this tender. Click "Analyze" to generate.' });
     }
@@ -183,7 +225,7 @@ export const getTenderDossier = async (req, res) => {
 
 export const postCopilotChat = async (req, res) => {
   try {
-    const { tenderId } = req.params;
+    const tenderId = extractTenderId(req);
     const { message } = req.body;
     const userId = req.user?.userId || req.user?._id || '6abe2b7f4ec335668fdc702a';
 

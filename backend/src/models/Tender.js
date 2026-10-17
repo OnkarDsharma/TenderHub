@@ -2,7 +2,14 @@ import mongoose from 'mongoose';
 
 const tenderSchema = new mongoose.Schema({
   // --- Core Identification ---
-  sourcePortal: { type: String, required: true, default: 'JK_TENDERS' },
+  sourcePortal: { type: String, required: true, default: 'JK_TENDERS', index: true },
+  state: { 
+    type: String, 
+    required: true, 
+    enum: ['Jammu & Kashmir', 'Himachal Pradesh', 'Punjab', 'Ladakh', 'Other'],
+    default: 'Jammu & Kashmir', 
+    index: true 
+  },
   sourceTenderId: { type: String, required: true, index: true }, // e.g. 2026_APD_321986_1
   isMultiTender: { type: Boolean, default: false, index: true },
   baseTenderId: { type: String, index: true }, // e.g. 2026_RDPR_325394
@@ -161,6 +168,9 @@ const tenderSchema = new mongoose.Schema({
 
 // Indexes for fast filtering, deduplication, and retention management
 tenderSchema.index({ sourcePortal: 1, sourceTenderId: 1 }, { unique: true });
+tenderSchema.index({ state: 1, status: 1, closingDate: 1 });
+tenderSchema.index({ state: 1, sourcePortal: 1, closingDate: 1 });
+tenderSchema.index({ state: 1, location: 1 });
 tenderSchema.index({ departmentCode: 1, closingDate: 1 });
 tenderSchema.index({ organisationChain: 1, closingDate: 1 });
 tenderSchema.index({ status: 1, isDelisted: 1, closingDate: 1 });

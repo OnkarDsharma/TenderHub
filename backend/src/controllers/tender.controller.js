@@ -38,6 +38,7 @@ export const getTenders = async (req, res, next) => {
       organisation, 
       department, 
       location, 
+      state,
       closingDays,
       status = 'active', // 'active' | 'archived' | 'all'
       sortBy = 'arrival' // 'arrival' | 'closingAsc' | 'closingDesc' | 'valueDesc' | 'valueAsc'
@@ -51,6 +52,18 @@ export const getTenders = async (req, res, next) => {
 
     // 2. Build array of base filter conditions (Category, Search, Department, Location)
     const baseConditions = [];
+
+    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
+    if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
+      baseConditions.push({ state: { $regex: `^${escapeRegex(state)}$`, $options: 'i' } });
+    }
+
+    // Dedicated Separation: Browse Tenders displays standard public procurement notices, excluding GeM (which has its own dedicated /gem-tenders portal)
+    if (req.query.portal) {
+      baseConditions.push({ sourcePortal: req.query.portal });
+    } else {
+      baseConditions.push({ sourcePortal: { $ne: 'GEM' } });
+    }
 
     // Specific Category Filter (Matches productCategory or tenderCategory)
     if (category && typeof category === 'string' && category.trim()) {
@@ -496,7 +509,9 @@ export const triggerAiAnalysis = async (req, res, next) => {
 export const getTenderStats = async (req, res, next) => {
   try {
     const now = new Date();
+    const portalFilter = req.query.portal ? { sourcePortal: req.query.portal } : { sourcePortal: { $ne: 'GEM' } };
     const activeMatch = {
+      ...portalFilter,
       status: 'ACTIVE',
       isDelisted: { $ne: true },
       closingDate: { $gte: now },

@@ -60,11 +60,13 @@ async function compressPDF(inputPath, outputPath) {
 }
 
 export class JKTenderAdapter extends TenderSourceAdapter {
-  constructor() {
-    super('JK_TENDERS');
-    this.baseUrl = 'https://jktenders.gov.in';
-    this.latestActiveUrl = 'https://jktenders.gov.in/nicgep/app?page=FrontEndLatestActiveTenders&service=page';
-    this.departmentRootUrl = 'https://jktenders.gov.in/nicgep/app?page=FrontEndTendersByOrganisation&service=page';
+  constructor(portalName = 'JK_TENDERS', baseUrl = 'https://jktenders.gov.in', state = 'Jammu & Kashmir') {
+    super(portalName);
+    this.portalName = portalName;
+    this.baseUrl = baseUrl;
+    this.state = state;
+    this.latestActiveUrl = `${baseUrl}/nicgep/app?page=FrontEndLatestActiveTenders&service=page`;
+    this.departmentRootUrl = `${baseUrl}/nicgep/app?page=FrontEndTendersByOrganisation&service=page`;
     this.lastCaptchaTime = null;
     this.captchaCount = 0;
     this.captchaAttempts = 0;
@@ -77,6 +79,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
   async fetchList(pageNumber = 1, filters = { syncMode: 'DEPARTMENT', limit: 100 }, onPageScraped = null) {
     const maxTenders = filters.limit || 100;
     const isHeadless = process.env.SCRAPER_HEADLESS !== 'false';
+    this.isHeadless = isHeadless;
     const syncMode = filters.syncMode || 'DEPARTMENT';
     logger.info(`[Scraper] Launching Playwright (headless: ${isHeadless}) for mode: ${syncMode} (Target limit: ${maxTenders})...`);
 
@@ -314,8 +317,8 @@ export class JKTenderAdapter extends TenderSourceAdapter {
    * Crawls tenders by Department hierarchy (All Active Tenders of Each Organisation)
    */
   async crawlByDepartment(page, context, maxTenders, onPageScraped, onBatchUpdate, filters = {}) {
-    logger.info(`[Homepage] Navigating to JK Tenders homepage: https://jktenders.gov.in/nicgep/app`);
-    await page.goto('https://jktenders.gov.in/nicgep/app', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    logger.info(`[Homepage] Navigating to ${this.portalName} homepage: ${this.baseUrl}/nicgep/app`);
+    await page.goto(`${this.baseUrl}/nicgep/app`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await this.humanDelay(page, 600, 900);
 
     logger.info(`[Homepage] Clicking "Tenders by Organisation" link...`);
@@ -1330,7 +1333,20 @@ export class JKTenderAdapter extends TenderSourceAdapter {
       logger.warn(`❌ [Auto-Captcha] All ${maxAttempts} automatic attempts failed for tender: ${tenderId}.`);
     }
 
-    // Manual solving prompt in open browser
+    // In headless mode, manual GUI interaction is impossible
+    const isHeadless = this.isHeadless !== undefined ? this.isHeadless : (process.env.SCRAPER_HEADLESS !== 'false');
+    if (isHeadless) {
+      logger.warn(`⚠️ [Auto-Captcha] In headless mode, cannot prompt for manual input for tender: ${tenderId}. Navigating back to continue crawling.`);
+      const captchaBackBtn = page.locator("a.customButton_link:has-text('Back'), a:has-text('Back'), input[value='Back']").first();
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+        captchaBackBtn.click({ noWaitAfter: true }).catch(() => {})
+      ]);
+      await this.humanDelay(page, 500, 800);
+      return false;
+    }
+
+    // Manual solving prompt in open visual browser
     console.log('\n======================================================');
     console.log(`🔑 [MANUAL CAPTCHA #${this.captchaCount}] Required for Tender: ${tenderId}`);
     if (timeSinceLastCaptcha) {
@@ -1768,7 +1784,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
             bidOpeningDateStr: docToSave.bidOpeningDateStr,
             bidOpeningDate: docToSave.bidOpeningDate,
             hasDownloadLinks: (docToSave.nitDocuments?.length > 0 || docToSave.isDocumentAvailable),
-            portalTenderUrl: 'https://jktenders.gov.in',
+            portalTenderUrl: this.baseUrl,
             reason: docReason || (isFuture ? `Document download start date in future: ${docToSave.documentDownloadStartDateStr}` : 'Portal documents not yet available for download'),
             status: isFuture ? 'AWAITING_DOWNLOAD_DATE' : 'READY_TO_DOWNLOAD',
             lastCheckedAt: new Date()
@@ -2026,7 +2042,8 @@ export class JKTenderAdapter extends TenderSourceAdapter {
 
     return {
       title: rawTenderData.title || "Untitled Tender",
-      sourcePortal: this.portalName,
+      sourcePortal: rawTenderData.sourcePortal || this.portalName || 'JK_TENDERS',
+      state: rawTenderData.state || this.state || 'Jammu & Kashmir',
       sourceTenderId: rawTenderData.sourceTenderId,
       detailsUrl: rawTenderData.detailsUrl,
       isDocumentAvailable: rawTenderData.isDocumentAvailable !== false,

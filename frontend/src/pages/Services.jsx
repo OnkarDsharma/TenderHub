@@ -122,12 +122,13 @@ export default function Services() {
         setDossierData(res.dossier);
         setPersonalizedFit(res.personalizedFit);
         setStatusMsg('AI Analysis completed successfully!');
+        loadPlansAndProfile();
         
         // Seed initial copilot welcome message
         setChatMessages([
           {
             role: 'assistant',
-            content: `Namaste! I am your Personalized Contractor Copilot for "${res.dossier.executiveOverview?.title || 'this tender'}". I have verified your Class ${res.personalizedFit?.registrationClass} credentials and computed your Bid Match Score at ${res.personalizedFit?.matchScore}%. You can ask me any questions about EMD, BOQ material quantities, delay penalties, or technical compliance.`
+            content: `Namaste! I am your Tender Copilot for this work.\n\n• Contractor Profile: ${res.personalizedFit?.contractorName || 'Prime Infrastructure'} (${res.personalizedFit?.registrationClass})\n• Eligibility Match: ${res.personalizedFit?.matchScore}% (${res.personalizedFit?.verdict})\n• Quick Queries: Ask me about EMD/CDR rules, turnover eligibility, BOQ material quantities, or delay penalties.`
           }
         ]);
       } else {
@@ -390,9 +391,9 @@ export default function Services() {
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
                   {dossierData.executiveOverview?.title}
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line space-y-1.5 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800 mt-2">
                   {dossierData.summary}
-                </p>
+                </div>
               </div>
 
               {/* Personalized Match Pill */}
@@ -639,7 +640,7 @@ export default function Services() {
                         <Boxes className="w-5 h-5 text-blue-600" />
                         <span>Bill of Quantities: Primary Raw Material Breakdown</span>
                       </h3>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1 whitespace-pre-line leading-relaxed">
                         {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary}
                       </p>
                     </div>

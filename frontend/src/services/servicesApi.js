@@ -25,19 +25,19 @@ export const servicesApi = {
 
   // Trigger or retrieve full AI Dossier for a tender
   analyzeTender: async (tenderId) => {
-    const res = await api.post(`/services/analyze/${tenderId}`);
+    const res = await api.post('/services/analyze', { tenderId });
     return res.data;
   },
 
   // Get existing AI Dossier for tender
   getTenderDossier: async (tenderId) => {
-    const res = await api.get(`/services/dossier/${tenderId}`);
+    const res = await api.get('/services/dossier', { params: { tenderId } });
     return res.data;
   },
 
   // Ask question to Personalized Copilot
   askCopilot: async (tenderId, message) => {
-    const res = await api.post(`/services/chat/${tenderId}`, { message });
+    const res = await api.post('/services/chat', { tenderId, message });
     return res.data;
   },
 

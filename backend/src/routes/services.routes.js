@@ -21,9 +21,18 @@ router.use(verifyToken);
 router.get('/contractor-profile', getContractorProfile);
 router.put('/contractor-profile', updateContractorProfile);
 
+router.post('/analyze', analyzeTender);
 router.post('/analyze/:tenderId', analyzeTender);
+router.post('/analyze/*splat', analyzeTender);
+
+router.get('/dossier', getTenderDossier);
 router.get('/dossier/:tenderId', getTenderDossier);
+router.get('/dossier/*splat', getTenderDossier);
+
+router.post('/chat', postCopilotChat);
 router.post('/chat/:tenderId', postCopilotChat);
+router.post('/chat/*splat', postCopilotChat);
+
 router.get('/my-dossiers', getMyDossiers);
 
 export default router;
