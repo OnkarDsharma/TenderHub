@@ -17,7 +17,7 @@ export const mongoOptions = {
   retryReads: true,
 };
 
-export const connectDB = async () => {
+export const connectDB = async (maxRetries = 3) => {
   // Listen to connection events (avoid duplicate listeners if called multiple times)
   if (mongoose.connection.listenerCount('connected') === 0) {
     mongoose.connection.on('connected', () => {
@@ -29,16 +29,23 @@ export const connectDB = async () => {
 
   const primaryUri = env.MONGO_URI;
 
-  try {
-    logger.info('[Database] Connecting to Primary MongoDB cluster...');
-    activeMongoUri = primaryUri;
-    isUsingSecondaryDb = false;
-    await mongoose.connect(primaryUri, mongoOptions);
-  } catch (primaryError) {
-    logger.error(`❌ Primary MongoDB Connection Failed: ${primaryError.message}`);
-    
-    logger.warn('ℹ️ Automated failover to Secondary Server is DISABLED (Marked as Future Configuration pending Render paid plan).');
-    process.exit(1);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`[Database] Connecting to Primary MongoDB cluster...${attempt > 1 ? ` (Attempt ${attempt}/${maxRetries})` : ''}`);
+      activeMongoUri = primaryUri;
+      isUsingSecondaryDb = false;
+      await mongoose.connect(primaryUri, mongoOptions);
+      return;
+    } catch (primaryError) {
+      if (attempt < maxRetries) {
+        logger.warn(`⚠️ [MongoDB Transient Glitch] ${primaryError.message}. Retrying in 2.5s (Attempt ${attempt}/${maxRetries})...`);
+        await new Promise((r) => setTimeout(r, 2500));
+        continue;
+      }
+      logger.error(`❌ Primary MongoDB Connection Failed: ${primaryError.message}`);
+      logger.warn('ℹ️ Automated failover to Secondary Server is DISABLED (Marked as Future Configuration pending Render paid plan).');
+      process.exit(1);
+    }
   }
 };
 

@@ -8,6 +8,7 @@ export const apiLimiter = rateLimit({
     sendCommand: (...args) => redis.call(...args),
     prefix: 'rl-api:', 
   }),
+  passOnStoreError: true,
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: process.env.NODE_ENV === 'development' ? 50000 : 2000, // Generous limit in dev to prevent blocking legitimate usage
   message: { error: 'Too many requests, please try again later.' },
@@ -28,6 +29,7 @@ export const authLimiter = rateLimit({
     sendCommand: (...args) => redis.call(...args),
     prefix: 'rl-auth:',
   }),
+  passOnStoreError: true,
   windowMs: 60 * 60 * 1000, // 1 hour
   limit: process.env.NODE_ENV === 'development' ? 5000 : 50, // Limit each IP to login/register requests
   message: { error: 'Too many authentication attempts, please try again later.' },

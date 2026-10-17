@@ -16,16 +16,17 @@ export const redis = new Redis({
   tls: isSecure ? { rejectUnauthorized: false } : undefined,
   family: 4, // Force IPv4 to prevent socket resets
   keepAlive: 30000,
+  connectTimeout: 10000,
   maxRetriesPerRequest: null, // Critical requirement for BullMQ
   retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
+    const delay = Math.min(times * 100, 3000);
     return delay;
   }
 });
 
 redis.on('connect', () => logger.info('Redis Connected Successfully'));
 redis.on('error', (err) => {
-  if (!err.message.includes('ECONNRESET')) {
+  if (!err.message.includes('ECONNRESET') && !err.message.includes('ETIMEDOUT')) {
     logger.error(`Redis Error: ${err.message}`);
   }
 });
