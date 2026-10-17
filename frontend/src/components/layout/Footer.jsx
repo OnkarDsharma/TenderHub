@@ -81,13 +81,23 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link to="/gem-tenders" className="hover:text-white transition-colors">
+                  Government e-Marketplace (GeM) Bids
+                </Link>
+              </li>
+              <li>
                 <Link to="/services" className="hover:text-white transition-colors">
-                  AI Services &amp; Estimator
+                  AI Tender Analysis &amp; Estimator
+                </Link>
+              </li>
+              <li>
+                <Link to="/check-score" className="hover:text-white transition-colors">
+                  Check Bid Score &amp; Eligibility
                 </Link>
               </li>
               <li>
                 <Link to="/pricing" className="hover:text-white transition-colors">
-                  Contractor Plans
+                  Subscription Plans
                 </Link>
               </li>
               <li>
@@ -98,6 +108,11 @@ export function Footer() {
               <li>
                 <Link to="/about" className="hover:text-white transition-colors">
                   About Platform
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-white transition-colors">
+                  Contact Support Desk
                 </Link>
               </li>
             </ul>

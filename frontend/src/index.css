@@ -129,79 +129,48 @@ html, body {
 }
 
 /* ==========================================================================
-   Light Theme: Premium Dark Gray Shades Around Edges & Boxes
-   Provides crisp edge definition, perimeter depth, and attractive contrast
+   Design System: Refined B2B Procurement Workspace
+   Subtle borders, clean surface elevation, crisp typography, and high contrast.
    ========================================================================== */
 
-/* Enhanced light theme background to let white shaded cards pop with elevation */
 html:not(.dark) body {
-  background-color: #F1F4F7;
+  background-color: #F7F9FC;
 }
 
-/* Dark gray borders for crisp edge contrast */
-html:not(.dark) .border-slate-200,
-html:not(.dark) .border-slate-200\/90,
-html:not(.dark) .border-slate-200\/80,
-html:not(.dark) .border-slate-200\/70,
-html:not(.dark) .border-slate-200\/60,
-html:not(.dark) .border-slate-200\/50,
-html:not(.dark) .border-slate-100 {
+/* Subtle, restrained border defaults */
+html:not(.dark) .border-slate-200 {
+  border-color: #E2E8F0;
+}
+
+/* Subtle, natural surface card elevation - restrained and professional */
+html:not(.dark) .card-surface {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+
+html:not(.dark) .card-surface-interactive {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  transition: all 0.15s ease-in-out;
+}
+
+html:not(.dark) .card-surface-interactive:hover {
   border-color: #CBD5E1;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
 }
 
-/* Dark gray edge shading around cards, containers, panels, and white boxes */
-html:not(.dark) article.bg-white,
-html:not(.dark) .bg-white.rounded-2xl,
-html:not(.dark) .bg-white.rounded-xl,
-html:not(.dark) .bg-white.rounded-3xl,
-html:not(.dark) [class*="bg-white"][class*="rounded-2xl"],
-html:not(.dark) [class*="bg-white"][class*="rounded-xl"] {
-  box-shadow: 
-    0 1px 3px 0 rgba(15, 23, 42, 0.08),
-    0 4px 16px -2px rgba(15, 23, 42, 0.08),
-    0 0 0 1px rgba(15, 23, 42, 0.05);
-}
-
-/* Interactive hover dark-gray shade for cards & clickable boxes */
-html:not(.dark) article.bg-white:hover,
-html:not(.dark) .bg-white.rounded-2xl:hover:not(.no-hover-shade),
-html:not(.dark) .bg-white.rounded-xl:hover:not(.no-hover-shade) {
-  box-shadow: 
-    0 10px 25px -4px rgba(15, 23, 42, 0.14),
-    0 4px 10px -2px rgba(15, 23, 42, 0.08),
-    0 0 0 1px rgba(15, 23, 42, 0.08);
-}
-
-/* Distinct bottom dark gray shade on sticky navbar */
-html:not(.dark) header.sticky {
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08);
-}
-
-/* Filter sidebars, search consoles, and stat boxes */
-html:not(.dark) .bg-white.shadow-xs,
-html:not(.dark) .bg-white.shadow-sm,
-html:not(.dark) .bg-white.shadow-md {
-  box-shadow: 
-    0 2px 8px -1px rgba(15, 23, 42, 0.09),
-    0 1px 3px 0 rgba(15, 23, 42, 0.06),
-    0 0 0 1px rgba(15, 23, 42, 0.06);
-}
-
-/* Search inputs and dropdown select triggers in light mode */
+/* Restrained input style */
 html:not(.dark) input[type="text"],
 html:not(.dark) input[type="search"],
 html:not(.dark) input[type="email"],
 html:not(.dark) input[type="tel"],
-html:not(.dark) select,
-html:not(.dark) .input-box-shade {
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.04);
+html:not(.dark) select {
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
 }
 
-/* Modal and dialog dark gray perimeter shadow */
-html:not(.dark) [role="dialog"] > div,
-html:not(.dark) .modal-content-box {
-  box-shadow: 
-    0 20px 45px -8px rgba(15, 23, 42, 0.25),
-    0 8px 16px -4px rgba(15, 23, 42, 0.12),
-    0 0 0 1px rgba(15, 23, 42, 0.10);
+/* Dialog and popover elevation */
+html:not(.dark) [role="dialog"] > div {
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
 }

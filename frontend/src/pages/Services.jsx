@@ -4,7 +4,7 @@
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -19,33 +19,31 @@ import {
   TrendingUp,
   Download,
   Building2,
-  Wrench,
   ShieldAlert,
-  HelpCircle,
-  CreditCard,
   Check,
-  ChevronRight,
   RefreshCw,
   Search,
   Sliders,
-  DollarSign,
-  Scale
+  Scale,
+  ArrowRight
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
 import { billingApi } from '../services/billingApi';
 import { useAuthStore } from '../store/useAuthStore';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
 
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   // State Management
   const [plans, setPlans] = useState([]);
   const [profile, setProfile] = useState(null);
   const [inputTenderId, setInputTenderId] = useState(paramTenderId || '');
   const [activeTab, setActiveTab] = useState('preBid'); // 'preBid' | 'boq' | 'execution' | 'copilot'
-  const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [dossierData, setDossierData] = useState(null);
   const [personalizedFit, setPersonalizedFit] = useState(null);
@@ -82,7 +80,6 @@ export default function Services() {
 
   const loadPlansAndProfile = async () => {
     try {
-      setLoading(true);
       const [fetchedPlans, fetchedProfile] = await Promise.all([
         servicesApi.getPlans().catch(() => []),
         servicesApi.getContractorProfile().catch(() => null),
@@ -100,15 +97,13 @@ export default function Services() {
       }
     } catch (err) {
       console.error('Failed to load services data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAnalyze = async (idToAnalyze = inputTenderId) => {
     const targetId = idToAnalyze?.trim();
     if (!targetId) {
-      setError('Please provide a valid Tender ID to analyze.');
+      setError('Please enter a valid Tender ID or Portal Reference.');
       return;
     }
 
@@ -121,14 +116,14 @@ export default function Services() {
       if (res.success) {
         setDossierData(res.dossier);
         setPersonalizedFit(res.personalizedFit);
-        setStatusMsg('AI Analysis completed successfully!');
+        setStatusMsg('AI Analysis completed successfully.');
         loadPlansAndProfile();
         
         // Seed initial copilot welcome message
         setChatMessages([
           {
             role: 'assistant',
-            content: `Namaste! I am your Tender Copilot for this work.\n\n• Contractor Profile: ${res.personalizedFit?.contractorName || 'Prime Infrastructure'} (${res.personalizedFit?.registrationClass})\n• Eligibility Match: ${res.personalizedFit?.matchScore}% (${res.personalizedFit?.verdict})\n• Quick Queries: Ask me about EMD/CDR rules, turnover eligibility, BOQ material quantities, or delay penalties.`
+            content: `Namaste. I am your Tender Copilot for this contract.\n\n• Contractor Profile: ${res.personalizedFit?.contractorName || 'Prime Infrastructure'} (${res.personalizedFit?.registrationClass})\n• Eligibility Match: ${res.personalizedFit?.matchScore}% (${res.personalizedFit?.verdict})\n• Quick Queries: Ask about EMD/CDR rules, turnover compliance, BOQ material quantities, or delay penalties.`
           }
         ]);
       } else {
@@ -165,7 +160,7 @@ export default function Services() {
           }));
         }
       } else {
-        setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Apologies, could not process query. Please retry.' }]);
+        setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Unable to process query. Please retry.' }]);
       }
     } catch (err) {
       setChatMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${err.response?.data?.error || err.message}` }]);
@@ -180,38 +175,42 @@ export default function Services() {
       const updated = await servicesApi.updateContractorProfile(editProfile);
       setProfile(updated);
       setShowProfileModal(false);
-      setStatusMsg('Contractor memory updated! Re-evaluating bids with updated capacity...');
+      setStatusMsg('Contractor baseline updated. Re-evaluating bid capacity...');
       if (dossierData) {
         handleAnalyze(dossierData.tenderId);
       }
-    } catch (err) {
-      setError('Failed to update contractor memory.');
+    } catch {
+      setError('Failed to update contractor memory profile.');
     }
   };
 
   const handleCheckoutPlan = async (plan) => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/services');
+      return;
+    }
+
     try {
       const order = await billingApi.createOrder(`ai_${plan.id}`);
       if (order && window.Razorpay) {
         const options = {
           key: order.keyId,
           amount: order.amount,
-          currency: order.currency,
+          currency: order.currency || 'INR',
           name: 'TenderHub AI Services',
           description: plan.name,
           order_id: order.orderId,
           handler: async (response) => {
             await billingApi.verifyPayment(response);
             loadPlansAndProfile();
-            setStatusMsg(`Payment verified! Plan ${plan.name} is now active.`);
+            setStatusMsg(`Payment verified. Plan ${plan.name} is now active.`);
           },
-          theme: { color: '#1E3A8A' }
+          theme: { color: '#102D49' }
         };
         const rzp = new window.Razorpay(options);
         rzp.open();
       } else {
-        // Mock direct activation in test mode
-        alert(`Plan selection: ${plan.name} (₹${plan.price}). Payment gateway ready.`);
+        alert(`Checkout ready: ${plan.name} (₹${plan.price}).`);
       }
     } catch (err) {
       alert(`Checkout error: ${err.message}`);
@@ -237,75 +236,71 @@ export default function Services() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors pb-24">
-      {/* 1. HERO & CONTRACTOR STATUS BAR */}
-      <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800/80 bg-gradient-to-b from-blue-50/50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 pt-10 pb-12">
-        <div className="absolute inset-0 bg-grid-slate-100 dark:bg-grid-slate-800/20 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.5))] pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    <div className="min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
+      
+      {/* 1. HEADER & CONTRACTOR PROFILE STRIP */}
+      <section className="bg-white dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700/80 pt-8 pb-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* Left 7 Columns: Headline, Subtitle & Symmetrically Aligned Search Console */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-xs">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Next-Gen Contractor Intelligence Suite</span>
+            {/* Left 7 Columns: Title, Scrutiny Description & Search */}
+            <div className="lg:col-span-7 space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                <Cpu className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
+                <span>AI Quantity Surveyor &amp; Copilot</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
-                Personalized AI Agent &amp; <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500">
-                  Tender Quantity Surveyor
-                </span>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+                Technical Scrutiny &amp; BOQ Takeoff Suite
               </h1>
 
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                Automate tender document scrutiny, BOQ bulk material calculations, and qualification checks. 
-                Tuned specifically for your firm&apos;s registration class, turnover, and machinery.
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                Scrutinize official tender clauses, verify turnover and solvency eligibility, extract raw material schedules, and flag GCC risk clauses before you submit your bid.
               </p>
 
-              {/* Symmetrically Aligned Search Console */}
+              {/* Tender Analysis Input Console */}
               <div className="pt-2">
-                <div className="bg-white dark:bg-slate-900/90 p-2 sm:p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col sm:flex-row items-center gap-2">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-2">
                   <div className="relative flex-1 w-full">
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
+                    <Input
                       type="text"
-                      placeholder="Enter Tender ID / Portal Reference (e.g., 2026_PWD_321045_1 or Mongo ID)..."
+                      placeholder="Enter Tender ID or Portal Reference (e.g. 2026_PWD_321045_1)..."
                       value={inputTenderId}
                       onChange={(e) => setInputTenderId(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white"
+                      className="pl-10 text-xs sm:text-sm border-0 bg-transparent focus-visible:ring-0 shadow-none"
                     />
                   </div>
-                  <button
+                  <Button
+                    variant="primary"
                     onClick={() => handleAnalyze()}
                     disabled={analyzing}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                    className="w-full sm:w-auto text-xs font-semibold shrink-0"
                   >
                     {analyzing ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Analyzing with AI...</span>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        Analyzing Notice...
                       </>
                     ) : (
                       <>
-                        <Zap className="w-4 h-4" />
-                        <span>Analyze Tender</span>
+                        <Zap className="w-3.5 h-3.5 mr-1.5" />
+                        Run AI Analysis
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
 
-                {/* Status / Error Toast */}
+                {/* Status / Feedback message */}
                 {statusMsg && (
-                  <p className="mt-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <p className="mt-2 text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                     <span>{statusMsg}</span>
                   </p>
                 )}
                 {error && (
-                  <p className="mt-2.5 text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     <span>{error}</span>
                   </p>
@@ -313,58 +308,54 @@ export default function Services() {
               </div>
             </div>
 
-            {/* Right 5 Columns: Symmetrically Balanced Contractor Memory Card */}
+            {/* Right 5 Columns: Contractor Baseline & Capacity Card */}
             <div className="lg:col-span-5">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    <Building2 className="w-4 h-4 text-blue-600" />
-                    <span>Contractor Memory &amp; Baseline</span>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                    <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
+                    <span>Contractor Profile Baseline</span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setShowProfileModal(true)}
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-semibold text-dalBlue dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Sliders className="w-3.5 h-3.5" />
-                    <span>Edit Profile</span>
+                    <span>Configure Profile</span>
                   </button>
                 </div>
 
                 <div className="space-y-3">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Entity</span>
-                    <p className="text-base font-black text-slate-900 dark:text-white truncate mt-0.5">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                       {profile?.companyName || 'Prime Infrastructure & Engineering'}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">Class Badge</span>
-                      <span className="font-bold text-xs text-blue-700 dark:text-blue-300 mt-0.5 block truncate">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase block">Registration Class</span>
+                      <span className="font-semibold text-xs text-dalBlue dark:text-blue-300 block truncate mt-0.5">
                         {profile?.registrationClass || 'Class A Works'}
                       </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">Avg Annual Turnover</span>
-                      <span className="font-bold text-xs text-slate-900 dark:text-white mt-0.5 block">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase block">Avg Annual Turnover</span>
+                      <span className="font-semibold text-xs text-slate-900 dark:text-white block mt-0.5">
                         ₹{((profile?.avgAnnualTurnoverInr || 50000000) / 1e7).toFixed(1)} Crore
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-500">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Analysis Credits:</span>
-                  </div>
-                  <span className="font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    {profile?.credits?.availableDossiers ?? 2} Free Dossiers Available
-                  </span>
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 dark:text-slate-400">Available AI Dossiers:</span>
+                  <Badge variant="success">
+                    {profile?.credits?.availableDossiers ?? 2} Dossiers Available
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -373,51 +364,52 @@ export default function Services() {
         </div>
       </section>
 
-      {/* 2. MAIN DOSSIER & ANALYSIS DASHBOARD */}
+      {/* 2. MAIN WORKSPACE / DOSSIER CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {dossierData ? (
           <div className="space-y-6">
             {/* Executive Snapshot Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="space-y-2 max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
-                    {dossierData.executiveOverview?.department || 'Public Works'}
-                  </span>
-                  <span className="text-xs text-slate-500">
+                  <Badge variant="outline">
+                    {dossierData.executiveOverview?.department || 'Public Works Department'}
+                  </Badge>
+                  <span className="text-xs text-slate-500 font-mono">
                     Ref: {dossierData.sourceTenderId || dossierData.tenderId}
                   </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-300 font-medium border border-blue-200/60">
+                    Official Document Verified
+                  </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                   {dossierData.executiveOverview?.title}
                 </h2>
-                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line space-y-1.5 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800 mt-2">
+                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-lg border border-slate-200/70 dark:border-slate-700/60 leading-relaxed">
                   {dossierData.summary}
                 </div>
               </div>
 
               {/* Personalized Match Pill */}
               {personalizedFit && (
-                <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0 text-center min-w-[200px]">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Contractor Match Score
+                <div className="bg-slate-50 dark:bg-slate-900/70 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0 text-center min-w-[200px]">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Contractor Fit Rating
                   </p>
-                  <p className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                  <p className="text-3xl font-bold text-dalBlue dark:text-blue-400 mt-1">
                     {personalizedFit.matchScore}%
                   </p>
-                  <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    personalizedFit.matchScore >= 80 
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                  }`}>
-                    {personalizedFit.verdict}
-                  </span>
+                  <div className="mt-1">
+                    <Badge variant={personalizedFit.matchScore >= 80 ? 'success' : 'warning'}>
+                      {personalizedFit.verdict}
+                    </Badge>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Navigation Tabs - Symmetrical Balanced Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+            {/* Navigation Tabs - Clean Segmented Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3">
               {[
                 { id: 'preBid', label: '1. Win The Bid (Pre-Bid)', icon: TrendingUp },
                 { id: 'boq', label: '2. Raw Materials & BOQ', icon: Boxes },
@@ -430,13 +422,13 @@ export default function Services() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+                        ? 'bg-dalBlue text-white shadow-xs font-bold'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{tab.label}</span>
                   </button>
                 );
@@ -444,18 +436,18 @@ export default function Services() {
             </div>
 
             {/* TAB CONTENT PANELS */}
-            <div className="mt-4">
+            <div>
               {/* TAB 1: PRE-BID WINNING INSIGHTS */}
               {activeTab === 'preBid' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Eligibility & Gaps */}
                   <div className="lg:col-span-2 space-y-6">
-                    {/* Personalized Financial & Experience Evaluation */}
+                    {/* Financial & Technical Fit Breakdown */}
                     {personalizedFit && (
-                      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <Scale className="w-4 h-4 text-blue-600" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-dalBlue dark:text-blue-400" />
                             <span>Financial &amp; Technical Fit Breakdown</span>
                           </h3>
                           <span className="text-xs text-slate-500">
@@ -463,64 +455,64 @@ export default function Services() {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                            <p className="text-[11px] font-semibold text-slate-500 uppercase">3-Yr Avg Turnover</p>
-                            <p className="text-base font-black text-slate-900 dark:text-white mt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">3-Yr Avg Turnover</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
                               ₹{(personalizedFit.turnoverCheck.contractor / 1e7).toFixed(2)} Cr
                             </p>
-                            <p className="text-xs mt-0.5 text-slate-500">
+                            <p className="text-xs text-slate-500 mt-0.5">
                               Req: ₹{(personalizedFit.turnoverCheck.required / 1e7).toFixed(2)} Cr
                             </p>
-                            <div className="mt-2 flex items-center gap-1.5 text-xs font-bold">
+                            <div className="mt-2 text-xs font-semibold">
                               {personalizedFit.turnoverCheck.passed ? (
-                                <span className="text-emerald-600 flex items-center gap-1">
+                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                   <Check className="w-3.5 h-3.5" /> Compliant
                                 </span>
                               ) : (
-                                <span className="text-amber-600 flex items-center gap-1">
+                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                   <AlertTriangle className="w-3.5 h-3.5" /> JV Needed
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                            <p className="text-[11px] font-semibold text-slate-500 uppercase">Bank Solvency</p>
-                            <p className="text-base font-black text-slate-900 dark:text-white mt-1">
+                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Bank Solvency</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
                               ₹{(personalizedFit.solvencyCheck.contractor / 1e7).toFixed(2)} Cr
                             </p>
-                            <p className="text-xs mt-0.5 text-slate-500">
+                            <p className="text-xs text-slate-500 mt-0.5">
                               Req: ₹{(personalizedFit.solvencyCheck.required / 1e7).toFixed(2)} Cr
                             </p>
-                            <div className="mt-2 flex items-center gap-1.5 text-xs font-bold">
+                            <div className="mt-2 text-xs font-semibold">
                               {personalizedFit.solvencyCheck.passed ? (
-                                <span className="text-emerald-600 flex items-center gap-1">
+                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                   <Check className="w-3.5 h-3.5" /> Sufficient
                                 </span>
                               ) : (
-                                <span className="text-amber-600 flex items-center gap-1">
+                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                   <AlertTriangle className="w-3.5 h-3.5" /> Enhance Solvency
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                            <p className="text-[11px] font-semibold text-slate-500 uppercase">Single Work Done</p>
-                            <p className="text-base font-black text-slate-900 dark:text-white mt-1">
+                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Single Work Done</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
                               ₹{(personalizedFit.experienceCheck.contractor / 1e7).toFixed(2)} Cr
                             </p>
-                            <p className="text-xs mt-0.5 text-slate-500">
+                            <p className="text-xs text-slate-500 mt-0.5">
                               Req: ₹{(personalizedFit.experienceCheck.required / 1e7).toFixed(2)} Cr
                             </p>
-                            <div className="mt-2 flex items-center gap-1.5 text-xs font-bold">
+                            <div className="mt-2 text-xs font-semibold">
                               {personalizedFit.experienceCheck.passed ? (
-                                <span className="text-emerald-600 flex items-center gap-1">
+                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                   <Check className="w-3.5 h-3.5" /> Fully Eligible
                                 </span>
                               ) : (
-                                <span className="text-amber-600 flex items-center gap-1">
+                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                   <AlertTriangle className="w-3.5 h-3.5" /> Check Sub-work
                                 </span>
                               )}
@@ -529,22 +521,22 @@ export default function Services() {
                         </div>
 
                         {/* Identified Gaps Cards */}
-                        {personalizedFit.identifiedGaps.length > 0 && (
+                        {personalizedFit.identifiedGaps?.length > 0 && (
                           <div className="mt-3 space-y-2">
-                            <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                              Actionable Gaps Detected:
+                            <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                              Identified Capacity Gaps:
                             </p>
                             {personalizedFit.identifiedGaps.map((gap, idx) => (
                               <div
                                 key={idx}
-                                className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 flex items-start gap-3"
+                                className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5"
                               >
                                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                 <div className="text-xs space-y-1">
-                                  <p className="font-bold text-amber-900 dark:text-amber-200">{gap.title}</p>
+                                  <p className="font-semibold text-amber-900 dark:text-amber-200">{gap.title}</p>
                                   <p className="text-slate-600 dark:text-slate-300">{gap.detail}</p>
-                                  <p className="font-semibold text-blue-600 dark:text-blue-400">
-                                    💡 Strategy: {gap.recommendation}
+                                  <p className="font-medium text-dalBlue dark:text-blue-400">
+                                    Mitigation: {gap.recommendation}
                                   </p>
                                 </div>
                               </div>
@@ -555,35 +547,35 @@ export default function Services() {
                     )}
 
                     {/* Mandatory Document Submission Checklist */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-dalBlue dark:text-blue-400" />
                         <span>Mandatory Document &amp; Affidavit Submission Pack</span>
                       </h3>
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         {dossierData.preBidAnalysis?.mandatoryDocumentChecklist?.map((doc) => (
                           <div
                             key={doc.sNo}
-                            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3"
+                            className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3"
                           >
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center">
+                                <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0">
                                   {doc.sNo}
                                 </span>
-                                <p className="text-sm font-bold text-slate-900 dark:text-white">{doc.title}</p>
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{doc.title}</p>
+                                <Badge variant="outline" className="text-[10px]">
                                   {doc.stage}
-                                </span>
+                                </Badge>
                               </div>
                               <p className="text-xs text-slate-600 dark:text-slate-300 pl-7">{doc.description}</p>
                               {doc.complianceTip && (
                                 <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium pl-7">
-                                  ⚠️ Tip: {doc.complianceTip}
+                                  Note: {doc.complianceTip}
                                 </p>
                               )}
                             </div>
-                            <span className="px-2 py-1 rounded text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/60 shrink-0">
                               Compulsory
                             </span>
                           </div>
@@ -594,33 +586,29 @@ export default function Services() {
 
                   {/* Right Column: Contract Risk & GCC Red Flags */}
                   <div className="space-y-6">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <ShieldAlert className="w-4 h-4 text-red-600" />
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-rose-600" />
                         <span>GCC Risk &amp; Contract Traps</span>
                       </h3>
                       <div className="space-y-3">
                         {dossierData.preBidAnalysis?.riskAndRedFlags?.map((risk, idx) => (
                           <div
                             key={idx}
-                            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-1.5"
+                            className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 space-y-1"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-mono font-bold text-slate-500">
+                              <span className="text-[10px] font-mono font-semibold text-slate-500">
                                 {risk.clauseReference || 'GCC Clause'}
                               </span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                risk.severity === 'HIGH'
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
-                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                              }`}>
+                              <Badge variant={risk.severity === 'HIGH' ? 'destructive' : 'warning'}>
                                 {risk.severity} Risk
-                              </span>
+                              </Badge>
                             </div>
                             <p className="text-xs font-bold text-slate-900 dark:text-white">{risk.title}</p>
-                            <p className="text-[11px] text-slate-600 dark:text-slate-300">{risk.riskSummary}</p>
-                            <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
-                              🛡️ Mitigation: {risk.mitigationAction}
+                            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{risk.riskSummary}</p>
+                            <p className="text-[11px] font-medium text-dalBlue dark:text-blue-400 pt-0.5">
+                              Mitigation: {risk.mitigationAction}
                             </p>
                           </div>
                         ))}
@@ -634,23 +622,25 @@ export default function Services() {
               {activeTab === 'boq' && (
                 <div className="space-y-6">
                   {/* Summary & Download Bar */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Boxes className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Boxes className="w-4 h-4 text-dalBlue dark:text-blue-400" />
                         <span>Bill of Quantities: Primary Raw Material Breakdown</span>
                       </h3>
-                      <p className="text-xs text-slate-500 mt-1 whitespace-pre-line leading-relaxed">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                         {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary}
                       </p>
                     </div>
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={downloadBoqCsv}
-                      className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold flex items-center gap-2 shadow-sm hover:opacity-90 cursor-pointer self-start sm:self-center"
+                      className="self-start sm:self-center text-xs"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Export BOQ (CSV)</span>
-                    </button>
+                      <Download className="w-3.5 h-3.5 mr-1.5" />
+                      Export BOQ (CSV)
+                    </Button>
                   </div>
 
                   {/* Material Cards Grid */}
@@ -658,20 +648,20 @@ export default function Services() {
                     {dossierData.preBidAnalysis?.boqMaterialBreakdown?.materials?.map((mat, idx) => (
                       <div
                         key={idx}
-                        className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2"
+                        className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-2"
                       >
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                        <Badge variant="outline" className="text-[10px]">
                           {mat.category || 'Material'}
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        </Badge>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {mat.name}
                         </h4>
-                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <p className="text-2xl font-black text-slate-900 dark:text-white">
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                          <p className="text-xl font-bold text-slate-900 dark:text-white">
                             {mat.estimatedQuantity}
                           </p>
                           <p className="text-xs text-slate-500">Rate: {mat.approxRateInr}</p>
-                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                             Est. Outlay: {mat.totalEstCost}
                           </p>
                         </div>
@@ -680,33 +670,33 @@ export default function Services() {
                   </div>
 
                   {/* BOQ Line Items Table */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                    <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                         Standard Schedule of Rates (SOR) Extracted Line Items
                       </h4>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                        <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
                           <tr>
-                            <th className="py-3 px-4 font-semibold">Item No</th>
-                            <th className="py-3 px-4 font-semibold">Description of Work Item</th>
-                            <th className="py-3 px-4 font-semibold">Quantity</th>
-                            <th className="py-3 px-4 font-semibold">Unit</th>
-                            <th className="py-3 px-4 font-semibold">Est. Rate (₹)</th>
-                            <th className="py-3 px-4 font-semibold">Est. Amount (₹)</th>
+                            <th className="py-2.5 px-4 font-semibold">Item No</th>
+                            <th className="py-2.5 px-4 font-semibold">Description of Work Item</th>
+                            <th className="py-2.5 px-4 font-semibold">Quantity</th>
+                            <th className="py-2.5 px-4 font-semibold">Unit</th>
+                            <th className="py-2.5 px-4 font-semibold">Est. Rate (₹)</th>
+                            <th className="py-2.5 px-4 font-semibold">Est. Amount (₹)</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                           {dossierData.preBidAnalysis?.boqMaterialBreakdown?.boqLineItems?.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                              <td className="py-3 px-4 font-mono font-bold text-blue-600">{item.itemNo}</td>
-                              <td className="py-3 px-4 text-slate-700 dark:text-slate-200 max-w-md">{item.description}</td>
-                              <td className="py-3 px-4 font-bold">{item.quantity}</td>
-                              <td className="py-3 px-4">{item.unit}</td>
-                              <td className="py-3 px-4">₹{item.estimatedRate?.toLocaleString('en-IN')}</td>
-                              <td className="py-3 px-4 font-bold text-emerald-600">
+                            <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-750">
+                              <td className="py-2.5 px-4 font-mono font-semibold text-dalBlue dark:text-blue-400">{item.itemNo}</td>
+                              <td className="py-2.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">{item.description}</td>
+                              <td className="py-2.5 px-4 font-semibold">{item.quantity}</td>
+                              <td className="py-2.5 px-4 text-slate-500">{item.unit}</td>
+                              <td className="py-2.5 px-4">₹{item.estimatedRate?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 px-4 font-semibold text-emerald-600 dark:text-emerald-400">
                                 ₹{item.estimatedAmount?.toLocaleString('en-IN')}
                               </td>
                             </tr>
@@ -722,21 +712,21 @@ export default function Services() {
               {activeTab === 'execution' && (
                 <div className="space-y-6">
                   {/* Procurement Phasing */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-blue-600" />
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-dalBlue dark:text-blue-400" />
                       <span>Post-Award Material Procurement &amp; Staging Schedule</span>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {dossierData.postAwardAnalysis?.procurementSchedule?.map((phase, idx) => (
                         <div
                           key={idx}
-                          className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-2"
+                          className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 space-y-2"
                         >
-                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-dalBlue dark:text-blue-400 uppercase tracking-wider">
                             {phase.timeframe}
                           </span>
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">{phase.phase}</h4>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{phase.phase}</h4>
                           <div className="text-xs space-y-1 text-slate-600 dark:text-slate-300">
                             <p className="font-semibold text-slate-500">Materials to Mobilize:</p>
                             <ul className="list-disc list-inside space-y-0.5">
@@ -745,7 +735,7 @@ export default function Services() {
                               ))}
                             </ul>
                           </div>
-                          <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 pt-1">
+                          <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 pt-1">
                             Critical Path: {phase.criticalPathItems}
                           </p>
                         </div>
@@ -754,8 +744,8 @@ export default function Services() {
                   </div>
 
                   {/* Milestone Delivery Tracker */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-emerald-600" />
                       <span>Departmental Physical &amp; Financial Milestones</span>
                     </h3>
@@ -763,27 +753,27 @@ export default function Services() {
                       {dossierData.postAwardAnalysis?.milestones?.map((m) => (
                         <div
                           key={m.milestoneNo}
-                          className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-xs font-black bg-blue-600 text-white">
+                              <Badge variant="primary" className="text-[10px]">
                                 Milestone {m.milestoneNo}
-                              </span>
-                              <span className="text-xs font-bold text-slate-500">
+                              </Badge>
+                              <span className="text-xs font-semibold text-slate-500">
                                 Target: {m.targetDays} Days
                               </span>
                             </div>
-                            <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                               {m.description}
                             </p>
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              ⚠️ Penalty if delayed: {m.penaltyIfDelayed}
+                            <p className="text-xs text-rose-600 dark:text-rose-400">
+                              Penalty if delayed: {m.penaltyIfDelayed}
                             </p>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-[11px] text-slate-400 font-bold uppercase">Billing Target</p>
-                            <p className="text-xl font-black text-emerald-600">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Billing Target</p>
+                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                               {m.financialProgressPct}% Progress
                             </p>
                           </div>
@@ -796,69 +786,69 @@ export default function Services() {
 
               {/* TAB 4: INTERACTIVE CONTRACTOR COPILOT CHAT */}
               {activeTab === 'copilot' && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col h-[600px] overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col h-[560px] overflow-hidden">
                   {/* Chat Header */}
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                  <div className="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                        <Sparkles className="w-4 h-4" />
+                      <div className="w-7 h-7 rounded-md bg-dalBlue text-white flex items-center justify-center">
+                        <Sparkles className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                           Personalized Tender Copilot
                         </h4>
                         <p className="text-[11px] text-slate-500">
-                          Grounded in tender specs &amp; {profile?.companyName || 'your profile'} memory
+                          Grounded in tender specs &amp; {profile?.companyName || 'your profile'} capacity
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs text-slate-500 font-semibold">
+                    <span className="text-xs text-slate-500 font-medium">
                       Queries Remaining: {profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50}
                     </span>
                   </div>
 
                   {/* Messages Area */}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                  <div className="flex-1 p-4 overflow-y-auto space-y-3">
                     {chatMessages.map((msg, idx) => (
                       <div
                         key={idx}
-                        className={`flex gap-3 max-w-2xl ${
+                        className={`flex gap-2.5 max-w-2xl ${
                           msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''
                         }`}
                       >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
                           msg.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300'
+                            ? 'bg-dalBlue text-white'
+                            : 'bg-blue-100 dark:bg-blue-900/60 text-dalBlue dark:text-blue-300'
                         }`}>
                           {msg.role === 'user' ? 'You' : 'AI'}
                         </div>
-                        <div className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                        <div className={`p-3 rounded-xl text-xs leading-relaxed ${
                           msg.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700/60'
+                            ? 'bg-dalBlue text-white'
+                            : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700/60'
                         }`}>
                           <p className="whitespace-pre-line">{msg.content}</p>
                         </div>
                       </div>
                     ))}
                     {chatLoading && (
-                      <div className="flex gap-3 max-w-2xl">
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-xs font-bold">
+                      <div className="flex gap-2.5 max-w-2xl">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 text-dalBlue flex items-center justify-center shrink-0 text-[10px] font-bold">
                           AI
                         </div>
-                        <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 flex items-center gap-2">
+                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs text-slate-500 flex items-center gap-2">
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Copilot is scanning tender clauses...</span>
+                          <span>Scanning tender clauses...</span>
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Suggested Question Chips */}
-                  <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 flex items-center gap-2 overflow-x-auto text-[11px]">
+                  <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 flex items-center gap-2 overflow-x-auto text-[11px]">
                     {[
-                      'EMD amount & FDR rules?',
+                      'EMD amount & CDR submission rules?',
                       'Check my turnover eligibility',
                       'Cement and Steel total quantities',
                       'What is the delay penalty rate?',
@@ -868,7 +858,7 @@ export default function Services() {
                         onClick={() => {
                           setChatInput(promptText);
                         }}
-                        className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-blue-500 shrink-0 cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-dalBlue shrink-0 cursor-pointer text-xs"
                       >
                         {promptText}
                       </button>
@@ -876,121 +866,173 @@ export default function Services() {
                   </div>
 
                   {/* Input Form */}
-                  <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
-                    <input
+                  <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                    <Input
                       type="text"
-                      placeholder="Ask any question about this tender (English, Hindi, Hinglish)..."
+                      placeholder="Ask questions about this tender (EMD, BOQ, penalty clauses)..."
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white"
+                      className="text-xs"
                     />
-                    <button
+                    <Button
                       type="submit"
+                      variant="primary"
+                      size="sm"
                       disabled={chatLoading || !chatInput.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1.5 hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50"
+                      className="shrink-0"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Send</span>
-                    </button>
+                      <Send className="w-3.5 h-3.5 mr-1" />
+                      Send
+                    </Button>
                   </form>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          /* Empty State / Feature Showcase if no tender analyzed yet */
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 border border-slate-200 dark:border-slate-800 text-center max-w-3xl mx-auto shadow-sm space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
-              <Cpu className="w-8 h-8" />
+          /* Empty / Idle State: 4-Step Technical Scrutiny Workflow */
+          <div className="space-y-8">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-8 sm:p-10 border border-slate-200 dark:border-slate-700 shadow-xs max-w-4xl mx-auto text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-400 flex items-center justify-center mx-auto">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                Inspect Any Active Government Notice
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed">
+                Enter any Tender ID or select one of the sample public works below to generate an AI Dossier with BOQ breakdown, compliance checklists, and GCC risk warnings.
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-2.5 pt-2">
+                {[
+                  { label: 'PWD Road Macadamization (₹45 Lakhs)', id: '2026_PWD_321045_1' },
+                  { label: 'Jal Shakti Water Supply Scheme (₹1.8 Cr)', id: '2026_JAL_109283_1' },
+                  { label: 'District Hospital Upgradation Block (₹3.2 Cr)', id: '2026_MED_441209_1' },
+                ].map((sample, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setInputTenderId(sample.id);
+                      handleAnalyze(sample.id);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:border-dalBlue dark:hover:border-blue-400 transition-colors cursor-pointer"
+                  >
+                    ⚡ Test {sample.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Ready to Analyze Any Government Tender
-            </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto">
-              Paste a Tender ID above, or pick one of the active sample tenders from Jammu &amp; Kashmir, CPWD, or NHAI to see the full AI Dossier in action.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2 pt-2">
-              {[
-                { label: 'Sample PWD Road Work (₹45 Lakhs)', id: '2026_PWD_321045_1' },
-                { label: 'Sample Water Supply Jal Nigam (₹1.8 Cr)', id: '2026_JAL_109283_1' },
-                { label: 'Sample Health Building (₹3.2 Cr)', id: '2026_MED_441209_1' },
-              ].map((sample, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setInputTenderId(sample.id);
-                    handleAnalyze(sample.id);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all cursor-pointer"
-                >
-                  ⚡ Try {sample.label}
-                </button>
-              ))}
+
+            {/* 4-Step Technical Workflow Explanation */}
+            <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
+                  1
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Select Notice</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Provide an official portal notice ID or NIT reference number.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
+                  2
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Scrutinize Docs</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  AI reads NIT clauses, technical specifications, and general conditions.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
+                  3
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Run Analysis</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Evaluates financial turnover, solvency, and extracts material quantities.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
+                  4
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Review &amp; Export</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Export CSV bill of quantities and check affidavit requirements.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* 3. PRICING & PLANS FOR SERVICES */}
-        <section className="mt-20 pt-12 border-t border-slate-200 dark:border-slate-800">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-              Transparent, Value-Backed Pricing
+        {/* 3. AI SERVICES PLANS SECTION */}
+        <section className="mt-16 pt-12 border-t border-slate-200 dark:border-slate-700">
+          <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-dalBlue dark:text-blue-400">
+              Contractor Intelligence Plans
             </span>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">
-              Choose Your AI Estimator Plan
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              AI Quantity Surveyor &amp; Copilot Plans
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-              Save up to ₹15,000 per tender compared to manual quantity surveyors. Powered by high-speed Gemini Flash with verified Indian contracting benchmarks.
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              Accurate document parsing and BOQ itemization for Indian public works. Quotas renew monthly, or purchase single tenders on-demand.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all ${
+                className={`relative rounded-xl p-6 flex flex-col justify-between transition-all ${
                   plan.popular
-                    ? 'bg-white dark:bg-slate-900 border-2 border-blue-600 shadow-xl scale-[1.02]'
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-300'
+                    ? 'bg-white dark:bg-slate-800 ring-2 ring-dalBlue dark:ring-blue-500 shadow-md'
+                    : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs'
                 }`}
               >
                 {plan.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white shadow-xs">
+                  <span className={`absolute -top-3 left-6 px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
+                    plan.popular ? 'bg-chinarRed text-white shadow-xs' : 'bg-slate-700 text-white'
+                  }`}>
                     {plan.badge}
                   </span>
                 )}
 
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1 min-h-[32px]">{plan.description}</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{plan.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">
+                    {plan.description}
+                  </p>
 
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
+                    <span className="text-3xl font-bold text-dalBlue dark:text-white">
                       ₹{plan.price}
                     </span>
-                    <span className="text-xs font-bold text-slate-500">{plan.unit}</span>
+                    <span className="text-xs font-medium text-slate-500">{plan.unit}</span>
                   </div>
 
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                  <ul className="mt-5 space-y-2.5 text-xs text-slate-700 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700 pt-4">
                     {plan.features?.map((feat, fIdx) => (
                       <li key={fIdx} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{feat}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <button
-                  onClick={() => handleCheckoutPlan(plan)}
-                  className={`mt-8 w-full py-3 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer ${
-                    plan.popular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
-                  }`}
-                >
-                  {plan.ctaText || 'Get Started'}
-                </button>
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <Button
+                    variant={plan.popular ? 'primary' : 'outline'}
+                    onClick={() => handleCheckoutPlan(plan)}
+                    className="w-full text-xs font-semibold"
+                  >
+                    {plan.ctaText || 'Get Started'}
+                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -1002,34 +1044,33 @@ export default function Services() {
         {showProfileModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5"
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-700 shadow-xl space-y-4"
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  <span>Configure Contractor Memory</span>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
+                  <span>Configure Contractor Baseline</span>
                 </h3>
                 <button
                   onClick={() => setShowProfileModal(false)}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+              <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                     Company / Firm Name
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={editProfile.companyName}
                     onChange={(e) => setEditProfile({ ...editProfile, companyName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   />
                 </div>
 
@@ -1041,9 +1082,9 @@ export default function Services() {
                     <select
                       value={editProfile.registrationClass}
                       onChange={(e) => setEditProfile({ ...editProfile, registrationClass: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white"
                     >
-                      <option value="Class Special">Class Special / Super Class</option>
+                      <option value="Class Special">Class Special</option>
                       <option value="Class A Works">Class A Works</option>
                       <option value="Class B Works">Class B Works</option>
                       <option value="Class C Works">Class C Works</option>
@@ -1053,13 +1094,12 @@ export default function Services() {
 
                   <div>
                     <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Avg. Turnover (INR)
+                      Avg Turnover (₹)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={editProfile.avgAnnualTurnoverInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, avgAnnualTurnoverInr: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      onChange={(e) => setEditProfile({ ...editProfile, avgAnnualTurnoverInr: Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -1067,42 +1107,42 @@ export default function Services() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Bank Solvency (INR)
+                      Bank Solvency (₹)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={editProfile.solvencyLimitInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, solvencyLimitInr: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      onChange={(e) => setEditProfile({ ...editProfile, solvencyLimitInr: Number(e.target.value) })}
                     />
                   </div>
                   <div>
                     <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Largest Single Work (INR)
+                      Largest Single Work (₹)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={editProfile.largestSingleWorkDoneInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: Number(e.target.value) })}
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowProfileModal(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold cursor-pointer hover:bg-blue-700"
+                    variant="primary"
+                    size="sm"
                   >
-                    Save Memory
-                  </button>
+                    Save Baseline
+                  </Button>
                 </div>
               </form>
             </motion.div>

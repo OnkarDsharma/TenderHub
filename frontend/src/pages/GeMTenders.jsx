@@ -203,48 +203,46 @@ export default function GeMTenders() {
     <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-        {/* 1. Header Banner with GeM Branding */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-dalBlue to-slate-900 text-white p-6 sm:p-8 shadow-md border border-slate-800">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-bold tracking-wide">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>GeM Portal Integration • {selectedState || 'Northern Region (J&K, HP, Punjab, Ladakh)'}</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight text-white">
-                Government e-Marketplace Bids
-              </h1>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Active Central Government, Defence, Ministry of Road Transport, and Public Sector procurement opportunities verified across {selectedState || 'Jammu & Kashmir, Himachal Pradesh, Punjab, and Ladakh'}.
-              </p>
+        {/* 1. Refined Regional Header & Verified Metric Counters */}
+        <div className="bg-white dark:bg-slate-900 rounded-lg p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
+              <Landmark className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
+              <span>Government e-Marketplace (GeM) • {selectedState || 'Northern Region'}</span>
             </div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+              Central &amp; Public Sector GeM Bids
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Central Government, Defence, PSU, and departmental procurement bids with consignee delivery stations in {selectedState || 'Jammu & Kashmir, Himachal Pradesh, Punjab, and Ladakh'}.
+            </p>
+          </div>
 
-            {/* Quick KPI Stat Counter Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0">
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 text-center">
-                <span className="text-xl sm:text-2xl font-mono font-black text-amber-300 block">
-                  {pagination.totalCount || stats?.totalActive || 0}
-                </span>
-                <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
-                  Active {selectedState ? selectedState.split(' ')[0] : 'All'} Bids
-                </span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 text-center">
-                <span className="text-xl sm:text-2xl font-mono font-black text-red-400 block">
-                  {stats?.closingSoon || 0}
-                </span>
-                <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
-                  Closing &lt; 48h
-                </span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 text-center col-span-2 sm:col-span-1">
-                <span className="text-xl sm:text-2xl font-mono font-black text-emerald-300 block">
-                  100%
-                </span>
-                <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
-                  PDF Parsed Specs
-                </span>
-              </div>
+          {/* Restrained KPI Stat Counter Pills */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 shrink-0">
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
+              <span className="text-lg sm:text-xl font-mono font-bold text-slate-900 dark:text-white block">
+                {pagination.totalCount || stats?.totalActive || 0}
+              </span>
+              <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
+                Active Bids
+              </span>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
+              <span className="text-lg sm:text-xl font-mono font-bold text-amber-700 dark:text-amber-400 block">
+                {stats?.closingSoon || 0}
+              </span>
+              <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
+                Closing &lt; 48h
+              </span>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center col-span-2 sm:col-span-1 min-w-[100px]">
+              <span className="text-lg sm:text-xl font-mono font-bold text-dalBlue dark:text-blue-300 block">
+                Official
+              </span>
+              <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
+                GeM Portal Feed
+              </span>
             </div>
           </div>
         </div>
@@ -477,27 +475,27 @@ export default function GeMTenders() {
                     </div>
                   </div>
 
-                  {/* Actions Bar */}
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  {/* Actions Bar: View Specs dominant, AI and PDF secondary */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <button
                       onClick={() => setSelectedBid(item)}
-                      className="flex-1 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center"
+                      className="flex-1 py-1.5 px-3 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center shadow-xs"
                     >
                       View Specs
                     </button>
                     <button
                       onClick={() => navigate(`/services?tenderId=${encodeURIComponent(item.sourceTenderId)}`)}
-                      className="inline-flex items-center gap-1 py-1.5 px-2.5 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-dalBlue dark:text-blue-300 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                      title="Analyze with AI Agent"
+                      className="inline-flex items-center gap-1 py-1.5 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                      title="Analyze with AI Estimator"
                     >
-                      <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      <Sparkles className="w-3 h-3 text-dalBlue dark:text-blue-400" />
                       <span>AI Dossier</span>
                     </button>
                     <a
                       href={docUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs"
+                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
                       title="Open official GeM Bid PDF"
                     >
                       <Download className="w-3 h-3" />

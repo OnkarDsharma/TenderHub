@@ -4,7 +4,7 @@
  * Features structured dropdown filters (Districts, Categories, Authorities, Divisions),
  * prominent interactive focus and selection states, and live notice analytics.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -24,7 +24,6 @@ import {
   Building2,
   Calendar,
   X,
-  Eye, 
   Sparkles,
   Briefcase,
   FileCheck,
@@ -804,27 +803,27 @@ export default function Tenders() {
           <main className="lg:col-span-3 space-y-4">
             
             {/* Top Tab Bar: Latest vs Archived Notices + Sorting */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 sm:p-2.5 rounded-2xl shadow-xs">
-              {/* Menu Tabs with High-Contrast Active States */}
-              <div className="grid grid-cols-3 sm:flex items-center gap-1 sm:gap-1.5 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200/60 dark:border-slate-800 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-2 sm:p-2.5 rounded-lg shadow-xs">
+              {/* Menu Tabs with Clean Active States */}
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-md border border-slate-200/80 dark:border-slate-800 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => {
                     setStatus('active');
                     setCurrentPage(1);
                   }}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue ${
                     status === 'active'
-                      ? 'bg-dalBlue text-white shadow-sm font-bold border border-dalBlue dark:bg-blue-600 dark:border-blue-500 ring-2 ring-dalBlue/20 dark:ring-blue-400/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-dalBlue dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 font-medium'
+                      ? 'bg-white dark:bg-slate-800 text-dalBlue dark:text-white font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                 >
-                  <Clock className={`w-3.5 h-3.5 shrink-0 ${status === 'active' ? 'text-white' : 'text-dalBlue dark:text-blue-400'}`} />
-                  <span className="truncate">Latest Notices</span>
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Active Notices</span>
                   <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
                     status === 'active' 
-                      ? 'bg-white/20 text-white' 
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      ? 'bg-blue-50 dark:bg-blue-950/60 text-dalBlue dark:text-blue-300' 
+                      : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}>
                     {activeCount}
                   </span>
@@ -836,19 +835,19 @@ export default function Tenders() {
                     setStatus('archived');
                     setCurrentPage(1);
                   }}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue ${
                     status === 'archived'
-                      ? 'bg-amber-700 text-white dark:bg-amber-600 shadow-sm font-bold border border-amber-700 dark:border-amber-500 ring-2 ring-amber-600/20'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 font-medium'
+                      ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                   title="Tenders whose download closed or awaiting bid opening"
                 >
-                  <Archive className={`w-3.5 h-3.5 shrink-0 ${status === 'archived' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                  <Archive className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Archived</span>
                   <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
                     status === 'archived' 
-                      ? 'bg-white/20 text-white' 
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' 
+                      : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}>
                     {archivedCount}
                   </span>
@@ -860,19 +859,19 @@ export default function Tenders() {
                     setStatus('expired');
                     setCurrentPage(1);
                   }}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue ${
                     status === 'expired'
-                      ? 'bg-slate-800 text-white dark:bg-slate-700 shadow-sm font-bold border border-slate-800 dark:border-slate-600 ring-2 ring-slate-800/20 dark:ring-slate-500/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 font-medium'
+                      ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                   title="Tenders whose bid submission deadline has elapsed"
                 >
-                  <CalendarX className={`w-3.5 h-3.5 shrink-0 ${status === 'expired' ? 'text-white' : 'text-slate-500'}`} />
+                  <CalendarX className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Expired</span>
                   <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
                     status === 'expired' 
-                      ? 'bg-white/20 text-white' 
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' 
+                      : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}>
                     {expiredCount}
                   </span>
@@ -1041,7 +1040,7 @@ export default function Tenders() {
                                   <span>Viewing 15 of {totalCount} Active Notices</span>
                                 </div>
                                 <h3 className="text-base sm:text-lg font-display font-bold">
-                                  {isAuthenticated ? 'Upgrade to TenderHub Pro (₹399/mo)' : 'Unlock All Tender Notices & Technical Details'}
+                                  {isAuthenticated ? 'Upgrade to TenderHub Pro' : 'Unlock All Tender Notices & Technical Details'}
                                 </h3>
                                 <p className="text-xs text-blue-100/80 mt-1 max-w-xl leading-relaxed">
                                   {isAuthenticated 
@@ -1056,9 +1055,9 @@ export default function Tenders() {
                                 <Button
                                   type="button"
                                   onClick={() => navigate('/pricing')}
-                                  className="w-full sm:w-auto bg-chinarRed hover:bg-chinarRed/90 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg cursor-pointer"
+                                  className="w-full sm:w-auto bg-chinarRed hover:bg-chinarRed/90 text-white font-semibold text-xs py-2 px-5 rounded-lg shadow-sm cursor-pointer"
                                 >
-                                  Upgrade to Pro (₹399)
+                                  View Pro Plans
                                 </Button>
                               ) : (
                                 <Button

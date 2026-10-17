@@ -116,7 +116,7 @@ export default function TenderDetails() {
           const proxyUrl = `${api.defaults.baseURL}/tenders/${tenderId}/zip`;
           const res = await fetch(proxyUrl);
           if (res.ok) response = res;
-        } catch (e) {
+        } catch {
           // Fallback to direct fetch
         }
       }
@@ -374,7 +374,6 @@ export default function TenderDetails() {
   const genuineCovers = (tender.coversInfo || []).filter(cover => {
     if (!cover) return false;
     const type = String(cover.coverType || '').trim();
-    const docType = String(cover.documentType || '').trim();
     const desc = String(cover.description || '').trim();
     // Exclude dates and navbar
     if (/\d{1,2}-[a-z]{3}-\d{4}/i.test(type) || /\d{1,2}-[a-z]{3}-\d{4}/i.test(desc)) return false;
@@ -447,37 +446,39 @@ export default function TenderDetails() {
               <div className="flex flex-col sm:flex-row md:flex-col gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
                 <Button 
                   onClick={() => toggleBookmark(tender)}
-                  variant={bookmarked ? "outline" : "default"}
-                  className={`w-full text-xs font-bold py-2 sm:py-2.5 ${
+                  variant={bookmarked ? "outline" : "primary"}
+                  className={`w-full text-xs font-semibold py-2 sm:py-2.5 ${
                     bookmarked 
-                      ? 'border-red-200 text-chinarRed hover:bg-red-50 dark:hover:bg-red-950/40' 
-                      : 'bg-dalBlue hover:bg-dalBlue-700 text-white'
+                      ? 'border-rose-200 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40' 
+                      : ''
                   }`}
                 >
-                  <Heart className={`w-4 h-4 mr-1.5 ${bookmarked ? 'fill-current text-chinarRed' : ''}`} />
-                  {bookmarked ? 'Saved' : 'Save Tender'}
+                  <Heart className={`w-3.5 h-3.5 mr-1.5 ${bookmarked ? 'fill-current text-rose-600' : ''}`} />
+                  {bookmarked ? 'Saved in Watchlist' : 'Save Tender'}
                 </Button>
 
                 <Button 
                   onClick={() => navigate(`/services/${tender._id || tender.sourceTenderId}`)}
-                  className="w-full text-xs font-bold py-2 sm:py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xs"
+                  variant="outline"
+                  className="w-full text-xs font-semibold py-2 sm:py-2.5 border-blue-200 dark:border-blue-800 text-dalBlue dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                 >
-                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5 text-dalBlue dark:text-blue-400" />
                   Contractor AI Dossier
                 </Button>
 
                 <Button 
                   onClick={() => navigate(`/check-score/${tender._id || tender.sourceTenderId}`)}
-                  className="w-full text-xs font-bold py-2 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs"
+                  variant="outline"
+                  className="w-full text-xs font-semibold py-2 sm:py-2.5 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750"
                 >
-                  <Calculator className="w-4 h-4 mr-1.5" />
+                  <Calculator className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
                   Check Win Score
                 </Button>
                 
                 <Button 
                   onClick={handleOpenPortalModal}
                   variant="outline" 
-                  className="w-full gap-1.5 text-xs font-semibold py-2 sm:py-2.5"
+                  className="w-full gap-1.5 text-xs font-semibold py-2 sm:py-2.5 text-slate-600 dark:text-slate-300"
                 >
                   Original Portal <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 </Button>
@@ -488,10 +489,10 @@ export default function TenderDetails() {
 
         {/* Multi-Work Tenders Alert & Navigation */}
         {tender.relatedTenders && tender.relatedTenders.length > 0 && (
-          <div className="bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-amber-50/80 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border border-amber-200 dark:border-amber-800/70 rounded-2xl p-4 sm:p-5 shadow-xs mb-6">
+          <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl p-4 sm:p-5 shadow-xs mb-6">
             <div className="flex items-start gap-3 sm:gap-3.5">
-              <div className="p-2.5 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded-xl shrink-0 mt-0.5 shadow-xs">
-                <Layers className="w-5 h-5" />
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded-lg shrink-0 mt-0.5 shadow-xs">
+                <Layers className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">

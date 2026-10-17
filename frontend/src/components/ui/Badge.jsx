@@ -5,16 +5,17 @@
 import { cn } from '@/utils/cn';
 
 export function Badge({ className, variant = 'default', children, ...props }) {
-  const baseStyles = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold transition-colors";
+  const baseStyles = "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors";
   
   const variants = {
-    default: "bg-dalBlue text-white shadow-xs",
-    secondary: "bg-paper dark:bg-slate-800 border border-border dark:border-slate-700 text-charcoal dark:text-slate-200",
-    outline: "border border-dalBlue/30 dark:border-blue-500/30 text-dalBlue dark:text-blue-300",
-    success: "bg-successGreen/10 dark:bg-successGreen/20 text-successGreen dark:text-emerald-400 border border-successGreen/20 dark:border-emerald-500/30",
-    warning: "bg-warningGold/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-warningGold/20 dark:border-amber-500/30",
-    destructive: "bg-chinarRed/10 dark:bg-red-500/20 text-chinarRed dark:text-red-400 border border-chinarRed/20 dark:border-red-500/30",
-    pro: "bg-[#ECEEF2] dark:bg-slate-800 text-[#1E293B] dark:text-slate-100 border border-[#D5D8DF] dark:border-slate-700 shadow-2xs uppercase tracking-wider font-extrabold",
+    default: "bg-dalBlue/10 dark:bg-blue-500/20 text-dalBlue dark:text-blue-300 border border-dalBlue/20 dark:border-blue-500/30",
+    secondary: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700",
+    outline: "border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300",
+    success: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
+    warning: "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
+    destructive: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
+    pro: "bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold tracking-tight uppercase text-[10px]",
+    neutral: "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-[10px]",
   };
 
   return (

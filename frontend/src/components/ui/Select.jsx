@@ -31,12 +31,11 @@ export function SelectTrigger({ className, children, value, onValueChange }) {
         value={value || ''}
         onChange={(e) => onValueChange?.(e.target.value)}
         className={cn(
-          "flex h-9 sm:h-10 w-full items-center justify-between rounded-xl border px-3 pr-8 py-1.5 text-xs sm:text-sm appearance-none cursor-pointer transition-all duration-150",
+          "flex h-9 sm:h-10 w-full items-center justify-between rounded-lg border px-3 pr-8 py-1.5 text-xs sm:text-sm appearance-none cursor-pointer transition-all duration-150",
           isSelected
-            ? "border-dalBlue dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 font-semibold shadow-xs ring-1 ring-dalBlue/20 dark:ring-blue-400/30"
-            : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-normal",
-          "hover:border-dalBlue dark:hover:border-blue-400 hover:shadow-xs",
-          "focus:outline-none focus:border-dalBlue dark:focus:border-blue-400 focus:ring-2 focus:ring-dalBlue/30 dark:focus:ring-blue-400/40",
+            ? "border-dalBlue dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/30 text-dalBlue dark:text-blue-200 font-semibold shadow-2xs"
+            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-normal hover:border-slate-300 dark:hover:border-slate-600",
+          "focus:outline-none focus:border-dalBlue dark:focus:border-blue-400 focus:ring-1 focus:ring-dalBlue dark:focus:ring-blue-400",
           className
         )}
       >
@@ -47,7 +46,7 @@ export function SelectTrigger({ className, children, value, onValueChange }) {
           "absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors duration-150",
           isSelected
             ? "text-dalBlue dark:text-blue-300"
-            : "text-slate-400 dark:text-slate-500 group-hover:text-dalBlue dark:group-hover:text-blue-400"
+            : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"
         )}
       />
     </div>

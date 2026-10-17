@@ -1,6 +1,7 @@
 /**
  * @file src/pages/Pricing.jsx
- * @description Modern, conversion-focused pricing plans with explicit WhatsApp number confirmation and live Razorpay checkout.
+ * @description Transparent B2B pricing plans for TenderHub J&K.
+ * Offers segmented tabs for Tender Discovery & Alerts (Pro Plans) and AI Quantity Surveyor (Copilot Plans).
  */
 import { useState, useEffect } from 'react';
 import { 
@@ -8,12 +9,14 @@ import {
   Shield, 
   ArrowRight, 
   MessageSquare, 
-  Sparkles, 
   Loader2, 
   CheckCircle2, 
   AlertCircle,
   X,
-  PhoneCall
+  PhoneCall,
+  HelpCircle,
+  Layers,
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -26,6 +29,7 @@ export default function Pricing() {
   const { isAuthenticated, user, checkAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState('tenders'); // 'tenders' | 'ai'
   const [subscription, setSubscription] = useState(null);
   const [loadingPlanId, setLoadingPlanId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -68,7 +72,6 @@ export default function Pricing() {
     });
   };
 
-  // Step 1: When user clicks Upgrade on a plan card
   const handleInitiateUpgrade = (plan) => {
     if (!isAuthenticated) {
       navigate('/login?redirect=/pricing');
@@ -81,7 +84,6 @@ export default function Pricing() {
     setShowPhoneModal(true);
   };
 
-  // Step 2: User confirms WhatsApp number and proceeds to Razorpay
   const handleProceedToPayment = async (e) => {
     e?.preventDefault();
     const cleanPhone = whatsappPhone.trim().replace(/\D/g, '');
@@ -96,19 +98,16 @@ export default function Pricing() {
     setLoadingPlanId(selectedPlan.id);
 
     try {
-      // 1. Create order on backend
       const orderData = await billingApi.createOrder(selectedPlan.id);
 
-      // 2. Load Razorpay SDK
       const isLoaded = await loadRazorpayScript();
       if (!isLoaded) {
         throw new Error('Failed to load Razorpay payment gateway. Please check your internet connection.');
       }
 
-      // 3. Configure Razorpay modal options
       const options = {
         key: orderData.keyId,
-        amount: orderData.amount, // in paise
+        amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'TenderHub J&K',
         description: `${selectedPlan.name} Subscription`,
@@ -119,7 +118,7 @@ export default function Pricing() {
           contact: cleanPhone,
         },
         theme: {
-          color: '#1E3A8A', // Dal Blue
+          color: '#102D49',
         },
         modal: {
           ondismiss: () => {
@@ -129,7 +128,6 @@ export default function Pricing() {
         handler: async (response) => {
           try {
             setLoadingPlanId(selectedPlan.id);
-            // 4. Verify payment cryptographically and activate Pro only upon verified payment
             const verifyRes = await billingApi.verifyPayment({
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
@@ -139,7 +137,7 @@ export default function Pricing() {
             });
 
             if (verifyRes.success) {
-              setSuccessMessage(`🎉 Payment verified! ${selectedPlan.name} activated successfully. Receipt and alert onboarding sent to WhatsApp ${cleanPhone}.`);
+              setSuccessMessage(`Payment verified. ${selectedPlan.name} is now active. Receipt and onboarding sent to WhatsApp ${cleanPhone}.`);
               const updatedSub = await billingApi.getStatus();
               setSubscription(updatedSub);
               checkAuth();
@@ -164,7 +162,7 @@ export default function Pricing() {
     }
   };
 
-  const PLANS = [
+  const PRO_PLANS = [
     {
       id: 'free',
       name: 'Free Starter',
@@ -187,15 +185,15 @@ export default function Pricing() {
       id: 'pro_monthly',
       name: 'Pro Monthly',
       price: '₹10',
-      period: '/ month (Test Rate: ₹10)',
-      ratePerDay: 'Only ₹10 for testing',
+      period: '/ month',
+      ratePerDay: 'Introductory promotional access',
       badge: 'Most Popular',
-      desc: 'Everything an active contractor needs to win tenders in their district.',
+      desc: 'Full access for active contractors and suppliers to monitor all district tenders.',
       features: [
         'Full access to ALL tenders & pagination (no view limits)',
-        'Personalized WhatsApp alerts for your Depts & Districts',
-        'Instant BOQ Excel & Price Schedule 1-click downloads',
-        'Save UNLIMITED tenders & document bookmarks',
+        'Personalized WhatsApp alerts for Depts & Districts',
+        'Instant BOQ Excel & Price Schedule downloads',
+        'Save unlimited tenders & document bookmarks',
         'Corrigendum & bid extension notifications',
         'Priority technical support desk',
       ],
@@ -209,12 +207,12 @@ export default function Pricing() {
       period: '/ 3 months',
       ratePerDay: '~₹11 / day (Save 17%)',
       badge: 'Working Season',
-      desc: 'Tailored for peak bidding seasons from spring through autumn.',
+      desc: 'Designed for active peak bidding seasons from spring through autumn.',
       features: [
         'All Pro Monthly features included',
         'Save 17% compared to monthly renewal',
-        'High-priority WhatsApp notification queue',
-        'Dedicated contractor relationship liaison',
+        'High-priority WhatsApp notification delivery',
+        'Dedicated contractor support liaison',
       ],
       isPopular: false,
       cta: 'Upgrade to Pro Quarterly',
@@ -224,13 +222,13 @@ export default function Pricing() {
       name: 'Pro Annual',
       price: '₹2,999',
       period: '/ year',
-      ratePerDay: 'Only ~₹8 / day (Save 37%)',
+      ratePerDay: '~₹8 / day (Save 37%)',
       badge: 'Best Value',
-      desc: 'Complete peace of mind for established Class A/B engineering firms.',
+      desc: 'Annual coverage for established Class A and Class B engineering firms.',
       features: [
         'All Pro features for a full 365 days',
         'Effective rate of only ₹249/month',
-        'Direct phone & WhatsApp priority engineering hotline',
+        'Direct priority engineering hotline',
         'Early access to newly automated department scrapers',
       ],
       isPopular: false,
@@ -238,80 +236,173 @@ export default function Pricing() {
     },
   ];
 
+  const AI_PLANS = [
+    {
+      id: 'ai_pay_per_tender',
+      name: 'Pay-Per-Tender Dossier',
+      price: '₹299',
+      period: 'per tender',
+      ratePerDay: 'Valid for 30 days',
+      badge: 'On-Demand',
+      desc: 'Full comprehensive AI analysis and BOQ takeoff for a single critical tender.',
+      features: [
+        '1 Full Comprehensive AI Tender Dossier',
+        'Instant BOQ Raw Material Extractor & Rates',
+        'Turnover & Solvency Capacity Gap Check',
+        'Mandatory Document & Affidavit Checklist',
+        'Post-Award Milestone & Penalty Alert Sheet',
+        '48-Hour Interactive Tender Copilot (20 queries)',
+      ],
+      isPopular: false,
+      cta: 'Analyze Single Tender',
+    },
+    {
+      id: 'ai_copilot_starter',
+      name: 'Contractor Copilot Starter',
+      price: '₹999',
+      period: '/ month',
+      ratePerDay: '10 Dossiers / month',
+      badge: 'Most Popular',
+      desc: 'Continuous AI quantity surveying and bid advisory for active local contractors.',
+      features: [
+        '10 Full AI Tender Dossiers every month',
+        'Personalized Contractor Profile Memory',
+        'Turnover, Machinery & Solvency Gap Analysis',
+        'Complete Raw Material BOQ Schedule & Rates',
+        '100 Interactive Copilot AI Queries',
+        'Email & WhatsApp Summary Alerts',
+      ],
+      isPopular: true,
+      cta: 'Activate Copilot Starter',
+    },
+    {
+      id: 'ai_bidding_pro',
+      name: 'Bidding Pro & Execution Suite',
+      price: '₹2,499',
+      period: '/ month',
+      ratePerDay: '35 Dossiers / month',
+      badge: 'Enterprise Value',
+      desc: 'Advanced intelligence suite for engineering firms executing multiple public works.',
+      features: [
+        '35 Full AI Tender Dossiers per month',
+        'Advanced Multi-Agent Engineering Intelligence',
+        'Auto-generated Excel BOQ Line Items & Rates',
+        'Subcontractor Work Packaging & Safety Specs',
+        '350 Interactive Copilot AI Queries',
+        'Direct WhatsApp Priority Desk Support',
+      ],
+      isPopular: false,
+      cta: 'Upgrade to Bidding Pro',
+    },
+  ];
+
   const hasActiveSub = subscription?.hasActiveSubscription;
+  const currentPlanList = activeTab === 'tenders' ? PRO_PLANS : AI_PLANS;
 
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="min-h-screen bg-paper dark:bg-slate-900 py-10 sm:py-14 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-dalBlue dark:text-blue-300 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" /> Transparent Contractor Pricing
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-dalBlue dark:text-blue-300 text-xs font-semibold uppercase tracking-wider">
+            <Shield className="w-3.5 h-3.5" /> Transparent Procurement Pricing
           </div>
-          <h1 className="text-3xl sm:text-5xl font-display font-black text-dalBlue dark:text-white tracking-tight">
-            Win More J&K Tenders with <span className="text-chinarRed">Pro Intelligence</span>
+          <h1 className="text-2xl sm:text-4xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+            Plans Built for Government Contractors
           </h1>
-          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-            Never miss an important contract in your district. Instant WhatsApp alerts, unblurred access across all departments, and 1-click BOQ downloads.
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+            Choose between full portal access with real-time WhatsApp alerts, or AI quantity surveying dossiers to evaluate technical specifications and BOQ materials.
           </p>
+
+          {/* Segmented Tab Control */}
+          <div className="pt-4 flex justify-center">
+            <div className="inline-flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setActiveTab('tenders')}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'tenders'
+                    ? 'bg-white dark:bg-slate-900 text-dalBlue dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>Tender Access &amp; Alerts</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('ai')}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'ai'
+                    ? 'bg-white dark:bg-slate-900 text-dalBlue dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Bot className="w-4 h-4" />
+                <span>AI Quantity Surveyor &amp; Copilot</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Alerts / Feedback */}
+        {/* Feedback Messages */}
         {successMessage && (
           <div className="mt-8 max-w-2xl mx-auto p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-            <div className="text-sm font-medium">{successMessage}</div>
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="text-xs sm:text-sm font-medium">{successMessage}</div>
           </div>
         )}
 
         {errorMessage && (
           <div className="mt-8 max-w-2xl mx-auto p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-center gap-3">
-            <AlertCircle className="w-6 h-6 text-rose-600 shrink-0" />
-            <div className="text-sm font-medium">{errorMessage}</div>
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div className="text-xs sm:text-sm font-medium">{errorMessage}</div>
           </div>
         )}
 
         {/* Pricing Cards Grid */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-          {PLANS.map((plan) => {
+        <div className={`mt-10 grid grid-cols-1 ${activeTab === 'tenders' ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3 max-w-5xl mx-auto'} gap-6 items-stretch`}>
+          {currentPlanList.map((plan) => {
             const isCurrentActivePlan = hasActiveSub && subscription?.planId === plan.id;
             const isLoading = loadingPlanId === plan.id;
 
             return (
               <div 
                 key={plan.id}
-                className={`relative flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 ${
+                className={`relative flex flex-col justify-between rounded-xl p-6 transition-all duration-200 ${
                   plan.isPopular 
-                    ? 'bg-white dark:bg-slate-800 ring-2 ring-dalBlue dark:ring-blue-500 shadow-xl shadow-blue-500/10 scale-102 z-10' 
-                    : 'bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'
+                    ? 'bg-white dark:bg-slate-800 ring-2 ring-dalBlue dark:ring-blue-500 shadow-md z-10' 
+                    : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs hover:border-slate-300'
                 }`}
               >
-                {/* Popular / Best Value Badge */}
+                {/* Status / Recommended Badge */}
                 {plan.badge && (
-                  <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-xs ${
-                    plan.isPopular 
-                      ? 'bg-chinarRed text-white' 
-                      : 'bg-slate-700 text-white dark:bg-slate-600'
-                  }`}>
-                    {plan.badge}
+                  <div className="absolute -top-3 left-6">
+                    <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wide ${
+                      plan.isPopular 
+                        ? 'bg-chinarRed text-white shadow-xs' 
+                        : 'bg-slate-700 text-white dark:bg-slate-600'
+                    }`}>
+                      {plan.badge}
+                    </span>
                   </div>
                 )}
 
                 <div>
-                  <div className="text-lg font-bold text-slate-900 dark:text-white mt-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white mt-1">
                     {plan.name}
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px]">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">
                     {plan.desc}
                   </p>
 
                   {/* Price */}
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl sm:text-4xl font-black text-dalBlue dark:text-white">
+                    <span className="text-3xl font-bold text-dalBlue dark:text-white">
                       {plan.price}
                     </span>
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       {plan.period}
                     </span>
                   </div>
@@ -320,20 +411,20 @@ export default function Pricing() {
                   </div>
 
                   {/* Feature Checklist */}
-                  <div className="mt-6 border-t border-slate-100 dark:border-slate-700 pt-5 space-y-3">
+                  <div className="mt-5 border-t border-slate-100 dark:border-slate-700/80 pt-4 space-y-2.5">
                     {plan.features.map((perk, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+                      <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
                         <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{perk}</span>
+                        <span className="leading-snug">{perk}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Call to Action Button */}
-                <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
                   {isCurrentActivePlan ? (
-                    <div className="w-full py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-center font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800">
+                    <div className="w-full py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-center font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800">
                       <CheckCircle2 className="w-4 h-4" /> Active Plan
                     </div>
                   ) : plan.disabled ? (
@@ -347,14 +438,14 @@ export default function Pricing() {
                   ) : (
                     <Button
                       variant={plan.isPopular ? 'primary' : 'outline'}
-                      className="w-full text-xs font-bold py-2.5 shadow-sm"
+                      className="w-full text-xs font-semibold"
                       onClick={() => handleInitiateUpgrade(plan)}
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                          Opening Payment...
+                          Processing...
                         </>
                       ) : (
                         <>
@@ -370,45 +461,72 @@ export default function Pricing() {
           })}
         </div>
 
-        {/* Trust & Guarantee Banner */}
-        <div className="mt-16 bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Shield className="w-6 h-6" />
+        {/* Quota & Subscription FAQ strip */}
+        <div className="mt-14 max-w-4xl mx-auto rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 sm:p-7">
+          <div className="flex items-center gap-2 mb-4">
+            <HelpCircle className="w-5 h-5 text-dalBlue dark:text-blue-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              How Quotas &amp; Plans Work
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs text-slate-600 dark:text-slate-300">
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-1">What happens when view limits are reached?</h4>
+              <p className="leading-relaxed">
+                Free Starter accounts can preview the first 15 tender notices per day. Upgrading to any Pro plan immediately removes all pagination and notice viewing caps.
+              </p>
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Zero Risk • Instant Online Activation
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Pay securely via UPI (Google Pay, PhonePe, Paytm), Netbanking, or Debit Cards. Cancel anytime.
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-1">How do AI Dossier credits renew?</h4>
+              <p className="leading-relaxed">
+                Copilot Starter and Bidding Pro plans grant fresh dossier credits every monthly billing cycle. You can also analyze single high-stakes tenders on-demand using the Pay-Per-Tender option at any time.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Are payments secure?</h4>
+              <p className="leading-relaxed">
+                All transactions are processed securely through Razorpay supporting UPI (Google Pay, PhonePe, Paytm), Netbanking, and Debit/Credit Cards. Receipts are automatically sent to your verified mobile number.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Can I cancel anytime?</h4>
+              <p className="leading-relaxed">
+                Yes. You retain access until the end of your billing cycle. You can manage or renew your plan at any time without unexpected auto-charges.
               </p>
             </div>
           </div>
-          <div className="shrink-0 flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              className="text-xs font-semibold"
-              onClick={() => navigate('/contact')}
-            >
-              Need Enterprise Help?
-            </Button>
+        </div>
+
+        {/* Trust & Assistance */}
+        <div className="mt-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-5 border border-slate-200 dark:border-slate-700 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span className="text-xs text-slate-700 dark:text-slate-300">
+              Need assistance selecting a plan for multiple firm divisions or Joint Ventures?
+            </span>
           </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate('/contact')}
+          >
+            Contact Procurement Desk
+          </Button>
         </div>
 
       </div>
 
       {/* Explicit WhatsApp Confirmation Modal */}
       {showPhoneModal && selectedPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 max-w-md w-full shadow-xl space-y-4">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Confirm WhatsApp Alerts Number
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -419,15 +537,16 @@ export default function Pricing() {
               <button 
                 type="button" 
                 onClick={() => setShowPhoneModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleProceedToPayment} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <PhoneCall className="w-3.5 h-3.5 text-emerald-600" /> Enter WhatsApp Mobile Number
                 </label>
                 <div className="relative">
@@ -442,7 +561,7 @@ export default function Pricing() {
                       setWhatsappPhone(e.target.value);
                       if (phoneError) setPhoneError('');
                     }}
-                    className="pl-11 text-xs font-mono font-bold"
+                    className="pl-11 text-xs font-mono font-semibold"
                     autoFocus
                   />
                 </div>
@@ -450,7 +569,7 @@ export default function Pricing() {
                   <p className="text-[11px] text-rose-500 mt-1 font-medium">{phoneError}</p>
                 )}
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  We will send your payment receipt and instant tender alerts matching your departments to this WhatsApp number.
+                  Payment receipt and tender notifications matching your department and district criteria will be delivered to this number.
                 </p>
               </div>
 
@@ -458,15 +577,16 @@ export default function Pricing() {
                 <Button 
                   type="button" 
                   variant="outline" 
+                  size="sm"
                   onClick={() => setShowPhoneModal(false)}
-                  className="text-xs"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   variant="primary"
-                  className="text-xs font-bold bg-dalBlue hover:bg-dalBlue-700 text-white shadow-xs"
+                  size="sm"
+                  className="font-semibold"
                 >
                   Proceed to Pay {selectedPlan.price}
                 </Button>

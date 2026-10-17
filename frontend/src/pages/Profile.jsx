@@ -16,7 +16,6 @@ import {
   Check,
   X,
   Save,
-  RotateCcw,
   Database,
   MessageSquare,
   Calculator
@@ -72,6 +71,7 @@ const getInitials = (name) => {
 };
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('saved');
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   

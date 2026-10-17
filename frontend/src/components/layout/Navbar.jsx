@@ -21,65 +21,92 @@ export function Navbar() {
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   const { user, isAuthenticated, isPro, logout } = useAuthStore();
 
-  const navLinks = [
-    { label: 'Home', path: '/' },
+  const primaryNavLinks = [
     { label: 'Browse Tenders', path: '/tenders' },
-    { label: 'GeM Tenders', path: '/gem-tenders' },
-    { label: 'Services', path: '/services', isAi: true },
+    { label: 'GeM Bids', path: '/gem-tenders' },
+    { label: 'AI Services', path: '/services', isAi: true },
     { label: 'Check Score', path: '/check-score' },
     { label: 'Pricing', path: '/pricing' },
+  ];
+
+  const secondaryNavLinks = [
     { label: 'About', path: '/about' },
     { label: 'Contact', path: '/contact' },
   ];
 
+  const allNavLinks = [
+    { label: 'Home', path: '/' },
+    ...primaryNavLinks,
+    ...secondaryNavLinks,
+  ];
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 h-15 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Left Side: Brand Identity & Desktop Navigation grouped together */}
-        <div className="flex items-center gap-4 lg:gap-6 xl:gap-8 min-w-0">
+        <div className="flex items-center gap-6 xl:gap-8 min-w-0">
           {/* Institutional Brand Identity */}
-          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group focus:outline-none">
-            <div className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl bg-dalBlue text-white flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform duration-150">
-              <Landmark className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 group focus:outline-none">
+            <div className="w-8 h-8 rounded-lg bg-dalBlue text-white flex items-center justify-center shadow-xs shrink-0 group-hover:bg-dalBlue/90 transition-colors">
+              <Landmark className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg font-display font-black tracking-tight text-dalBlue dark:text-white leading-none">
+                <span className="text-base sm:text-lg font-display font-bold tracking-tight text-dalBlue dark:text-white leading-none">
                   Tender<span className="text-chinarRed">Hub</span>
                 </span>
                 {(import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175')) && (
-                  <span className="text-[9px] font-bold tracking-tight bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 px-1.5 py-0.2 rounded-full border border-purple-200 dark:border-purple-800 select-none">
+                  <span className="text-[9px] font-mono font-bold tracking-tight bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 select-none">
                     TEST
                   </span>
                 )}
               </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-normal mt-0.5 hidden sm:block">
-                Public Works &amp; Procurement
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-normal hidden sm:block">
+                Procurement Intelligence
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1">
-            {navLinks.map((link) => {
+          <nav className="hidden lg:flex items-center gap-1">
+            {primaryNavLinks.map((link) => {
+              const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue dark:focus-visible:ring-blue-400 ${
+                    isActive
+                      ? 'bg-slate-100 dark:bg-slate-800 text-dalBlue dark:text-white font-bold'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span>{link.label}</span>
+                  {link.isAi && (
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-blue-100 dark:bg-blue-950/80 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      AI
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+
+            {/* Secondary Destinations: About & Contact */}
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
+            {secondaryNavLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-dalBlue/10 dark:bg-blue-500/20 text-dalBlue dark:text-blue-200 font-bold border border-dalBlue/20 dark:border-blue-400/30 shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-dalBlue dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/80 border border-transparent'
+                      ? 'text-dalBlue dark:text-white font-semibold'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  <span>{link.label}</span>
-                  {link.isAi && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black tracking-widest bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xs">
-                      AI
-                    </span>
-                  )}
+                  {link.label}
                 </Link>
               );
             })}
@@ -92,25 +119,25 @@ export function Navbar() {
           {/* Light/Dark Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-750 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-dalBlue dark:hover:text-white transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed"
+            className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
             title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             aria-label="Toggle theme"
           >
             {isDark ? (
-              <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+              <Sun className="w-4 h-4 text-amber-400" />
             ) : (
-              <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700" />
+              <Moon className="w-4 h-4 text-slate-600" />
             )}
           </button>
 
           {/* Saved Tenders Bookmark Indicator */}
           <Link
             to="/profile"
-            className="relative w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full border border-slate-200 dark:border-slate-700/80 hover:border-red-200 dark:hover:border-red-900/60 bg-slate-50/80 dark:bg-slate-800/80 hover:bg-red-50/60 dark:hover:bg-red-950/30 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-chinarRed dark:hover:text-red-400 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed"
+            className="relative w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-chinarRed dark:hover:text-red-400 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
             title="Saved Tenders"
             aria-label="Saved Tenders"
           >
-            <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Heart className="w-4 h-4" />
             {savedTenders.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-chinarRed text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
                 {savedTenders.length}
@@ -119,7 +146,7 @@ export function Navbar() {
           </Link>
 
           {/* Subtle Visual Divider */}
-          <div className="h-4.5 w-px bg-slate-200 dark:bg-slate-700/80 mx-0.5 hidden sm:block" />
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block" />
 
           {/* User Auth: Small Circular Profile or Sign In Actions */}
           {isAuthenticated ? (
@@ -185,7 +212,7 @@ export function Navbar() {
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-chinarRed cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign In</span>
@@ -196,10 +223,10 @@ export function Navbar() {
           {/* Mobile Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full border border-slate-200 dark:border-slate-700/80 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+            className="lg:hidden w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="w-4 h-4 sm:w-4.5 sm:h-4.5" /> : <Menu className="w-4 h-4 sm:w-4.5 sm:h-4.5" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
 
@@ -212,14 +239,14 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-4 space-y-2 overflow-hidden"
+            className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 space-y-1 overflow-hidden"
           >
-            {navLinks.map((link) => (
+            {allNavLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`min-h-[42px] flex items-center px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                className={`min-h-[40px] flex items-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
                   location.pathname === link.path
                     ? 'bg-dalBlue/10 dark:bg-blue-500/20 text-dalBlue dark:text-blue-300 font-bold border border-dalBlue/20 dark:border-blue-500/30'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80'
