@@ -198,6 +198,13 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
       {/* Bottom Row: Location, Category & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 pt-1">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* State Badge */}
+          {tender.state && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-300 rounded-md text-[10px] sm:text-[11px] font-bold border border-blue-200 dark:border-blue-800 shrink-0">
+              {tender.state}
+            </span>
+          )}
+
           {/* Famous Location */}
           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-lg text-[11px] sm:text-xs font-medium border border-slate-200 dark:border-slate-700">
             <MapPin className="w-3 h-3 text-chinarRed shrink-0" />

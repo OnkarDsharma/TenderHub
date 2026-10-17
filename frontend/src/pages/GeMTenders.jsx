@@ -383,7 +383,7 @@ export default function GeMTenders() {
             <Layers className="w-10 h-10 text-slate-400 mx-auto" />
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No GeM Bids Found</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              No live bids match your selected search criteria for Jammu &amp; Kashmir. Try clearing some filters.
+              No live bids match your selected search criteria for {selectedState || 'this region'}. Try clearing some filters or changing state.
             </p>
             <button
               onClick={handleResetFilters}
@@ -406,11 +406,18 @@ export default function GeMTenders() {
                   <div className="space-y-3">
                     {/* Top Badges */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
-                        <span>GeM Portal</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
+                          <span>GeM Portal</span>
+                        </div>
+                        {item.state && (
+                          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
+                            <span>{item.state}</span>
+                          </div>
+                        )}
                       </div>
                       {isUrgent && (
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold shrink-0">
                           <Clock className="w-3 h-3" />
                           <span>Closing Soon</span>
                         </div>

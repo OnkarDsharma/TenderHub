@@ -16,13 +16,17 @@ const logger = pino({
   transport: { target: 'pino-pretty' }
 });
 
-// Parse command line arguments
+// Parse command line arguments (supports both --flag=value and --flag value)
 const args = process.argv.slice(2);
 const getArg = (flag, defaultValue) => {
+  const eqArg = args.find(a => a.startsWith(`${flag}=`));
+  if (eqArg) {
+    return eqArg.split('=').slice(1).join('=').replace(/^['"]|['"]$/g, '');
+  }
   const index = args.indexOf(flag);
-  return index !== -1 && args[index + 1] ? args[index + 1] : defaultValue;
+  return index !== -1 && args[index + 1] ? args[index + 1].replace(/^['"]|['"]$/g, '') : defaultValue;
 };
-const hasFlag = (flag) => args.includes(flag);
+const hasFlag = (flag) => args.some(a => a === flag || a.startsWith(`${flag}=`));
 
 const maxPages = parseInt(getArg('--pages', '5'), 10);
 const limit = parseInt(getArg('--limit', String(maxPages * 10)), 10);
