@@ -509,9 +509,17 @@ export const triggerAiAnalysis = async (req, res, next) => {
 export const getTenderStats = async (req, res, next) => {
   try {
     const now = new Date();
-    const portalFilter = req.query.portal ? { sourcePortal: req.query.portal } : { sourcePortal: { $ne: 'GEM' } };
+    const { portal, state } = req.query;
+    const portalFilter = portal ? { sourcePortal: portal } : { sourcePortal: { $ne: 'GEM' } };
+
+    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
+    const stateFilter = (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL')
+      ? { state: { $regex: `^${state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
+      : {};
+
     const activeMatch = {
       ...portalFilter,
+      ...stateFilter,
       status: 'ACTIVE',
       isDelisted: { $ne: true },
       closingDate: { $gte: now },
@@ -587,6 +595,7 @@ export const getTenderStats = async (req, res, next) => {
 
     // Send the computed metrics to the frontend stats section
     res.status(200).json({
+      state: state || 'All Northern States',
       activeTendersCount,
       authoritiesCount,
       totalValue,

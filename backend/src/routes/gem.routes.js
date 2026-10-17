@@ -190,18 +190,24 @@ router.get('/tenders/:id', async (req, res, next) => {
 
 /**
  * @route POST /api/v1/gem/sync
- * @desc On-demand trigger to execute GeM J&K crawl
+ * @desc On-demand trigger to execute GeM regional crawl
  */
 router.post('/sync', async (req, res, next) => {
   try {
-    const { limit = 20, maxPages = 2, delay = 1200 } = req.body;
-    // Run crawl in background or return status
-    gemAdapter.fetchList(1, { limit, maxPages, delay })
-      .catch((err) => console.error('[GeM Async Sync Error]', err.message));
+    const { 
+      limit = 20, 
+      maxPages = 2, 
+      delay = 1200, 
+      state = 'JAMMU & KASHMIR' 
+    } = req.body;
+
+    // Run crawl in background with regional state filter
+    gemAdapter.fetchList(1, { limit, maxPages, delay, state })
+      .catch((err) => console.error(`[GeM Async Sync Error - ${state}]`, err.message));
 
     res.status(200).json({
       success: true,
-      message: 'GeM crawl started in background with rate limiting gap.'
+      message: `GeM crawl started in background for ${state} with rate limiting gap.`
     });
   } catch (err) {
     next(err);

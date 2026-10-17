@@ -40,11 +40,14 @@ export const useTender = (id) => {
   });
 };
 
-export const useTenderStats = () => {
+export const useTenderStats = (params = {}) => {
   return useQuery({
-    queryKey: ['tenderStats'],
+    queryKey: ['tenderStats', params],
     queryFn: async () => {
-      const response = await api.get('/tenders/stats');
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v != null && v !== '')
+      );
+      const response = await api.get('/tenders/stats', { params: cleanParams });
       return response.data;
     },
     staleTime: 1000 * 60 * 5,
