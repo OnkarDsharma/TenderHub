@@ -1541,7 +1541,8 @@ export class JKTenderAdapter extends TenderSourceAdapter {
     const folderKey = formatTenderStorageKey(item.sourceTenderId, publishedDate, deptCode);
 
     const docToSave = {
-      sourcePortal: 'JK_TENDERS',
+      sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
+      state: item.state || this.state || 'Jammu & Kashmir',
       sourceTenderId: item.sourceTenderId,
       title: item.title || 'Untitled Tender',
       departmentCode: deptCode,
@@ -1667,7 +1668,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
 
     // Subdocument merge with existing tender to prevent duplicate entries
     const existing = await Tender.findOne({
-      sourcePortal: 'JK_TENDERS',
+      sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
       sourceTenderId: item.sourceTenderId
     }).lean();
 
@@ -1708,7 +1709,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
 
     // 1. Upsert in MongoDB Atlas
     const saved = await Tender.findOneAndUpdate(
-      { sourcePortal: 'JK_TENDERS', sourceTenderId: item.sourceTenderId },
+      { sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS', sourceTenderId: item.sourceTenderId },
       { $set: docToSave },
       { upsert: true, returnDocument: 'after' }
     ).lean();
@@ -1722,7 +1723,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
     if (saved.isMultiTender && saved.baseTenderId) {
       await Tender.updateMany(
         {
-          sourcePortal: 'JK_TENDERS',
+          sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
           $or: [
             { baseTenderId: saved.baseTenderId },
             { tenderReferenceNumber: saved.tenderReferenceNumber }
@@ -1761,7 +1762,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
         { sourceTenderId: saved.sourceTenderId },
         {
           $set: {
-            sourcePortal: 'JK_TENDERS',
+            sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
             sourceTenderId: saved.sourceTenderId,
             tenderReferenceNumber: saved.tenderReferenceNumber || '',
             title: saved.title,

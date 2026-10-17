@@ -185,9 +185,9 @@ export class CaptchaService {
    * Directly solves via Google Gemini Flash Vision (Free tier, ultra-fast, exact uppercase/lowercase preservation)
    */
   async solveWithGemini(base64Body) {
-    let model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-    if (model === 'gemini-3.6-flash' || !model) {
-      model = 'gemini-1.5-flash';
+    let model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    if (model === 'gemini-1.5-flash' || model === 'gemini-3.6-flash' || !model) {
+      model = 'gemini-2.5-flash';
     }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`;
 
