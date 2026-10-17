@@ -27,11 +27,11 @@ import {
   CheckCircle2,
   X,
   IndianRupee,
-  Briefcase
+  Landmark
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
-import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay } from '@/utils/formatters';
+import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
