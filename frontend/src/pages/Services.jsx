@@ -32,6 +32,20 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 
+function renderCopilotText(content) {
+  const parts = String(content || '').split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={index} className="rounded bg-slate-200/70 dark:bg-slate-800 px-1 py-0.5 font-mono text-[0.95em]">{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -875,7 +889,7 @@ export default function Services() {
                             ? 'bg-dalBlue text-white'
                             : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700/60'
                         }`}>
-                          <p className="whitespace-pre-line">{msg.content}</p>
+                          <div className="whitespace-pre-line">{renderCopilotText(msg.content)}</div>
                         </div>
                       </div>
                     ))}
