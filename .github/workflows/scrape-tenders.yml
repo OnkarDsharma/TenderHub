@@ -8,67 +8,126 @@ on:
     - cron: '0 13 * * 1-6'
   workflow_dispatch: # Allows manual 1-click trigger from GitHub Actions tab
 
-jobs:
-  scrape-and-sync:
-    name: Crawl Northern States & GeM Tenders
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      NODE_ENV: production
-      MONGO_URI: ${{ secrets.MONGO_URI }}
-      REDIS_URL: ${{ secrets.REDIS_URL }}
-      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: gemini-2.5-flash
-      SCRAPER_HEADLESS: 'true'
-      JWT_ACCESS_SECRET: 'thub_jwt_access_secret_32_chars_fallback'
-      JWT_REFRESH_SECRET: 'thub_jwt_refresh_secret_32_chars_fallback'
-      ADMIN_SECRET_KEY: 'admin_master_secret_thub_123'
-      ADMIN_EMAIL: 'admin@tenderhub.in'
+env:
+  NODE_ENV: production
+  MONGO_URI: ${{ secrets.MONGO_URI }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GEMINI_MODEL: gemini-2.5-flash
+  SCRAPER_HEADLESS: 'true'
+  JWT_ACCESS_SECRET: 'thub_jwt_access_secret_32_chars_fallback'
+  JWT_REFRESH_SECRET: 'thub_jwt_refresh_secret_32_chars_fallback'
+  ADMIN_SECRET_KEY: 'admin_master_secret_thub_123'
+  ADMIN_EMAIL: 'admin@tenderhub.in'
 
+jobs:
+  crawl-jk:
+    name: 🏛️ Jammu & Kashmir Tenders
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - name: 1. Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 2. Setup Node.js (v20)
+      - name: Setup Node.js (v20)
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
-      - name: 3. Install Dependencies & Playwright Chromium
+      - name: Install Dependencies & Playwright
         run: |
           cd backend
           npm ci --include=dev
           npx playwright install --with-deps chromium
 
-      - name: 4. Ingest Jammu & Kashmir Tenders
-        continue-on-error: true
+      - name: Ingest Jammu & Kashmir Tenders
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Jammu & Kashmir Tenders..."
-          node src/scripts/fetchLatestDailyTenders.js 150
+          node src/scripts/fetchLatestDailyTenders.js 100
 
-      - name: 5. Ingest Punjab Tenders
-        continue-on-error: true
+  crawl-punjab:
+    name: 🌾 Punjab Tenders
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies & Playwright
+        run: |
+          cd backend
+          npm ci --include=dev
+          npx playwright install --with-deps chromium
+
+      - name: Ingest Punjab Tenders
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Punjab Tenders..."
-          node src/scripts/fetchPunjabTenders.js 75
+          node src/scripts/fetchPunjabTenders.js 40
 
-      - name: 6. Ingest Himachal Pradesh Tenders
-        continue-on-error: true
+  crawl-hp:
+    name: 🏔️ Himachal Pradesh Tenders
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies & Playwright
+        run: |
+          cd backend
+          npm ci --include=dev
+          npx playwright install --with-deps chromium
+
+      - name: Ingest Himachal Pradesh Tenders
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Himachal Pradesh Tenders..."
-          node src/scripts/fetchHPTenders.js 75
+          node src/scripts/fetchHPTenders.js 40
 
-      - name: 7. Ingest GeM Multi-State Bids (J&K, HP, Punjab, Ladakh)
-        continue-on-error: true
+  crawl-gem:
+    name: 📦 GeM Multi-State Bids
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies & Playwright
+        run: |
+          cd backend
+          npm ci --include=dev
+          npx playwright install --with-deps chromium
+
+      - name: Ingest GeM Multi-State Bids
         run: |
           cd backend
           echo "📦 Ingesting Latest GeM Bids across Northern States..."
