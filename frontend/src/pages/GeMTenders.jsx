@@ -203,6 +203,14 @@ export default function GeMTenders() {
     setCurrentPage(1);
   };
 
+  const handlePageJump = (event) => {
+    event.preventDefault();
+    const requestedPage = Number(new FormData(event.currentTarget).get('page'));
+    if (!Number.isInteger(requestedPage) || requestedPage < 1) return;
+    setCurrentPage(Math.min(requestedPage, pagination.totalPages));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -506,21 +514,39 @@ export default function GeMTenders() {
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-800 text-xs">
             <span className="text-slate-500">
-              Page <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.currentPage}</span> of{' '}
+              Page <span className="font-bold text-slate-800 dark:text-slate-200">{currentPage}</span> of{' '}
               <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.totalPages}</span> ({pagination.totalCount} total bids)
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
+                title="Previous page"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
+              <form onSubmit={handlePageJump} className="flex items-center gap-1.5" aria-label="Jump to GeM bids page">
+                <label htmlFor="gem-page-jump" className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Go to</label>
+                <input
+                  key={currentPage}
+                  id="gem-page-jump"
+                  name="page"
+                  type="number"
+                  min="1"
+                  max={pagination.totalPages}
+                  step="1"
+                  defaultValue={currentPage}
+                  aria-label={`Page number, from 1 to ${pagination.totalPages}`}
+                  className="!min-h-0 h-8 w-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 text-center text-xs font-mono font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-1.5 focus:ring-dalBlue shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button type="submit" className="!min-h-0 h-8 px-2.5 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0">Go</button>
+              </form>
               <button
                 disabled={currentPage >= pagination.totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
+                title="Next page"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

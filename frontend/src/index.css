@@ -31,6 +31,17 @@
   .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
     color: #F8FAFC;
   }
+
+  /* Hide number input spinners/arrows across Chrome, Safari, Edge, and Firefox */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 /* Tasteful, Unobtrusive Scrollbar */
@@ -439,10 +450,10 @@
   white-space: nowrap;
 }
 
-.gem-page input,
+.gem-page input:not([type="number"]),
 .gem-page select,
-.estimator-page input,
-.score-page input,
+.estimator-page input:not([type="number"]),
+.score-page input:not([type="number"]),
 .score-page select {
   min-height: 42px;
   border-radius: 8px;

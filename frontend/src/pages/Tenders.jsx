@@ -417,7 +417,8 @@ export default function Tenders() {
   };
 
   const handlePageChange = (newPage) => {
-    if (!isAuthenticated && newPage > 1) {
+    const targetPage = Math.min(totalPages, Math.max(1, Math.trunc(Number(newPage) || 1)));
+    if (!isAuthenticated && targetPage > 1) {
       handleRequestAuth({
         title: 'Sign In to View More Tenders',
         subtitle: 'Guests are limited to previewing the 15 latest tender notices. Sign in to browse all pages and view details.',
@@ -425,8 +426,16 @@ export default function Tenders() {
       });
       return;
     }
-    setCurrentPage(newPage);
+    setCurrentPage(targetPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePageJump = (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const requestedPage = Number(formData.get('page'));
+    if (!Number.isInteger(requestedPage) || requestedPage < 1) return;
+    handlePageChange(requestedPage);
   };
 
   return (
@@ -1116,7 +1125,7 @@ export default function Tenders() {
                     {!isAuthenticated && <span className="ml-2 text-slate-400 dark:text-slate-500 font-normal">(Sign in for all pages)</span>}
                   </span>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
                     <Button
                       variant="outline" size="sm"
                       onClick={() => handlePageChange(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}
@@ -1128,6 +1137,23 @@ export default function Tenders() {
                     <div className="h-8 px-3 flex items-center justify-center bg-dalBlue text-white dark:bg-blue-600 rounded-lg text-xs font-mono font-bold shadow-xs border border-dalBlue dark:border-blue-500">
                       {currentPage}
                     </div>
+
+                    <form onSubmit={handlePageJump} className="flex items-center gap-1.5" aria-label="Jump to tender page">
+                      <label htmlFor="tender-page-jump" className="text-xs text-slate-500 dark:text-slate-400">Go to</label>
+                      <input
+                        key={currentPage}
+                        id="tender-page-jump"
+                        name="page"
+                        type="number"
+                        min="1"
+                        max={totalPages}
+                        step="1"
+                        defaultValue={currentPage}
+                        aria-label={`Page number, from 1 to ${totalPages}`}
+                        className="h-8 w-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-1 text-center text-xs font-mono text-slate-800 dark:text-white focus:outline-none focus:ring-1.5 focus:ring-dalBlue [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <Button type="submit" variant="outline" size="sm" className="px-2.5 text-xs">Go</Button>
+                    </form>
 
                     <Button
                       variant="outline" size="sm"
