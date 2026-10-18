@@ -7,6 +7,8 @@ import 'dotenv/config';
 import { hpTenderAdapter } from '../services/adapters/HPTenderAdapter.js';
 import { connectDB, closeDB } from '../config/db.js';
 
+import Tender from '../models/Tender.js';
+
 async function run() {
   const limit = parseInt(process.argv[2], 10) || 20;
   console.log(`\n======================================================`);
@@ -19,9 +21,31 @@ async function run() {
 
   try {
     let savedCount = 0;
+    let skippedCount = 0;
     let pdfCount = 0;
 
-    await hpTenderAdapter.fetchList(1, { syncMode: 'DEPARTMENT', limit }, async (batch) => {
+    await hpTenderAdapter.fetchList(1, {
+      syncMode: 'DEPARTMENT',
+      limit,
+      stopAfterConsecutiveSkips: 5,
+      countSkippedTowardsLimit: false,
+      shouldSkipTender: async (sourceTenderId) => {
+        try {
+          const existing = await Tender.findOne({
+            sourcePortal: 'HP_TENDERS',
+            sourceTenderId
+          }).select('pdfFetchStatus').lean();
+
+          if (existing && existing.pdfFetchStatus === 'COMPLETED') {
+            skippedCount++;
+            return true;
+          }
+          return false;
+        } catch (e) {
+          return false;
+        }
+      }
+    }, async (batch) => {
       for (const tender of batch) {
         savedCount++;
         if (tender.pdfUrls && tender.pdfUrls.length > 0) pdfCount += tender.pdfUrls.length;
@@ -30,7 +54,7 @@ async function run() {
     });
 
     console.log('\n======================================================');
-    console.log(`🎉 Himachal Pradesh Ingestion Completed: ${savedCount} tenders`);
+    console.log(`🎉 Himachal Pradesh Ingestion Completed: ${savedCount} saved, ${skippedCount} skipped`);
     console.log('======================================================\n');
 
     await closeDB();
