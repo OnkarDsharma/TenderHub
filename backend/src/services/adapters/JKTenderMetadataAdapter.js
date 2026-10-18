@@ -17,12 +17,7 @@ import Tender from '../../models/Tender.js';
 import { extractDeptCode, formatTenderStorageKey, uploadJsonToR2 } from '../../utils/r2Storage.js';
 import { parseISTDate, formatStandardTime, extractDateParts } from '../../utils/dateUtils.js';
 
-const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: { colorize: true }
-  }
-});
+const logger = pino();
 
 export class JKTenderMetadataAdapter {
   constructor(options = {}) {

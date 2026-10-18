@@ -43,7 +43,7 @@ jobs:
       - name: 3. Install Dependencies & Playwright Chromium
         run: |
           cd backend
-          npm ci
+          npm ci --include=dev
           npx playwright install --with-deps chromium
 
       - name: 4. Ingest Jammu & Kashmir Tenders

@@ -12,9 +12,7 @@ import { gemAdapter, safeDate } from '../services/adapters/GeMAdapter.js';
 import Tender from '../models/Tender.js';
 import pino from 'pino';
 
-const logger = pino({
-  transport: { target: 'pino-pretty' }
-});
+const logger = pino();
 
 // Parse command line arguments (supports both --flag=value and --flag value)
 const args = process.argv.slice(2);
