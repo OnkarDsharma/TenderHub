@@ -1,11 +1,24 @@
 /**
  * @file src/components/layout/Navbar.jsx
- * @description Classical, human-crafted top navigation with reliable theme toggle,
- * clear institutional branding, and responsive mobile navigation.
+ * @description Spacious, elegant top navigation matching the Techbyte aesthetic.
+ * Fixed text congestion by using single-line no-wrap labels, generous gaps,
+ * streamlined top utility bar, and comfortable spacing between links and profile.
  */
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Landmark, Heart, User, Menu, X, Sun, Moon, LogIn, LogOut, Sparkles } from 'lucide-react';
+import { 
+  Landmark,
+  Heart, 
+  Menu, 
+  X, 
+  Sun, 
+  Moon, 
+  LogIn, 
+  LogOut, 
+  ArrowUpRight,
+  ShieldCheck,
+  Sparkles
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -21,307 +34,215 @@ export function Navbar() {
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   const { user, isAuthenticated, isPro, logout } = useAuthStore();
 
-  const primaryNavLinks = [
+  const navLinks = [
+    { label: 'Home', path: '/' },
     { label: 'Browse Tenders', path: '/tenders' },
     { label: 'GeM Bids', path: '/gem-tenders' },
-    { label: 'AI Services', path: '/services', isAi: true },
+    { label: 'AI Estimator', path: '/services', badge: 'AI' },
     { label: 'Check Score', path: '/check-score' },
     { label: 'Pricing', path: '/pricing' },
-  ];
-
-  const secondaryNavLinks = [
-    { label: 'About', path: '/about' },
     { label: 'Contact', path: '/contact' },
   ];
 
-  const allNavLinks = [
-    { label: 'Home', path: '/' },
-    ...primaryNavLinks,
-    ...secondaryNavLinks,
-  ];
-
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        
-        {/* Left Side: Brand Identity & Desktop Navigation grouped together */}
-        <div className="flex items-center gap-6 xl:gap-8 min-w-0">
-          {/* Institutional Brand Identity */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group focus:outline-none">
-            <div className="w-8 h-8 rounded-lg bg-dalBlue text-white flex items-center justify-center shadow-xs shrink-0 group-hover:bg-dalBlue/90 transition-colors">
-              <Landmark className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg font-display font-bold tracking-tight text-dalBlue dark:text-white leading-none">
-                  Tender<span className="text-chinarRed">Hub</span>
+    <header className="sticky top-0 z-50 w-full transition-colors duration-200">
+      
+      {/* Top Utility Bar (Clean, uncluttered top strip) */}
+      <div className="bg-[#141416] text-[#A0A5B1] text-[11px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-[#24262E] hidden md:block">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          
+          {/* Left: Official portal status */}
+          <div className="flex items-center gap-2 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-techCoral shrink-0" />
+            <span>Official Portal Synchronized: <strong className="text-white font-semibold">jktenders.gov.in &amp; GeM</strong></span>
+          </div>
+
+          {/* Right: AI Shortcut, Theme Toggle & Saved Bookmarks */}
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/services" 
+              className="inline-flex items-center gap-1.5 text-techCoral hover:text-white transition-colors text-[11px] font-semibold"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>AI BOQ Estimator</span>
+            </Link>
+
+            <div className="h-3 w-px bg-[#2D313A]" />
+
+            {/* Light/Dark Mode Switch */}
+            <button
+              onClick={toggleTheme}
+              className="text-[#B2B7C2] hover:text-white transition-colors cursor-pointer"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Saved Tenders Bookmark */}
+            <Link
+              to="/profile"
+              className="relative text-[#B2B7C2] hover:text-techCoral transition-colors cursor-pointer flex items-center gap-1"
+              title="Saved Tenders"
+              aria-label="Saved Tenders"
+            >
+              <Heart className="w-3.5 h-3.5" />
+              {savedTenders.length > 0 && (
+                <span className="w-3.5 h-3.5 rounded-full bg-techCoral text-white text-[8px] font-bold flex items-center justify-center">
+                  {savedTenders.length}
                 </span>
-                {(import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175')) && (
-                  <span className="text-[9px] font-mono font-bold tracking-tight bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 select-none">
-                    TEST
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-normal hidden sm:block">
+              )}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Navigation Bar */}
+      <div className="bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-[#262832] shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
+          
+          {/* Left Block: Coral accent brand container + Logo */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* Peach / Coral brand icon */}
+            <Link 
+              to="/"
+              className="bg-techCoral text-white w-10 h-10 sm:w-11 sm:h-11 rounded flex items-center justify-center hover:bg-techCoral-dark transition-colors cursor-pointer shrink-0 shadow-xs"
+              aria-label="TenderHub Home"
+            >
+              <Landmark className="w-5 h-5 text-white" />
+            </Link>
+
+            {/* Brand Logo: TenderHub */}
+            <Link to="/" className="flex flex-col group">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white font-display leading-none">
+                Tender<span className="text-techCoral">Hub</span>
+              </span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-normal mt-0.5 hidden sm:block">
                 Procurement Intelligence
               </span>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {primaryNavLinks.map((link) => {
+          {/* Desktop Nav Links (Clean, Spacious & No Wrapping) */}
+          <nav className="hidden lg:flex items-center justify-center gap-5 xl:gap-7 flex-1 px-4">
+            {navLinks.map((link) => {
               const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue dark:focus-visible:ring-blue-400 ${
+                  className={`whitespace-nowrap text-[13px] font-semibold transition-all py-1 flex items-center gap-1.5 ${
                     isActive
-                      ? 'bg-slate-100 dark:bg-slate-800 text-dalBlue dark:text-white font-bold'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      ? 'text-techCoral font-bold border-b-2 border-techCoral'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral'
                   }`}
                 >
                   <span>{link.label}</span>
-                  {link.isAi && (
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-blue-100 dark:bg-blue-950/80 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                      AI
+                  {link.badge && (
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-techCoral-50 dark:bg-techCoral/15 text-techCoral border border-techCoral/30">
+                      {link.badge}
                     </span>
                   )}
                 </Link>
               );
             })}
-
-            {/* Secondary Destinations: About & Contact */}
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
-            {secondaryNavLinks.map((link) => {
-              const isActive = location.pathname === link.path;
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'text-dalBlue dark:text-white font-semibold'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
           </nav>
-        </div>
 
-        {/* Right Side Action Center: Theme, Saved, Profile & Mobile Hamburger */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          
-          {/* Light/Dark Theme Switcher */}
-          <button
-            onClick={toggleTheme}
-            className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
-            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            aria-label="Toggle theme"
-          >
-            {isDark ? (
-              <Sun className="w-4 h-4 text-amber-400" />
+          {/* Right Action: Clean Button & Profile */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* Quick Explore Button */}
+            <Link
+              to="/tenders"
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-slate-900 hover:bg-techCoral text-white dark:bg-slate-800 dark:hover:bg-techCoral text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+            >
+              <span>Explore Tenders</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+
+            {/* Auth Buttons / Profile */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <Link
+                  to="/profile"
+                  className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden hover:border-techCoral transition-colors"
+                  title={user?.name || user?.email}
+                >
+                  {user?.picture ? (
+                    <img src={user.picture} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-techCoral">
+                      {(user?.name || user?.email || 'U')[0].toUpperCase()}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  onClick={logout}
+                  title="Sign Out"
+                  className="text-slate-400 hover:text-techCoral p-1 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
-              <Moon className="w-4 h-4 text-slate-600" />
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <Link
+                  to="/login"
+                  className="px-3 py-1.5 rounded text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-techCoral transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
             )}
-          </button>
 
-          {/* Saved Tenders Bookmark Indicator */}
-          <Link
-            to="/profile"
-            className="relative w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-chinarRed dark:hover:text-red-400 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
-            title="Saved Tenders"
-            aria-label="Saved Tenders"
-          >
-            <Heart className="w-4 h-4" />
-            {savedTenders.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-chinarRed text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
-                {savedTenders.length}
-              </span>
-            )}
-          </Link>
+            {/* Mobile Menu Icon */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded text-slate-700 dark:text-slate-300 hover:text-techCoral cursor-pointer"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
 
-          {/* Subtle Visual Divider */}
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block" />
-
-          {/* User Auth: Small Circular Profile or Sign In Actions */}
-          {isAuthenticated ? (
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              {/* Circular Compact Profile Avatar */}
-              <Link
-                to="/profile"
-                className={`relative w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue ${
-                  isPro
-                    ? 'ring-2 ring-amber-400 dark:ring-amber-400 hover:ring-amber-500 shadow-xs'
-                    : 'border border-slate-200 dark:border-slate-700 hover:border-dalBlue dark:hover:border-blue-400 shadow-2xs hover:shadow-xs'
-                }`}
-                title={user?.name ? `${user.name} (${user.email || ''})` : user?.email || 'Contractor Workspace'}
-                aria-label="Contractor Profile"
-              >
-                {user?.picture ? (
-                  <img
-                    src={user.picture}
-                    alt={user.name || 'User'}
-                    className="w-full h-full rounded-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div
-                    className={`w-full h-full rounded-full text-[11px] font-bold flex items-center justify-center select-none ${
-                      isPro
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-dalBlue/10 dark:bg-blue-500/20 text-dalBlue dark:text-blue-300'
-                    }`}
-                  >
-                    {(user?.name || user?.email || 'U')[0].toUpperCase()}
-                  </div>
-                )}
-
-                {/* Floating PRO Badge Indicator */}
-                {isPro && (
-                  <span
-                    className="absolute -bottom-1 -right-1 px-1 py-0.2 text-[8px] font-black uppercase tracking-tighter rounded-full bg-amber-500 text-slate-900 border border-white dark:border-slate-900 shadow-2xs select-none leading-none"
-                    title="Pro Member"
-                  >
-                    PRO
-                  </span>
-                )}
-              </Link>
-
-              {/* Compact Logout Icon Button */}
-              <button
-                onClick={logout}
-                title="Sign Out"
-                className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full border border-transparent hover:border-red-200 dark:hover:border-red-900/60 flex items-center justify-center text-slate-500 hover:text-chinarRed dark:hover:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-all cursor-pointer focus:outline-none"
-                aria-label="Sign Out"
-              >
-                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <Link
-                to="/signup"
-                className="hidden sm:inline-flex items-center px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all"
-              >
-                <span>Register</span>
-              </Link>
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sign In</span>
-              </Link>
-            </div>
-          )}
-
-          {/* Mobile Menu Toggle Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-dalBlue"
-            aria-label="Toggle navigation menu"
-          >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
         </div>
-
       </div>
 
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 space-y-1 overflow-hidden"
+            className="lg:hidden bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-3 shadow-lg"
           >
-            {allNavLinks.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`min-h-[40px] flex items-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-                  location.pathname === link.path
-                    ? 'bg-dalBlue/10 dark:bg-blue-500/20 text-dalBlue dark:text-blue-300 font-bold border border-dalBlue/20 dark:border-blue-500/30'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80'
-                }`}
+                className="block text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-techCoral py-1.5"
               >
                 {link.label}
               </Link>
             ))}
 
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <Link
-                to="/profile"
+                to="/tenders"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[42px] flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-dalBlue dark:text-white bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60"
+                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-techCoral"
               >
-                <User className="w-4 h-4 text-slate-500 shrink-0" />
-                <span>Contractor Workspace</span>
+                <span>Explore Tenders</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
 
-              {isAuthenticated ? (
-                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 min-h-[44px]">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {user?.picture ? (
-                      <img
-                        src={user.picture}
-                        alt="Profile"
-                        className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-dalBlue text-white text-xs font-bold flex items-center justify-center shrink-0">
-                        {(user?.name || user?.email || 'U')[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      {user?.name && (
-                        <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                          {user.name}
-                        </span>
-                      )}
-                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                        {user?.email}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 cursor-pointer py-1 px-2 rounded-lg"
-                  >
-                    <LogOut className="w-3.5 h-3.5 shrink-0" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="min-h-[42px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    <span>Sign In</span>
-                  </Link>
-                  <Link
-                    to="/signup"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="min-h-[42px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-dalBlue hover:bg-dalBlue/90 shadow-xs"
-                  >
-                    <span>Register</span>
-                  </Link>
-                </div>
-              )}
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              >
+                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+              </button>
             </div>
           </motion.div>
         )}

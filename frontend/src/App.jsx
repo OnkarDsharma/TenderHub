@@ -25,6 +25,7 @@ import Services from './pages/Services';
 import { useAuthStore } from './store/useAuthStore';
 
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { CursorFollower } from './components/ui/cursor-follower';
 
 export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -36,6 +37,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-paper dark:bg-slate-900 text-charcoal dark:text-slate-100 w-full max-w-[100vw] overflow-x-hidden">
+      <CursorFollower />
       <ScrollToTop />
       <Navbar />
 

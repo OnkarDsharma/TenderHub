@@ -19,7 +19,7 @@ export function Footer() {
                 <Landmark className="w-4 h-4 text-white" />
               </div>
               <span className="text-lg font-display font-bold tracking-tight text-white">
-                Tender<span className="text-chinarRed">Hub</span>
+                Tec<span className="text-techCoral">b</span>byte <span className="text-xs text-slate-400 font-normal">/ TenderHub</span>
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-normal">

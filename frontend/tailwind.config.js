@@ -27,6 +27,17 @@ export default {
           700: '#C2410C',
           800: '#9A3412',
         },
+        techCoral: {
+          DEFAULT: '#FF6B4A',
+          light: '#FFA085',
+          dark: '#E85534',
+          50: '#FFF5F2',
+          100: '#FFE9E3',
+          200: '#FFD4C7',
+          500: '#FF6B4A',
+          600: '#E85534',
+          700: '#C73E20',
+        },
         saffronGold: {
           DEFAULT: '#D97706',
           50: '#FFFBEB',

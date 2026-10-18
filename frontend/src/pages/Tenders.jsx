@@ -427,7 +427,7 @@ export default function Tenders() {
   };
 
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="tenders-page min-h-screen bg-paper dark:bg-slate-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         
         {/* Page Title & Reset Header */}
@@ -499,7 +499,7 @@ export default function Tenders() {
         </div>
 
         {/* Mobile/Tablet Filter Accordion Toggle (< lg) */}
-        <div className="lg:hidden mb-4">
+        <div className="mb-4">
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
@@ -528,11 +528,11 @@ export default function Tenders() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div className="grid grid-cols-1 gap-5 items-start">
           
           {/* ---------------- FILTER SIDEBAR ---------------- */}
-          <aside className={`lg:col-span-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xs lg:sticky lg:top-20 flex flex-col max-h-[520px] sm:max-h-[560px] lg:max-h-[calc(100vh-6rem)] overflow-hidden transition-all ${
-            mobileFiltersOpen ? 'flex mb-4 lg:mb-0' : 'hidden lg:flex'
+          <aside className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xs flex flex-col overflow-hidden transition-all ${
+            mobileFiltersOpen ? 'flex mb-1' : 'hidden'
           }`}>
             {/* Pinned Header */}
             <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-100 dark:border-slate-700/80 text-dalBlue dark:text-blue-400 bg-white dark:bg-slate-800 shrink-0 select-none">
@@ -548,7 +548,7 @@ export default function Tenders() {
             </div>
 
             {/* Scrollable Filters Body with Dedicated Vertical Scrollbar */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-4 filter-scrollbar overscroll-contain">
+            <div className="filter-grid flex-1 px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-4">
               {/* Keyword Search Input */}
               <div>
                 <label className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -800,7 +800,7 @@ export default function Tenders() {
           </aside>
 
           {/* ---------------- MAIN RESULTS FEED ---------------- */}
-          <main className="lg:col-span-3 space-y-4">
+          <main className="space-y-4">
             
             {/* Top Tab Bar: Latest vs Archived Notices + Sorting */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-2 sm:p-2.5 rounded-lg shadow-xs">
