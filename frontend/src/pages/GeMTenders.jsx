@@ -9,24 +9,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
-  Filter, 
   RotateCcw, 
   ExternalLink, 
   Building2, 
-  Calendar, 
   Clock, 
   MapPin, 
-  ShieldCheck, 
   Layers, 
-  FileText, 
   ChevronLeft, 
   ChevronRight, 
   AlertCircle,
   Sparkles,
   Download,
-  CheckCircle2,
   X,
-  IndianRupee,
   Landmark
 } from 'lucide-react';
 
@@ -119,6 +113,7 @@ export default function GeMTenders() {
   // Filters & Pagination State
   const [selectedState, setSelectedState] = useState('');
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [sortBy, setSortBy] = useState('arrival');
   const [closingDays, setClosingDays] = useState('');
@@ -134,54 +129,62 @@ export default function GeMTenders() {
     : ALL_LOCATION_OPTIONS;
 
   // Fetch Bids from Backend
-  const loadTenders = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await gemApi.getTenders({
-        page: currentPage,
-        limit: 12,
-        state: selectedState || undefined,
-        search,
-        location: selectedLocation,
-        sortBy,
-        closingDays: closingDays || undefined
-      });
-
-      if (res?.success) {
-        setTenders(res.data || []);
-        setPagination(res.pagination || { totalPages: 1, totalCount: 0 });
-      }
-    } catch (err) {
-      console.error('[GeM Page] Failed to fetch tenders:', err);
-      setError('Unable to connect to GeM tenders index. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch Portal Stats
-  const loadStats = async () => {
-    try {
-      const data = await gemApi.getStats({ state: selectedState || undefined });
-      if (data) setStats(data);
-    } catch {
-      // Non-blocking
-    }
-  };
-
   useEffect(() => {
-    loadStats();
+    let cancelled = false;
+    const fetchStats = async () => {
+      try {
+        const data = await gemApi.getStats({ state: selectedState || undefined });
+        if (!cancelled && data) setStats(data);
+      } catch {
+        // Non-blocking
+      }
+    };
+    fetchStats();
+    return () => { cancelled = true; };
   }, [selectedState]);
 
   useEffect(() => {
-    loadTenders();
-  }, [currentPage, selectedState, selectedLocation, sortBy, closingDays]);
+    let cancelled = false;
+    const fetchTenders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await gemApi.getTenders({
+          page: currentPage,
+          limit: 12,
+          state: selectedState || undefined,
+          search: appliedSearch,
+          location: selectedLocation,
+          sortBy,
+          closingDays: closingDays || undefined
+        });
+
+        if (!cancelled && res?.success) {
+          const fetchedAt = Date.now();
+          setTenders((res.data || []).map((item) => {
+            const closingTime = item.closingDate ? new Date(item.closingDate).getTime() : null;
+            return {
+              ...item,
+              _isClosingSoon: closingTime !== null && closingTime >= fetchedAt && closingTime - fetchedAt < 48 * 60 * 60 * 1000,
+            };
+          }));
+          setPagination(res.pagination || { totalPages: 1, totalCount: 0 });
+        }
+      } catch (err) {
+        console.error('[GeM Page] Failed to fetch tenders:', err);
+        if (!cancelled) setError('Unable to connect to GeM tenders index. Please try again.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchTenders();
+    return () => { cancelled = true; };
+  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, sortBy]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    loadTenders();
+    setAppliedSearch(search);
   };
 
   const handleStateChange = (stateVal) => {
@@ -193,6 +196,7 @@ export default function GeMTenders() {
   const handleResetFilters = () => {
     setSelectedState('');
     setSearch('');
+    setAppliedSearch('');
     setSelectedLocation('');
     setSortBy('arrival');
     setClosingDays('');
@@ -200,7 +204,7 @@ export default function GeMTenders() {
   };
 
   return (
-    <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
+    <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
         {/* 1. Refined Regional Header & Verified Metric Counters */}
@@ -211,21 +215,21 @@ export default function GeMTenders() {
               <span>Government e-Marketplace (GeM) • {selectedState || 'Northern Region'}</span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
-              Central &amp; Public Sector GeM Bids
+              GeM Bid Directory
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               Central Government, Defence, PSU, and departmental procurement bids with consignee delivery stations in {selectedState || 'Jammu & Kashmir, Himachal Pradesh, Punjab, and Ladakh'}.
             </p>
           </div>
 
-          {/* Restrained KPI Stat Counter Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 shrink-0">
+          {/* Comparable bid metrics and a separate source note */}
+          <div className="gem-summary shrink-0">
             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
               <span className="text-lg sm:text-xl font-mono font-bold text-slate-900 dark:text-white block">
-                {pagination.totalCount || stats?.totalActive || 0}
+                {pagination.totalCount}
               </span>
               <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
-                Active Bids
+                Matching bids
               </span>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
@@ -236,14 +240,7 @@ export default function GeMTenders() {
                 Closing &lt; 48h
               </span>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center col-span-2 sm:col-span-1 min-w-[100px]">
-              <span className="text-lg sm:text-xl font-mono font-bold text-dalBlue dark:text-blue-300 block">
-                Official
-              </span>
-              <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
-                GeM Portal Feed
-              </span>
-            </div>
+            <p className="gem-source-note text-[11px] text-slate-500 dark:text-slate-400">Source: Government e-Marketplace (GeM)</p>
           </div>
         </div>
 
@@ -253,7 +250,7 @@ export default function GeMTenders() {
           {/* State Filter Navigation Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-dalBlue" /> State:
+              <MapPin className="w-3.5 h-3.5 text-dalBlue" /> Region:
             </span>
             {STATE_TABS.map((tab) => (
               <button
@@ -369,7 +366,7 @@ export default function GeMTenders() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <div className="w-8 h-8 border-3 border-dalBlue border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-slate-500 font-medium">Fetching verified GeM bids for Jammu &amp; Kashmir...</p>
+            <p className="text-xs text-slate-500 font-medium">Loading GeM bids...</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl p-6 text-center text-red-600 dark:text-red-400">
@@ -391,23 +388,20 @@ export default function GeMTenders() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="gem-bid-list">
             {tenders.map((item) => {
-              const isUrgent = item.closingDate && new Date(item.closingDate).getTime() - Date.now() < 48 * 60 * 60 * 1000;
-              const docUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${item.sourceTenderId.replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
+              const isUrgent = item._isClosingSoon;
+              const docUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
 
               return (
                 <div
                   key={item._id || item.sourceTenderId}
-                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 hover:border-dalBlue/40 dark:hover:border-blue-500/40 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
+                  className="gem-bid-row bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors group"
                 >
-                  <div className="space-y-3">
+                  <div className="gem-bid-content">
                     {/* Top Badges */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
-                          <span>GeM Portal</span>
-                        </div>
                         {item.state && (
                           <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
                             <span>{item.state}</span>
@@ -440,7 +434,7 @@ export default function GeMTenders() {
                     </div>
 
                     {/* Title / Item Category */}
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors">
+                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors break-words">
                       {item.title}
                     </h2>
 
@@ -448,25 +442,25 @@ export default function GeMTenders() {
                     <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
                       <div className="flex items-start gap-1.5">
                         <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1">{item.organisationChain || item.departmentName}</span>
+                        <span className="break-words">{item.organisationChain || item.departmentName || '—'}</span>
                       </div>
                       <div className="flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-chinarRed shrink-0 mt-0.5" />
-                        <span className="line-clamp-1 font-semibold text-slate-700 dark:text-slate-200">
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 break-words">
                           {item.location || 'Jammu & Kashmir'}
                         </span>
                       </div>
                     </div>
 
                     {/* Key Technical & Financial Parameters */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                    <div className="gem-bid-financials grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                      <div className="p-2">
                         <span className="text-slate-400 block font-medium">EMD Amount</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                           {item.emdAmount > 0 ? formatCurrencyINR(item.emdAmount) : 'Exempted / Zero'}
                         </span>
                       </div>
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                      <div className="p-2">
                         <span className="text-slate-400 block font-medium">Bid Closing</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                           {formatDateDisplay(item.closingDate)}
@@ -476,12 +470,12 @@ export default function GeMTenders() {
                   </div>
 
                   {/* Actions Bar: View Specs dominant, AI and PDF secondary */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="gem-bid-actions flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <button
                       onClick={() => setSelectedBid(item)}
-                      className="flex-1 py-1.5 px-3 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center shadow-xs"
+                      className="py-2 px-3 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
                     >
-                      View Specs
+                      View bid
                     </button>
                     <button
                       onClick={() => navigate(`/services?tenderId=${encodeURIComponent(item.sourceTenderId)}`)}
@@ -489,7 +483,7 @@ export default function GeMTenders() {
                       title="Analyze with AI Estimator"
                     >
                       <Sparkles className="w-3 h-3 text-dalBlue dark:text-blue-400" />
-                      <span>AI Dossier</span>
+                      <span>AI analysis</span>
                     </button>
                     <a
                       href={docUrl}
@@ -499,7 +493,7 @@ export default function GeMTenders() {
                       title="Open official GeM Bid PDF"
                     >
                       <Download className="w-3 h-3" />
-                      <span>PDF ↗</span>
+                      <span>PDF</span>
                     </a>
                   </div>
                 </div>
@@ -587,7 +581,7 @@ export default function GeMTenders() {
               {/* Delivery Stations in J&K */}
               <div className="space-y-1.5">
                 <span className="font-bold text-slate-700 dark:text-slate-300 block">
-                  Verified J&amp;K Consignee Stations
+                  J&amp;K Consignee Stations
                 </span>
                 <p className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-dalBlue dark:text-blue-300 font-medium">
                   {selectedBid.location}

@@ -3,7 +3,7 @@
  * @description Dedicated AI Services section offering personalized contractor tender analysis,
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,6 +28,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
+import { api } from '../services/api';
 import { billingApi } from '../services/billingApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -42,6 +43,8 @@ export default function Services() {
   // State Management
   const [plans, setPlans] = useState([]);
   const [profile, setProfile] = useState(null);
+  const [profileReady, setProfileReady] = useState(false);
+  const [exampleTender, setExampleTender] = useState(null);
   const [inputTenderId, setInputTenderId] = useState(paramTenderId || '');
   const [activeTab, setActiveTab] = useState('preBid'); // 'preBid' | 'boq' | 'execution' | 'copilot'
   const [analyzing, setAnalyzing] = useState(false);
@@ -57,28 +60,16 @@ export default function Services() {
 
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const lastAutoAnalyzeRef = useRef('');
   const [editProfile, setEditProfile] = useState({
     companyName: '',
-    registrationClass: 'Class A Works',
-    avgAnnualTurnoverInr: 50000000,
-    solvencyLimitInr: 20000000,
-    largestSingleWorkDoneInr: 30000000,
+    registrationClass: '',
+    avgAnnualTurnoverInr: '',
+    solvencyLimitInr: '',
+    largestSingleWorkDoneInr: '',
   });
 
-  // Load Initial Data
-  useEffect(() => {
-    loadPlansAndProfile();
-  }, []);
-
-  // Auto-analyze if tenderId is present in URL
-  useEffect(() => {
-    if (paramTenderId) {
-      setInputTenderId(paramTenderId);
-      handleAnalyze(paramTenderId);
-    }
-  }, [paramTenderId]);
-
-  const loadPlansAndProfile = async () => {
+  const loadPlansAndProfile = useCallback(async () => {
     try {
       const [fetchedPlans, fetchedProfile] = await Promise.all([
         servicesApi.getPlans().catch(() => []),
@@ -88,22 +79,33 @@ export default function Services() {
       if (fetchedProfile) {
         setProfile(fetchedProfile);
         setEditProfile({
-          companyName: fetchedProfile.companyName || 'Prime Infrastructure',
-          registrationClass: fetchedProfile.registrationClass || 'Class A Works',
-          avgAnnualTurnoverInr: fetchedProfile.avgAnnualTurnoverInr || 50000000,
-          solvencyLimitInr: fetchedProfile.solvencyLimitInr || 20000000,
-          largestSingleWorkDoneInr: fetchedProfile.largestSingleWorkDoneInr || 30000000,
+          companyName: fetchedProfile.companyName || '',
+          registrationClass: fetchedProfile.registrationClass || '',
+          avgAnnualTurnoverInr: fetchedProfile.avgAnnualTurnoverInr ?? '',
+          solvencyLimitInr: fetchedProfile.solvencyLimitInr ?? '',
+          largestSingleWorkDoneInr: fetchedProfile.largestSingleWorkDoneInr ?? '',
         });
       }
     } catch (err) {
       console.error('Failed to load services data:', err);
+    } finally {
+      setProfileReady(true);
     }
-  };
+  }, []);
 
-  const handleAnalyze = async (idToAnalyze = inputTenderId) => {
+  const handleAnalyze = useCallback(async (idToAnalyze = inputTenderId) => {
     const targetId = idToAnalyze?.trim();
     if (!targetId) {
       setError('Please enter a valid Tender ID or Portal Reference.');
+      return;
+    }
+    if (!profileReady) {
+      setError('Contractor profile is loading. Try again in a moment.');
+      return;
+    }
+    if (!profile || profile.companyName === 'Prime Infrastructure & Engineering') {
+      setError('Review and save your contractor profile before running a personalized analysis.');
+      setShowProfileModal(true);
       return;
     }
 
@@ -111,6 +113,13 @@ export default function Services() {
       setError('');
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
+
+      const tenderSearch = await api.get('/tenders', { params: { search: targetId, status: 'all', limit: 10 } });
+      const tenderMatches = Array.isArray(tenderSearch.data?.data) ? tenderSearch.data.data : [];
+      const tenderExists = tenderMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId);
+      if (!tenderExists) {
+        throw new Error('Tender reference was not found in the TenderHub index. Choose a tender from Browse Tenders and try again.');
+      }
 
       const res = await servicesApi.analyzeTender(targetId);
       if (res.success) {
@@ -123,7 +132,7 @@ export default function Services() {
         setChatMessages([
           {
             role: 'assistant',
-            content: `Namaste. I am your Tender Copilot for this contract.\n\n• Contractor Profile: ${res.personalizedFit?.contractorName || 'Prime Infrastructure'} (${res.personalizedFit?.registrationClass})\n• Eligibility Match: ${res.personalizedFit?.matchScore}% (${res.personalizedFit?.verdict})\n• Quick Queries: Ask about EMD/CDR rules, turnover compliance, BOQ material quantities, or delay penalties.`
+            content: `Namaste. I am your Tender Copilot for this contract.\n\n• Contractor Profile: ${res.personalizedFit?.contractorName || 'your contractor profile'} (${res.personalizedFit?.registrationClass})\n• Eligibility Match: ${res.personalizedFit?.matchScore}% (${res.personalizedFit?.verdict})\n• Quick Queries: Ask about EMD/CDR rules, turnover compliance, BOQ material quantities, or delay penalties.`
           }
         ]);
       } else {
@@ -135,7 +144,31 @@ export default function Services() {
     } finally {
       setAnalyzing(false);
     }
-  };
+  }, [inputTenderId, loadPlansAndProfile, profile, profileReady]);
+
+  // Load the account profile and one real tender as the optional example.
+  useEffect(() => {
+    loadPlansAndProfile();
+    api.get('/tenders', { params: { limit: 1, status: 'active' } })
+      .then((response) => {
+        const payload = response.data?.data?.tenders || response.data?.data || response.data?.tenders || [];
+        setExampleTender(Array.isArray(payload) ? payload[0] || null : null);
+      })
+      .catch((err) => console.error('Failed to load a tender example:', err));
+  }, [loadPlansAndProfile]);
+
+  // Auto-analyze if the route contains a tender ID, after profile data loads.
+  useEffect(() => {
+    if (paramTenderId) {
+      setInputTenderId(paramTenderId);
+      const profileKey = profile?.updatedAt || profile?.companyName || 'missing-profile';
+      const runKey = `${paramTenderId}:${profileKey}`;
+      if (profileReady && lastAutoAnalyzeRef.current !== runKey) {
+        lastAutoAnalyzeRef.current = runKey;
+        handleAnalyze(paramTenderId);
+      }
+    }
+  }, [paramTenderId, profileReady, profile, handleAnalyze]);
 
   const handleSendMessage = async (e) => {
     e?.preventDefault();
@@ -236,7 +269,7 @@ export default function Services() {
   };
 
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
+    <div className="estimator-page min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
       
       {/* 1. HEADER & CONTRACTOR PROFILE STRIP */}
       <section className="bg-white dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700/80 pt-8 pb-10">
@@ -244,18 +277,18 @@ export default function Services() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* Left 7 Columns: Title, Scrutiny Description & Search */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className="estimator-primary lg:col-span-8 space-y-3">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 <Cpu className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
                 <span>AI Quantity Surveyor &amp; Copilot</span>
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
-                Technical Scrutiny &amp; BOQ Takeoff Suite
+                AI Tender Analysis
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                Scrutinize official tender clauses, verify turnover and solvency eligibility, extract raw material schedules, and flag GCC risk clauses before you submit your bid.
+                Analyze tender documents, compare turnover and solvency criteria, extract material schedules, and review contractual risks before you submit a bid. Confirm key requirements in the source documents.
               </p>
 
               {/* Tender Analysis Input Console */}
@@ -265,28 +298,29 @@ export default function Services() {
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <Input
                       type="text"
-                      placeholder="Enter Tender ID or Portal Reference (e.g. 2026_PWD_321045_1)..."
+                      placeholder="Enter a Tender ID or portal reference"
                       value={inputTenderId}
                       onChange={(e) => setInputTenderId(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+                      aria-label="Tender ID or portal reference"
                       className="pl-10 text-xs sm:text-sm border-0 bg-transparent focus-visible:ring-0 shadow-none"
                     />
                   </div>
                   <Button
                     variant="primary"
                     onClick={() => handleAnalyze()}
-                    disabled={analyzing}
+                    disabled={analyzing || !profileReady}
                     className="w-full sm:w-auto text-xs font-semibold shrink-0"
                   >
                     {analyzing ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                        Analyzing Notice...
+                        Analyzing tender...
                       </>
                     ) : (
                       <>
                         <Zap className="w-3.5 h-3.5 mr-1.5" />
-                        Run AI Analysis
+                        Analyze tender
                       </>
                     )}
                   </Button>
@@ -305,12 +339,18 @@ export default function Services() {
                     <span>{error}</span>
                   </p>
                 )}
+                {!dossierData && exampleTender && (
+                  <button type="button" onClick={() => setInputTenderId(exampleTender.sourceTenderId || exampleTender._id)} className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:underline">
+                    <span>Try an example</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{exampleTender.sourceTenderId || exampleTender._id}</span>
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Right 5 Columns: Contractor Baseline & Capacity Card */}
-            <div className="lg:col-span-5">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
+            <div className="estimator-profile lg:col-span-4">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs space-y-3">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
                     <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
@@ -330,7 +370,7 @@ export default function Services() {
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Entity</span>
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {profile?.companyName || 'Prime Infrastructure & Engineering'}
+                      {profile?.companyName || 'Profile not configured'}
                     </p>
                   </div>
 
@@ -338,23 +378,28 @@ export default function Services() {
                     <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] font-semibold text-slate-500 uppercase block">Registration Class</span>
                       <span className="font-semibold text-xs text-dalBlue dark:text-blue-300 block truncate mt-0.5">
-                        {profile?.registrationClass || 'Class A Works'}
+                        {profile?.registrationClass || 'Not provided'}
                       </span>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] font-semibold text-slate-500 uppercase block">Avg Annual Turnover</span>
                       <span className="font-semibold text-xs text-slate-900 dark:text-white block mt-0.5">
-                        ₹{((profile?.avgAnnualTurnoverInr || 50000000) / 1e7).toFixed(1)} Crore
+                        {profile?.avgAnnualTurnoverInr ? `₹${(profile.avgAnnualTurnoverInr / 1e7).toFixed(1)} Crore` : 'Not provided'}
                       </span>
                     </div>
                   </div>
+                  {profile?.companyName === 'Prime Infrastructure & Engineering' && (
+                    <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
+                      Example profile values are prefilled. Review and update them before using personalized analysis.
+                    </p>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
                   <span className="text-slate-500 dark:text-slate-400">Available AI Dossiers:</span>
                   <Badge variant="success">
-                    {profile?.credits?.availableDossiers ?? 2} Dossiers Available
+                      {profile?.credits?.availableDossiers ?? '—'} Dossiers Available
                   </Badge>
                 </div>
               </div>
@@ -373,14 +418,12 @@ export default function Services() {
               <div className="space-y-2 max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">
-                    {dossierData.executiveOverview?.department || 'Public Works Department'}
+                    {dossierData.executiveOverview?.department || 'Department not listed'}
                   </Badge>
                   <span className="text-xs text-slate-500 font-mono">
                     Ref: {dossierData.sourceTenderId || dossierData.tenderId}
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-300 font-medium border border-blue-200/60">
-                    Official Document Verified
-                  </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">TenderHub record</span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                   {dossierData.executiveOverview?.title}
@@ -798,7 +841,7 @@ export default function Services() {
                           Personalized Tender Copilot
                         </h4>
                         <p className="text-[11px] text-slate-500">
-                          Grounded in tender specs &amp; {profile?.companyName || 'your profile'} capacity
+                          Grounded in tender specs &amp; {profile?.companyName || 'your contractor profile'} capacity
                         </p>
                       </div>
                     </div>
@@ -890,80 +933,15 @@ export default function Services() {
             </div>
           </div>
         ) : (
-          /* Empty / Idle State: 4-Step Technical Scrutiny Workflow */
-          <div className="space-y-8">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-8 sm:p-10 border border-slate-200 dark:border-slate-700 shadow-xs max-w-4xl mx-auto text-center space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-400 flex items-center justify-center mx-auto">
-                <Cpu className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                Inspect Any Active Government Notice
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed">
-                Enter any Tender ID or select one of the sample public works below to generate an AI Dossier with BOQ breakdown, compliance checklists, and GCC risk warnings.
-              </p>
-
-              <div className="flex flex-wrap justify-center gap-2.5 pt-2">
-                {[
-                  { label: 'PWD Road Macadamization (₹45 Lakhs)', id: '2026_PWD_321045_1' },
-                  { label: 'Jal Shakti Water Supply Scheme (₹1.8 Cr)', id: '2026_JAL_109283_1' },
-                  { label: 'District Hospital Upgradation Block (₹3.2 Cr)', id: '2026_MED_441209_1' },
-                ].map((sample, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setInputTenderId(sample.id);
-                      handleAnalyze(sample.id);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:border-dalBlue dark:hover:border-blue-400 transition-colors cursor-pointer"
-                  >
-                    ⚡ Test {sample.label}
-                  </button>
-                ))}
-              </div>
+          <div className="estimator-empty-state max-w-5xl mx-auto border-t border-slate-200 dark:border-slate-700 py-8 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
             </div>
-
-            {/* 4-Step Technical Workflow Explanation */}
-            <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
-                  1
-                </div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Select Notice</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Provide an official portal notice ID or NIT reference number.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
-                  2
-                </div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Scrutinize Docs</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  AI reads NIT clauses, technical specifications, and general conditions.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
-                  3
-                </div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Run Analysis</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Evaluates financial turnover, solvency, and extracts material quantities.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center">
-                  4
-                </div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">Review &amp; Export</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Export CSV bill of quantities and check affidavit requirements.
-                </p>
-              </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Analysis workspace</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Enter a tender reference above to begin. Analysis results will appear here when available.
+              </p>
             </div>
           </div>
         )}
@@ -1069,6 +1047,7 @@ export default function Services() {
                   </label>
                   <Input
                     type="text"
+                    required
                     value={editProfile.companyName}
                     onChange={(e) => setEditProfile({ ...editProfile, companyName: e.target.value })}
                   />
@@ -1081,9 +1060,11 @@ export default function Services() {
                     </label>
                     <select
                       value={editProfile.registrationClass}
+                      required
                       onChange={(e) => setEditProfile({ ...editProfile, registrationClass: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white"
                     >
+                      <option value="" disabled>Select registration class</option>
                       <option value="Class Special">Class Special</option>
                       <option value="Class A Works">Class A Works</option>
                       <option value="Class B Works">Class B Works</option>
@@ -1098,6 +1079,8 @@ export default function Services() {
                     </label>
                     <Input
                       type="number"
+                      min="0"
+                      required
                       value={editProfile.avgAnnualTurnoverInr}
                       onChange={(e) => setEditProfile({ ...editProfile, avgAnnualTurnoverInr: Number(e.target.value) })}
                     />
@@ -1111,6 +1094,8 @@ export default function Services() {
                     </label>
                     <Input
                       type="number"
+                      min="0"
+                      required
                       value={editProfile.solvencyLimitInr}
                       onChange={(e) => setEditProfile({ ...editProfile, solvencyLimitInr: Number(e.target.value) })}
                     />
@@ -1121,6 +1106,8 @@ export default function Services() {
                     </label>
                     <Input
                       type="number"
+                      min="0"
+                      required
                       value={editProfile.largestSingleWorkDoneInr}
                       onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: Number(e.target.value) })}
                     />

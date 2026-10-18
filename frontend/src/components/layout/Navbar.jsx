@@ -13,10 +13,8 @@ import {
   X, 
   Sun, 
   Moon, 
-  LogIn, 
   LogOut, 
   ArrowUpRight,
-  ShieldCheck,
   Sparkles
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -32,7 +30,7 @@ export function Navbar() {
 
   // Subscribe to global stores
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
-  const { user, isAuthenticated, isPro, logout } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   const navLinks = [
     { label: 'Home', path: '/' },
@@ -48,13 +46,13 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full transition-colors duration-200">
       
       {/* Top Utility Bar (Clean, uncluttered top strip) */}
-      <div className="bg-[#141416] text-[#A0A5B1] text-[11px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-[#24262E] hidden md:block">
+      <div className="navbar-source-strip bg-[#141416] text-[#A0A5B1] text-[11px] sm:text-xs py-1 px-4 sm:px-6 lg:px-8 border-b border-[#24262E] hidden md:block">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           
-          {/* Left: Official portal status */}
+          {/* Left: data-source context */}
           <div className="flex items-center gap-2 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-techCoral shrink-0" />
-            <span>Official Portal Synchronized: <strong className="text-white font-semibold">jktenders.gov.in &amp; GeM</strong></span>
+            <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
+            <span>Data sources: <strong className="text-white font-semibold">jktenders.gov.in &amp; GeM</strong></span>
           </div>
 
           {/* Right: AI Shortcut, Theme Toggle & Saved Bookmarks */}
@@ -99,7 +97,7 @@ export function Navbar() {
 
       {/* Main Navigation Bar */}
       <div className="bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-[#262832] shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
+        <div className="navbar-main-row max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
           
           {/* Left Block: Coral accent brand container + Logo */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">

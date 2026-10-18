@@ -10,24 +10,17 @@ import {
   Calculator, 
   ShieldCheck, 
   AlertTriangle, 
-  Clock, 
-  DollarSign, 
-  Building2, 
-  FileText, 
   CheckCircle2, 
   XCircle, 
   TrendingUp, 
-  Sparkles, 
   History, 
   Trash2, 
   ExternalLink,
-  ChevronRight,
   Info,
   Lock,
   ArrowRight,
   RefreshCw,
   Search,
-  Scale
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/useAuthStore';
@@ -41,7 +34,7 @@ import { ScoreSpeedometer } from '@/components/shared/ScoreSpeedometer';
 export default function CheckScore() {
   const { tenderId: paramTenderId } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   // State
   const [selectedTender, setSelectedTender] = useState(null);
@@ -50,16 +43,16 @@ export default function CheckScore() {
   const [isLoadingTender, setIsLoadingTender] = useState(false);
 
   // Form Fields (Contractor Metrics)
-  const [registrationClass, setRegistrationClass] = useState('Class A Works');
+  const [registrationClass, setRegistrationClass] = useState('');
   const [maxAnnualTurnover, setMaxAnnualTurnover] = useState('');
   const [ongoingCommitments, setOngoingCommitments] = useState('');
   const [largestSimilarWork, setLargestSimilarWork] = useState('');
-  const [proposedQuotePercentage, setProposedQuotePercentage] = useState('-7.5');
-  const [hasMachineryEquipment, setHasMachineryEquipment] = useState(true);
-  const [hasValidGstClearance, setHasValidGstClearance] = useState(true);
-  const [hasRegistrationCardRenewal, setHasRegistrationCardRenewal] = useState(true);
-  const [hasActiveCdrFdrFacility, setHasActiveCdrFdrFacility] = useState(true);
-  const [saveAsDefaultProfile, setSaveAsDefaultProfile] = useState(true);
+  const [proposedQuotePercentage, setProposedQuotePercentage] = useState('');
+  const [hasMachineryEquipment, setHasMachineryEquipment] = useState(false);
+  const [hasValidGstClearance, setHasValidGstClearance] = useState(false);
+  const [hasRegistrationCardRenewal, setHasRegistrationCardRenewal] = useState(false);
+  const [hasActiveCdrFdrFacility, setHasActiveCdrFdrFacility] = useState(false);
+  const [saveAsDefaultProfile, setSaveAsDefaultProfile] = useState(false);
 
   // Outcome & History
   const [evaluationResult, setEvaluationResult] = useState(null);
@@ -127,7 +120,7 @@ export default function CheckScore() {
 
   // 3. Load target tender if tenderId exists in URL
   useEffect(() => {
-    const targetId = paramTenderId || manualTenderInput;
+    const targetId = paramTenderId;
     if (!targetId) return;
 
     const fetchTargetTender = async () => {
@@ -140,7 +133,7 @@ export default function CheckScore() {
           setSelectedTender(found);
           setManualTenderInput(found.sourceTenderId || found._id);
         }
-      } catch (err) {
+      } catch {
         const match = availableTenders.find(t => t._id === targetId || t.sourceTenderId === targetId);
         if (match) {
           setSelectedTender(match);
@@ -185,7 +178,7 @@ export default function CheckScore() {
         maxAnnualTurnover: Number(maxAnnualTurnover) || 0,
         ongoingCommitments: Number(ongoingCommitments) || 0,
         largestSimilarWork: Number(largestSimilarWork) || 0,
-        proposedQuotePercentage: Number(proposedQuotePercentage) || -5.0,
+        proposedQuotePercentage: Number(proposedQuotePercentage),
         registrationClass,
         hasMachineryEquipment,
         hasValidGstClearance,
@@ -236,7 +229,7 @@ export default function CheckScore() {
   // If user is not logged in: Institutional Auth-Gate
   if (!isAuthenticated) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+      <div className="score-page max-w-3xl mx-auto px-4 py-12 sm:py-16">
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 sm:p-10 shadow-xs text-center space-y-5">
           <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-400 rounded-xl flex items-center justify-center mx-auto">
             <Lock className="w-6 h-6" />
@@ -247,7 +240,7 @@ export default function CheckScore() {
               Contractor Verification Required
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-              Bid Allocation Probability &amp; Capacity Check
+              Bid Eligibility &amp; Score
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               Log in to calculate your CPWD / J&amp;K PWD Assessed Bid Capacity, Two-Cover statutory responsiveness, and allocation odds.
@@ -292,7 +285,7 @@ export default function CheckScore() {
   }
 
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="score-page min-h-screen bg-paper dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Top Header Banner */}
@@ -303,10 +296,10 @@ export default function CheckScore() {
               <span>J&amp;K e-Procurement Scoring Engine</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
-              Bid Allocation Probability &amp; Capacity Check
+              Bid Eligibility &amp; Score
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
-              Calculate assessed bid capacity, verify Two-Cover qualification requirements, and evaluate quote competitiveness for J&amp;K public works.
+              Assess bid capacity, Two-Cover requirements, and quote competitiveness for J&amp;K public works. This estimate does not guarantee qualification or award.
             </p>
           </div>
 
@@ -321,7 +314,7 @@ export default function CheckScore() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Check Score
+              Eligibility calculator
             </button>
             <button
               type="button"
@@ -388,13 +381,13 @@ export default function CheckScore() {
                       <div>
                         <span className="block text-[10px] uppercase font-semibold text-slate-400">Department</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300 truncate block">
-                          {selectedTender.departmentName || 'J&K PWD'}
+                          {selectedTender.departmentName || 'Not provided'}
                         </span>
                       </div>
                       <div>
                         <span className="block text-[10px] uppercase font-semibold text-slate-400">Class</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300">
-                          {selectedTender.tendererClass || 'Class A/B'}
+                          {selectedTender.tendererClass || 'Not provided'}
                         </span>
                       </div>
                     </div>
@@ -416,7 +409,7 @@ export default function CheckScore() {
                         <option value="" disabled>-- Select a recent tender --</option>
                         {availableTenders.map(t => (
                           <option key={t._id} value={t._id}>
-                            {t.sourceTenderId} • {t.title?.slice(0, 42)}... ({formatINR(t.estimatedValue) || 'Verified'})
+                            {t.sourceTenderId} • {t.title} ({formatINR(t.estimatedValue) || '—'})
                           </option>
                         ))}
                       </select>
@@ -452,6 +445,7 @@ export default function CheckScore() {
                             setIsLoadingTender(false);
                           }
                         }}
+                        aria-label="Find tender by reference"
                       >
                         {isLoadingTender ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                       </Button>
@@ -461,21 +455,23 @@ export default function CheckScore() {
               </div>
 
               {/* Step 2: Contractor Financial & Bidding Inputs */}
-              <form onSubmit={handleCalculateScore} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs space-y-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-dalBlue dark:text-blue-300 block">
-                  Step 2: Contractor Credentials &amp; Bidding Quote
+              <form onSubmit={handleCalculateScore} className="score-entry-form bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs">
+                <span className="text-xs font-semibold text-dalBlue dark:text-blue-300 block">
+                  Step 2: Contractor credentials and financial capacity
                 </span>
 
                 {/* Registration Class */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Registration Class (J&amp;K PWD / CPWD):
+                    Registration class (J&amp;K PWD / CPWD)
                   </label>
                   <select
                     value={registrationClass}
+                    required
                     onChange={(e) => setRegistrationClass(e.target.value)}
                     className="w-full text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
                   >
+                    <option value="" disabled>Select registration class</option>
                     <option value="Class Special">Class Special / Super Class (Unlimited Value)</option>
                     <option value="Class A Works">Class A Works (Up to ₹10.0+ Crores)</option>
                     <option value="Class B Works">Class B Works (Up to ₹2.5 Crores)</option>
@@ -484,11 +480,13 @@ export default function CheckScore() {
                   </select>
                 </div>
 
+                <h3 className="score-subsection-title">Financial capacity</h3>
+
                 {/* Max Annual Turnover (A) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Peak Annual Civil Turnover (A):
+                      Peak annual civil turnover (A) · ₹
                     </label>
                     {formatINR(maxAnnualTurnover) && (
                       <span className="text-[11px] font-mono font-bold text-dalBlue dark:text-blue-400">
@@ -498,6 +496,8 @@ export default function CheckScore() {
                   </div>
                   <Input
                     type="number"
+                    min="0"
+                    inputMode="numeric"
                     placeholder="Enter maximum 1-year turnover in last 5 FYs (e.g. 15000000)"
                     value={maxAnnualTurnover}
                     onChange={(e) => setMaxAnnualTurnover(e.target.value)}
@@ -510,7 +510,7 @@ export default function CheckScore() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Ongoing Commitments during contract period (B):
+                      Ongoing commitments during contract period (B) · ₹
                     </label>
                     {formatINR(ongoingCommitments) && (
                       <span className="text-[11px] font-mono font-bold text-dalBlue dark:text-blue-400">
@@ -520,18 +520,21 @@ export default function CheckScore() {
                   </div>
                   <Input
                     type="number"
+                    min="0"
+                    inputMode="numeric"
                     placeholder="Value of works in hand to complete during this period (e.g. 5000000)"
                     value={ongoingCommitments}
                     onChange={(e) => setOngoingCommitments(e.target.value)}
                     required
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Enter the rupee value of works in hand due during this contract period.</span>
                 </div>
 
                 {/* Single Largest Similar Work */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Single Largest Completed Similar Work:
+                      Single largest completed similar work · ₹
                     </label>
                     {formatINR(largestSimilarWork) && (
                       <span className="text-[11px] font-mono font-bold text-dalBlue dark:text-blue-400">
@@ -541,6 +544,8 @@ export default function CheckScore() {
                   </div>
                   <Input
                     type="number"
+                    min="0"
+                    inputMode="numeric"
                     placeholder="Value of largest completed work (e.g. 8000000)"
                     value={largestSimilarWork}
                     onChange={(e) => setLargestSimilarWork(e.target.value)}
@@ -550,12 +555,13 @@ export default function CheckScore() {
 
                 {/* Proposed Quoting Rate */}
                 <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+                  <span className="score-subsection-title">Step 3: Proposed bid</span>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                       Proposed Quoting Rate (% vs Advertised SSR):
                     </label>
                     <Badge variant={Number(proposedQuotePercentage) < -15 ? 'warning' : 'primary'}>
-                      {proposedQuotePercentage}%
+                      {proposedQuotePercentage ? `${proposedQuotePercentage}%` : 'Enter rate'}
                     </Badge>
                   </div>
                   <Input
@@ -567,6 +573,7 @@ export default function CheckScore() {
                     required
                   />
                   <div className="text-[11px] text-slate-500 space-y-0.5">
+                    <p>Negative values are discounts; positive values are premiums against the advertised SSR.</p>
                     <p>• <strong>-5% to -14.9%:</strong> Typical competitive corridor in J&amp;K.</p>
                     <p>• <strong>Below -15%:</strong> Triggers mandatory Additional Performance Security (APS).</p>
                   </div>
@@ -574,6 +581,7 @@ export default function CheckScore() {
 
                 {/* Statutory Checkboxes */}
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-xs">
+                  <h3 className="score-subsection-title">Eligibility and equipment checks</h3>
                   <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
                     <input
                       type="checkbox"
@@ -642,7 +650,7 @@ export default function CheckScore() {
                   ) : (
                     <>
                       <Calculator className="w-3.5 h-3.5 mr-1.5" />
-                      Calculate Bid Allocation Score
+                  Calculate eligibility
                     </>
                   )}
                 </Button>
@@ -690,7 +698,7 @@ export default function CheckScore() {
                           {evaluationResult.tender.title?.replace(/[[\]]/g, '')}
                         </h4>
                         <p className="text-[11px] text-slate-500">
-                          {evaluationResult.tender.departmentName || 'J&K PWD'} • Class {evaluationResult.inputs?.registrationClass}
+                          {evaluationResult.tender.departmentName || 'Not provided'} • Class {evaluationResult.inputs?.registrationClass}
                         </p>
                       </div>
 
@@ -730,7 +738,7 @@ export default function CheckScore() {
                     <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Tender Value</span>
                       <span className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono">
-                        {formatINR(evaluationResult.tender.estimatedValue) || 'Verified'}
+                        {formatINR(evaluationResult.tender.estimatedValue) || 'Not provided'}
                       </span>
                       <span className="text-[10px] text-slate-500 block mt-0.5">Advertised Cost</span>
                     </div>
@@ -855,7 +863,7 @@ export default function CheckScore() {
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 leading-relaxed flex items-start gap-2">
                     <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                     <span>
-                      Estimations are computed using the statutory J&amp;K PWD / CPWD Works formula (A &times; N &times; 2) &minus; B and verified procurement parameters. Official qualification is determined solely by the departmental tender committee.
+                      This assessment uses the configured J&amp;K PWD / CPWD Works formula (A &times; N &times; 2) &minus; B and the details entered above. It is not a guarantee of qualification; the tender committee makes the official decision.
                     </span>
                   </div>
 
@@ -865,7 +873,7 @@ export default function CheckScore() {
                       to={`/tenders/${evaluationResult.tender.sourceTenderId}`}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:underline"
                     >
-                      <span>View Official Tender Notice</span>
+                      <span>View tender details</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -873,7 +881,7 @@ export default function CheckScore() {
                 </div>
               ) : (
                 /* Empty Placeholder State */
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center space-y-3">
+                <div className="score-empty bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center space-y-3">
                   <div className="w-12 h-12 bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-xl flex items-center justify-center mx-auto">
                     <Calculator className="w-6 h-6" />
                   </div>

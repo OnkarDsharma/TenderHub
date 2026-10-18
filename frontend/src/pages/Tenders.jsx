@@ -27,7 +27,9 @@ import {
   Sparkles,
   Briefcase,
   FileCheck,
-  Lock
+  Lock,
+  Rows3,
+  Grid2X2
 } from 'lucide-react';
 
 import { useTenders } from '@/hooks/useTenders';
@@ -45,7 +47,7 @@ import { Button } from '@/components/ui/Button';
 // =============================================================================
 
 // 0. Northern Region State Options
-export const STATE_OPTIONS = [
+const STATE_OPTIONS = [
   { label: 'All Northern States', value: '' },
   { label: 'Jammu & Kashmir', value: 'Jammu & Kashmir' },
   { label: 'Himachal Pradesh', value: 'Himachal Pradesh' },
@@ -348,6 +350,7 @@ export default function Tenders() {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
 
   // Dynamic District Options based on State
   const activeDistrictOptions = state && STATE_DISTRICT_OPTIONS[state]
@@ -878,8 +881,19 @@ export default function Tenders() {
                 </button>
               </div>
 
-              {/* Sorting Selector */}
-              <div className="flex items-center justify-between sm:justify-start gap-2 px-1 sm:px-2 w-full sm:w-auto">
+              {/* Compact results count, view, and sorting controls */}
+              <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 px-1 sm:px-2 w-full sm:w-auto">
+                <span className="text-xs text-slate-500 dark:text-slate-400 mr-auto sm:mr-1">
+                  <strong className="font-mono text-slate-900 dark:text-white">{totalCount.toLocaleString('en-IN')}</strong> {status === 'archived' ? 'archived notices' : status === 'expired' ? 'expired notices' : 'active notices'}
+                </span>
+                <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5" role="group" aria-label="Tender view">
+                  <button type="button" onClick={() => setViewMode('list')} aria-label="List view" title="List view" aria-pressed={viewMode === 'list'} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-slate-100 dark:bg-slate-800 text-dalBlue dark:text-blue-300' : 'text-slate-500'}`}>
+                    <Rows3 className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => setViewMode('card')} aria-label="Card view" title="Card view" aria-pressed={viewMode === 'card'} className={`p-1.5 rounded-md ${viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-dalBlue dark:text-blue-300' : 'text-slate-500'}`}>
+                    <Grid2X2 className="w-4 h-4" />
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sort:</span>
@@ -994,16 +1008,6 @@ export default function Tenders() {
               </div>
             )}
 
-            {/* Total Results Summary */}
-            <div className="flex items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-xl text-xs text-slate-600 dark:text-slate-400 shadow-xs">
-              <span>
-                Showing <strong className="font-mono text-sm text-dalBlue dark:text-blue-400 font-bold">{totalCount}</strong> {status === 'archived' ? 'archived notices' : status === 'expired' ? 'expired notices' : 'active notices'}
-              </span>
-              <span className="text-[11px] text-slate-400 hidden sm:inline">
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-
             {/* Loading State */}
             {isLoading && (
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center space-y-3 shadow-xs">
@@ -1022,7 +1026,7 @@ export default function Tenders() {
 
             {/* Tender Feed */}
             {!isLoading && !isError && tenders.length > 0 && (
-              <div className="space-y-4">
+              <div className={viewMode === 'list' ? 'tender-results-list' : 'tender-results-cards'}>
                 {tenders.map((tender, index) => {
                   const isBlurredCard = !isPro && index >= 15;
                   return (
@@ -1098,6 +1102,7 @@ export default function Tenders() {
                           tender={tender} 
                           isBlurred={isBlurredCard}
                           onViewDetails={() => handleViewDetails(tender)}
+                          variant={viewMode === 'list' ? 'row' : 'card'}
                         />
                       </div>
                     </div>
