@@ -10,14 +10,15 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export function PreferenceModal() {
-  const { preferences, updatePreferences } = usePreferenceStore();
+  const preferences = usePreferenceStore((state) => state.preferences) || {};
+  const updatePreferences = usePreferenceStore((state) => state.updatePreferences);
 
   const [sectors, setSectors] = useState(['Civil Works']);
   const [location, setLocation] = useState('Baramulla');
   const [minVal, setMinVal] = useState('200000');
   const [preferEmd, setPreferEmd] = useState(false);
 
-  if (preferences.isConfigured) return null;
+  if (preferences?.isConfigured) return null;
 
   const sectorOptions = [
     'Civil Works', 'Electrical Works', 'Pipes & Water Supply', 

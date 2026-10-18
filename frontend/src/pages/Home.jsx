@@ -66,16 +66,18 @@ export default function Home() {
   });
 
   const handleTenderClick = (tender) => {
+    if (!tender) return;
+    const tenderId = tender._id || tender.id || '';
     if (!isAuthenticated) {
       setAuthModalConfig({
         title: 'Sign In to View Full Tender Details',
         subtitle: `Notice ${tender.sourceTenderId || ''}: ${tender.title?.slice(0, 80) || ''}...`,
-        redirectUrl: `/tenders/${tender._id}`
+        redirectUrl: `/tenders/${tenderId}`
       });
       setAuthModalOpen(true);
       return;
     }
-    navigate(`/tenders/${tender._id}`);
+    navigate(`/tenders/${tenderId}`);
   };
 
   // Fetch real aggregated database statistics from backend
@@ -98,37 +100,47 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Construct dynamic department cards from real live database metrics
-  const departmentCards = (stats?.departmentBreakdown || []).map((dept) => ({
-    title: dept.shortName.replace(/^(District\s+|Department\s+of\s+)/i, ''),
-    subtitle: dept.rootOrg.includes('AGRICULTURE') 
-      ? 'Department of Agricult...' 
-      : dept.rootOrg.includes('DC-PDD') 
-      ? 'Power Dept (PDD)' 
-      : dept.rootOrg.includes('PWD') || dept.rootOrg.includes('R&B')
-      ? 'PWD'
-      : dept.rootOrg.includes('HAUDD') || dept.rootOrg.includes('MUNICIPAL')
-      ? 'HAUDD'
-      : dept.rootOrg.includes('IRRIGATION') || dept.rootOrg.includes('IFCD')
-      ? 'I and FC'
-      : dept.rootOrg.includes('HEALTH') || dept.rootOrg.includes('MEDICAL')
-      ? 'Health and Medical Educ...'
-      : dept.rootOrg,
-    count: `${dept.count} Active Notices`,
-    value: formatCurrencyINR(dept.totalValue),
-    type: 'department',
-    query: { organisation: dept.rootOrg, department: dept.shortName }
-  }));
+  // Construct dynamic department cards from real live database metrics safely
+  const departmentCards = Array.isArray(stats?.departmentBreakdown)
+    ? stats.departmentBreakdown
+        .filter((dept) => dept && typeof dept === 'object')
+        .map((dept) => {
+          const rawName = String(dept.shortName || dept.fullName || dept.rootOrg || 'Department');
+          const cleanTitle = rawName.replace(/^(District\s+|Department\s+of\s+)/i, '');
+          const root = String(dept.rootOrg || dept.fullName || '');
 
-  // Construct dynamic domain/category cards from real live database metrics
-  const domainCards = (stats?.domainBreakdown || []).map((domain) => ({
-    title: domain.name,
-    subtitle: 'Classified Work Sector',
-    count: `${domain.count} Active Notices`,
-    value: formatCurrencyINR(domain.totalValue),
-    type: 'category',
-    query: { category: domain.name }
-  }));
+          let subtitle = root || 'Govt Department';
+          if (root.includes('AGRICULTURE')) subtitle = 'Department of Agricult...';
+          else if (root.includes('DC-PDD') || root.includes('PDD')) subtitle = 'Power Dept (PDD)';
+          else if (root.includes('PWD') || root.includes('R&B')) subtitle = 'PWD';
+          else if (root.includes('HAUDD') || root.includes('MUNICIPAL')) subtitle = 'HAUDD';
+          else if (root.includes('IRRIGATION') || root.includes('IFCD')) subtitle = 'I and FC';
+          else if (root.includes('HEALTH') || root.includes('MEDICAL')) subtitle = 'Health and Medical Educ...';
+
+          return {
+            title: cleanTitle,
+            subtitle,
+            count: `${dept.count || 0} Active Notices`,
+            value: formatCurrencyINR(dept.totalValue),
+            type: 'department',
+            query: { organisation: dept.rootOrg, department: dept.shortName }
+          };
+        })
+    : [];
+
+  // Construct dynamic domain/category cards from real live database metrics safely
+  const domainCards = Array.isArray(stats?.domainBreakdown)
+    ? stats.domainBreakdown
+        .filter((domain) => domain && typeof domain === 'object')
+        .map((domain) => ({
+          title: String(domain.name || 'Work Domain'),
+          subtitle: 'Classified Work Sector',
+          count: `${domain.count || 0} Active Notices`,
+          value: formatCurrencyINR(domain.totalValue),
+          type: 'category',
+          query: { category: domain.name }
+        }))
+    : [];
 
   // Fallback items based on real database records matching user's exact screenshot
   const fallbackDepartmentItems = [
@@ -295,34 +307,6 @@ export default function Home() {
         <div className="home-statbar relative z-10 bg-white dark:bg-[#18191E] border-t border-slate-200 dark:border-slate-800 w-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             
-            {/* Slider Numbers / Pagination: 01 ─────── 02  03 */}
-            <div className="flex items-center gap-3 text-xs sm:text-sm font-mono font-bold text-slate-500 dark:text-slate-400">
-              <button 
-                onClick={() => setActiveSlide(1)}
-                className={`transition-colors ${activeSlide === 1 ? 'text-slate-900 dark:text-white font-extrabold' : ''}`}
-              >
-                01
-              </button>
-              <div className="w-14 sm:w-20 h-0.5 bg-slate-300 dark:bg-slate-700 relative">
-                <div 
-                  className="absolute top-0 left-0 h-full bg-techCoral transition-all duration-300"
-                  style={{ width: activeSlide === 1 ? '50%' : activeSlide === 2 ? '75%' : '100%' }}
-                />
-              </div>
-              <button 
-                onClick={() => setActiveSlide(2)}
-                className={`transition-colors ${activeSlide === 2 ? 'text-slate-900 dark:text-white font-extrabold' : ''}`}
-              >
-                02
-              </button>
-              <button 
-                onClick={() => setActiveSlide(3)}
-                className={`transition-colors ${activeSlide === 3 ? 'text-slate-900 dark:text-white font-extrabold' : ''}`}
-              >
-                03
-              </button>
-            </div>
-
             {/* Real Procurement Counters */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">
               {/* Stat 1: Active Notices */}
@@ -458,13 +442,6 @@ export default function Home() {
           Styled in the Techbyte "WHAT WE DO" aesthetic with peach corner indicators
           ========================================================================= */}
       <section className="home-domains relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#121316] border-b border-slate-200 dark:border-slate-800 overflow-hidden">
-        
-        {/* Top-Right Geometric Abstract Shapes from Techbyte */}
-        <div className="absolute top-8 right-8 sm:right-16 flex items-start pointer-events-none">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-tl-full bg-techCoral/80" />
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-tr-full bg-indigo-500/80 -ml-1" />
-        </div>
-
         <div className="max-w-7xl mx-auto relative z-10">
           
           {/* Centered Pill Badge & Heading */}
@@ -664,14 +641,15 @@ export default function Home() {
 
           {/* Grid matching user's exact Screenshot 2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {stats.latestTenders.slice(0, 6).map((tender) => {
-              const cleanTitle = tender.title?.replace(/[[\]]/g, '') || 'Tender Notice';
-              const orgParts = (tender.organisationChain || '').split('||').map((p) => p.trim());
+            {(stats?.latestTenders || []).slice(0, 6).filter(Boolean).map((tender, index) => {
+              const cleanTitle = tender?.title?.replace(/[[\]]/g, '') || 'Tender Notice';
+              const orgParts = String(tender?.organisationChain || '').split('||').map((p) => p.trim());
               const primaryDept = orgParts[orgParts.length - 1] || orgParts[0] || 'Govt Authority';
+              const tenderKey = tender?._id || `tender-${index}`;
 
               return (
                 <div
-                  key={tender._id}
+                  key={tenderKey}
                   onClick={() => handleTenderClick(tender)}
                   className="bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-sm p-5 sm:p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
                 >
