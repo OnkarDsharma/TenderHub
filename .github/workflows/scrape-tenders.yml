@@ -13,6 +13,21 @@ jobs:
     name: Crawl Northern States & GeM Tenders
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      NODE_ENV: production
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-2.5-flash
+      SCRAPER_HEADLESS: 'true'
+      JWT_ACCESS_SECRET: 'thub_jwt_access_secret_32_chars_fallback'
+      JWT_REFRESH_SECRET: 'thub_jwt_refresh_secret_32_chars_fallback'
+      ADMIN_SECRET_KEY: 'admin_master_secret_thub_123'
+      ADMIN_EMAIL: 'admin@tenderhub.in'
 
     steps:
       - name: 1. Checkout Repository
@@ -33,17 +48,6 @@ jobs:
 
       - name: 4. Ingest Jammu & Kashmir Tenders
         continue-on-error: true
-        env:
-          NODE_ENV: production
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
-          SCRAPER_HEADLESS: 'true'
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Jammu & Kashmir Tenders..."
@@ -51,17 +55,6 @@ jobs:
 
       - name: 5. Ingest Punjab Tenders
         continue-on-error: true
-        env:
-          NODE_ENV: production
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
-          SCRAPER_HEADLESS: 'true'
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Punjab Tenders..."
@@ -69,17 +62,6 @@ jobs:
 
       - name: 6. Ingest Himachal Pradesh Tenders
         continue-on-error: true
-        env:
-          NODE_ENV: production
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
-          SCRAPER_HEADLESS: 'true'
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Himachal Pradesh Tenders..."
@@ -87,17 +69,6 @@ jobs:
 
       - name: 7. Ingest GeM Multi-State Bids (J&K, HP, Punjab, Ladakh)
         continue-on-error: true
-        env:
-          NODE_ENV: production
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
-          SCRAPER_HEADLESS: 'true'
         run: |
           cd backend
           echo "📦 Ingesting Latest GeM Bids across Northern States..."
