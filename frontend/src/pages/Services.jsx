@@ -946,75 +946,7 @@ export default function Services() {
           </div>
         )}
 
-        {/* 3. AI SERVICES PLANS SECTION */}
-        <section className="mt-16 pt-12 border-t border-slate-200 dark:border-slate-700">
-          <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-dalBlue dark:text-blue-400">
-              Contractor Intelligence Plans
-            </span>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              AI Quantity Surveyor &amp; Copilot Plans
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-              Accurate document parsing and BOQ itemization for Indian public works. Quotas renew monthly, or purchase single tenders on-demand.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
-                className={`relative rounded-xl p-6 flex flex-col justify-between transition-all ${
-                  plan.popular
-                    ? 'bg-white dark:bg-slate-800 ring-2 ring-dalBlue dark:ring-blue-500 shadow-md'
-                    : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs'
-                }`}
-              >
-                {plan.badge && (
-                  <span className={`absolute -top-3 left-6 px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    plan.popular ? 'bg-chinarRed text-white shadow-xs' : 'bg-slate-700 text-white'
-                  }`}>
-                    {plan.badge}
-                  </span>
-                )}
-
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">
-                    {plan.description}
-                  </p>
-
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-dalBlue dark:text-white">
-                      ₹{plan.price}
-                    </span>
-                    <span className="text-xs font-medium text-slate-500">{plan.unit}</span>
-                  </div>
-
-                  <ul className="mt-5 space-y-2.5 text-xs text-slate-700 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700 pt-4">
-                    {plan.features?.map((feat, fIdx) => (
-                      <li key={fIdx} className="flex items-start gap-2">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
-                  <Button
-                    variant={plan.popular ? 'primary' : 'outline'}
-                    onClick={() => handleCheckoutPlan(plan)}
-                    className="w-full text-xs font-semibold"
-                  >
-                    {plan.ctaText || 'Get Started'}
-                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
 
       {/* 4. MODAL: EDIT CONTRACTOR PROFILE MEMORY */}
