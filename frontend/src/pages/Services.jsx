@@ -4,7 +4,7 @@
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -25,12 +25,9 @@ import {
   Search,
   Sliders,
   Scale,
-  ArrowRight
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
 import { api } from '../services/api';
-import { billingApi } from '../services/billingApi';
-import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -40,11 +37,8 @@ export default function Services() {
   const [searchParams] = useSearchParams();
   const queryTenderId = searchParams.get('tenderId') || '';
   const initialTenderId = paramTenderId || queryTenderId;
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
 
   // State Management
-  const [plans, setPlans] = useState([]);
   const [profile, setProfile] = useState(null);
   const [profileReady, setProfileReady] = useState(false);
   const [exampleTender, setExampleTender] = useState(null);
@@ -74,11 +68,7 @@ export default function Services() {
 
   const loadPlansAndProfile = useCallback(async () => {
     try {
-      const [fetchedPlans, fetchedProfile] = await Promise.all([
-        servicesApi.getPlans().catch(() => []),
-        servicesApi.getContractorProfile().catch(() => null),
-      ]);
-      setPlans(fetchedPlans);
+      const fetchedProfile = await servicesApi.getContractorProfile().catch(() => null);
       if (fetchedProfile) {
         setProfile(fetchedProfile);
         setEditProfile({
@@ -118,29 +108,56 @@ export default function Services() {
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
 
       const isGem = targetId.toUpperCase().includes('GEM');
-      let tenderExists = false;
+      const normalizeId = (value) => String(value || '').trim().toUpperCase();
+      let analysisTenderId = targetId;
 
-      try {
-        const searchEndpoint = isGem ? '/gem/tenders' : '/tenders';
-        const tenderSearch = await api.get(searchEndpoint, { params: { search: targetId, status: 'all', limit: 10 } });
-        const tenderMatches = Array.isArray(tenderSearch.data?.data) ? tenderSearch.data.data : [];
-        tenderExists = tenderMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId || tender.tenderReferenceNumber === targetId);
-
-        if (!tenderExists) {
-          const fallbackEndpoint = isGem ? '/tenders' : '/gem/tenders';
-          const fallbackSearch = await api.get(fallbackEndpoint, { params: { search: targetId, status: 'all', limit: 10 } }).catch(() => ({ data: {} }));
-          const fallbackMatches = Array.isArray(fallbackSearch.data?.data) ? fallbackSearch.data.data : [];
-          tenderExists = fallbackMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId || tender.tenderReferenceNumber === targetId);
+      if (isGem) {
+        let gemTender = null;
+        try {
+          const detail = await api.get(`/gem/tenders/${encodeURIComponent(targetId)}`);
+          gemTender = detail.data?.data || null;
+        } catch (lookupError) {
+          if (lookupError.response?.status !== 404) {
+            throw new Error('Could not reach the GeM bid index. Please retry in a moment.', { cause: lookupError });
+          }
         }
-      } catch {
-        tenderExists = true;
+
+        // Search is a fallback for GeM references that the router cannot resolve as a path segment.
+        if (!gemTender) {
+          try {
+            const search = await api.get('/gem/tenders', {
+              params: { search: targetId, status: 'all', limit: 10 },
+            });
+            const candidates = Array.isArray(search.data?.data) ? search.data.data : [];
+            gemTender = candidates.find((tender) =>
+              [tender.sourceTenderId, tender.tenderReferenceNumber, tender._id]
+                .some((value) => normalizeId(value) === normalizeId(targetId))
+            ) || null;
+          } catch (lookupError) {
+            throw new Error('Could not reach the GeM bid index. Please retry in a moment.', { cause: lookupError });
+          }
+        }
+
+        if (!gemTender) {
+          throw new Error('This GeM bid is not in the TenderHub index yet. Choose it from GeM Bids or sync the bid before analyzing it.');
+        }
+        analysisTenderId = gemTender._id || gemTender.sourceTenderId || targetId;
+      } else {
+        const tenderSearch = await api.get('/tenders', {
+          params: { search: targetId, status: 'all', limit: 10 },
+        });
+        const tenderMatches = Array.isArray(tenderSearch.data?.data) ? tenderSearch.data.data : [];
+        const tender = tenderMatches.find((candidate) =>
+          [candidate.sourceTenderId, candidate._id, candidate.tenderReferenceNumber]
+            .some((value) => normalizeId(value) === normalizeId(targetId))
+        );
+        if (!tender) {
+          throw new Error('Tender reference was not found in the TenderHub index. Choose an active tender from Browse Tenders and try again.');
+        }
+        analysisTenderId = tender._id || tender.sourceTenderId || targetId;
       }
 
-      if (!tenderExists) {
-        throw new Error('Tender reference was not found in the TenderHub index. Choose an active tender from Browse Tenders or GeM Bids and try again.');
-      }
-
-      const res = await servicesApi.analyzeTender(targetId);
+      const res = await servicesApi.analyzeTender(analysisTenderId);
       if (res.success) {
         setDossierData(res.dossier);
         setPersonalizedFit(res.personalizedFit);
@@ -234,39 +251,6 @@ export default function Services() {
       }
     } catch {
       setError('Failed to update contractor memory profile.');
-    }
-  };
-
-  const handleCheckoutPlan = async (plan) => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/services');
-      return;
-    }
-
-    try {
-      const order = await billingApi.createOrder(`ai_${plan.id}`);
-      if (order && window.Razorpay) {
-        const options = {
-          key: order.keyId,
-          amount: order.amount,
-          currency: order.currency || 'INR',
-          name: 'TenderHub AI Services',
-          description: plan.name,
-          order_id: order.orderId,
-          handler: async (response) => {
-            await billingApi.verifyPayment(response);
-            loadPlansAndProfile();
-            setStatusMsg(`Payment verified. Plan ${plan.name} is now active.`);
-          },
-          theme: { color: '#102D49' }
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      } else {
-        alert(`Checkout ready: ${plan.name} (₹${plan.price}).`);
-      }
-    } catch (err) {
-      alert(`Checkout error: ${err.message}`);
     }
   };
 
