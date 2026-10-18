@@ -4,7 +4,7 @@
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -37,6 +37,9 @@ import { Badge } from '@/components/ui/Badge';
 
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const queryTenderId = searchParams.get('tenderId') || '';
+  const initialTenderId = paramTenderId || queryTenderId;
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
 
@@ -45,7 +48,7 @@ export default function Services() {
   const [profile, setProfile] = useState(null);
   const [profileReady, setProfileReady] = useState(false);
   const [exampleTender, setExampleTender] = useState(null);
-  const [inputTenderId, setInputTenderId] = useState(paramTenderId || '');
+  const [inputTenderId, setInputTenderId] = useState(initialTenderId);
   const [activeTab, setActiveTab] = useState('preBid'); // 'preBid' | 'boq' | 'execution' | 'copilot'
   const [analyzing, setAnalyzing] = useState(false);
   const [dossierData, setDossierData] = useState(null);
@@ -103,7 +106,7 @@ export default function Services() {
       setError('Contractor profile is loading. Try again in a moment.');
       return;
     }
-    if (!profile || profile.companyName === 'Prime Infrastructure & Engineering') {
+    if (!profile) {
       setError('Review and save your contractor profile before running a personalized analysis.');
       setShowProfileModal(true);
       return;
@@ -114,11 +117,27 @@ export default function Services() {
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
 
-      const tenderSearch = await api.get('/tenders', { params: { search: targetId, status: 'all', limit: 10 } });
-      const tenderMatches = Array.isArray(tenderSearch.data?.data) ? tenderSearch.data.data : [];
-      const tenderExists = tenderMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId);
+      const isGem = targetId.toUpperCase().includes('GEM');
+      let tenderExists = false;
+
+      try {
+        const searchEndpoint = isGem ? '/gem/tenders' : '/tenders';
+        const tenderSearch = await api.get(searchEndpoint, { params: { search: targetId, status: 'all', limit: 10 } });
+        const tenderMatches = Array.isArray(tenderSearch.data?.data) ? tenderSearch.data.data : [];
+        tenderExists = tenderMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId || tender.tenderReferenceNumber === targetId);
+
+        if (!tenderExists) {
+          const fallbackEndpoint = isGem ? '/tenders' : '/gem/tenders';
+          const fallbackSearch = await api.get(fallbackEndpoint, { params: { search: targetId, status: 'all', limit: 10 } }).catch(() => ({ data: {} }));
+          const fallbackMatches = Array.isArray(fallbackSearch.data?.data) ? fallbackSearch.data.data : [];
+          tenderExists = fallbackMatches.some((tender) => tender.sourceTenderId === targetId || tender._id === targetId || tender.tenderReferenceNumber === targetId);
+        }
+      } catch {
+        tenderExists = true;
+      }
+
       if (!tenderExists) {
-        throw new Error('Tender reference was not found in the TenderHub index. Choose a tender from Browse Tenders and try again.');
+        throw new Error('Tender reference was not found in the TenderHub index. Choose an active tender from Browse Tenders or GeM Bids and try again.');
       }
 
       const res = await servicesApi.analyzeTender(targetId);
@@ -159,16 +178,17 @@ export default function Services() {
 
   // Auto-analyze if the route contains a tender ID, after profile data loads.
   useEffect(() => {
-    if (paramTenderId) {
-      setInputTenderId(paramTenderId);
+    const targetId = paramTenderId || queryTenderId;
+    if (targetId) {
+      setInputTenderId(targetId);
       const profileKey = profile?.updatedAt || profile?.companyName || 'missing-profile';
-      const runKey = `${paramTenderId}:${profileKey}`;
+      const runKey = `${targetId}:${profileKey}`;
       if (profileReady && lastAutoAnalyzeRef.current !== runKey) {
         lastAutoAnalyzeRef.current = runKey;
-        handleAnalyze(paramTenderId);
+        handleAnalyze(targetId);
       }
     }
-  }, [paramTenderId, profileReady, profile, handleAnalyze]);
+  }, [paramTenderId, queryTenderId, profileReady, profile, handleAnalyze]);
 
   const handleSendMessage = async (e) => {
     e?.preventDefault();
