@@ -28,7 +28,7 @@ jobs:
   crawl-jk:
     name: 🏛️ Jammu & Kashmir Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -50,12 +50,12 @@ jobs:
         run: |
           cd backend
           echo "🏛️ Ingesting Latest Jammu & Kashmir Tenders..."
-          node src/scripts/fetchLatestDailyTenders.js 100
+          node src/scripts/fetchLatestDailyTenders.js 50
 
   crawl-punjab:
     name: 🌾 Punjab Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
   crawl-hp:
     name: 🏔️ Himachal Pradesh Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
