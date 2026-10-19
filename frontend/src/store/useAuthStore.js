@@ -7,6 +7,8 @@ import { create } from 'zustand';
 import { api } from '@/services/api';
 import { useBookmarkStore } from './useBookmarkStore';
 
+const PRODUCTION_API_URL = 'https://tenderhub-backend-jofq.onrender.com/api/v1';
+
 const isTestMode = import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175');
 
 const defaultTestUser = {
@@ -231,8 +233,19 @@ export const useAuthStore = create((set, get) => ({
    * Supports mode: 'login' | 'signup'
    */
   loginWithGoogle: (mode = 'login', redirectPath = '') => {
-    const backendUrl = api.defaults.baseURL || 'http://localhost:8000/api/v1';
     const frontendOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    // OAuth leaves the frontend and returns to the backend, so a localhost API
+    // URL baked into an old or misconfigured production bundle would send mobile
+    // users to localhost on their own device. Always use the deployed API for
+    // hosted frontends; localhost remains available for local development.
+    const isLocalFrontend = typeof window !== 'undefined' &&
+      ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const configuredBackend = (api.defaults.baseURL || '').trim().replace(/\/+$/, '');
+    const backendUrl = isLocalFrontend
+      ? (configuredBackend || 'http://localhost:8000/api/v1')
+      : (configuredBackend && !/localhost|127\.0\.0\.1/i.test(configuredBackend)
+        ? configuredBackend
+        : PRODUCTION_API_URL);
     const currentRedirect = redirectPath || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redirect') : '') || '';
     const originParam = frontendOrigin ? `&frontendUrl=${encodeURIComponent(frontendOrigin)}` : '';
     const redirectParam = currentRedirect ? `&redirect=${encodeURIComponent(currentRedirect)}` : '';
