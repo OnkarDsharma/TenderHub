@@ -85,7 +85,7 @@ SECONDARY_MONGO_URI=mongodb+srv://...
 REDIS_URL=redis://127.0.0.1:6379
 JWT_ACCESS_SECRET=...
 JWT_REFRESH_SECRET=...
-BACKEND_URL=https://tenderhub-backend-jofq.onrender.com
+BACKEND_URL=https://tenderhub-4nbc.onrender.com
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
 RAZORPAY_KEY_ID=rzp_live_...
@@ -103,7 +103,7 @@ R2_BUCKET_NAME=tenderhub
 
 ### Key Frontend Environment Variables (`frontend/.env.production`)
 ```env
-VITE_API_URL=https://tenderhub-backend-jofq.onrender.com/api/v1
+VITE_API_URL=https://tenderhub-4nbc.onrender.com/api/v1
 VITE_RAZORPAY_KEY_ID=rzp_live_TjWTNQzT2o8NCV
 ```
 

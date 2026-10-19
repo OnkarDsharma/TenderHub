@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { api } from '@/services/api';
 import { useBookmarkStore } from './useBookmarkStore';
 
-const PRODUCTION_API_URL = 'https://tenderhub-backend-jofq.onrender.com/api/v1';
+const PRODUCTION_API_URL = 'https://tenderhub-4nbc.onrender.com/api/v1';
 
 const isTestMode = import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175');
 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const PRODUCTION_RENDER_URL = 'https://tenderhub-backend-jofq.onrender.com/api/v1';
+const PRODUCTION_RENDER_URL = 'https://tenderhub-4nbc.onrender.com/api/v1';
 const LOCAL_DEV_URL = 'http://localhost:8000/api/v1';
 
 const isProductionDomain = typeof window !== 'undefined' && 

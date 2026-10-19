@@ -452,10 +452,10 @@ ADMIN_SECRET_KEY=<master_admin_passkey_minimum_8_chars>
 ADMIN_EMAIL=admin@tenderhub.in
 CORS_ORIGIN=https://tenderhub.in,https://tenderhub-frontend.onrender.com
 FRONTEND_URL=https://tenderhub.in
-BACKEND_URL=https://tenderhub-backend-jofq.onrender.com
+BACKEND_URL=https://tenderhub-4nbc.onrender.com
 GOOGLE_CLIENT_ID=<google_oauth_client_id>
 GOOGLE_CLIENT_SECRET=<google_oauth_client_secret>
-GOOGLE_CALLBACK_URL=https://tenderhub-backend-jofq.onrender.com/api/v1/auth/google/callback
+GOOGLE_CALLBACK_URL=https://tenderhub-4nbc.onrender.com/api/v1/auth/google/callback
 EMAIL_PROVIDER=brevo
 EMAIL_API_KEY=<brevo_api_key>
 EMAIL_FROM=TenderHub <no-reply@tenderhub.in>
@@ -476,7 +476,7 @@ SCRAPER_HEADLESS=true
 
 #### Frontend (`Render / Vercel -> Environment Variables`)
 ```env
-VITE_API_URL=https://tenderhub-backend-jofq.onrender.com/api/v1
+VITE_API_URL=https://tenderhub-4nbc.onrender.com/api/v1
 VITE_RAZORPAY_KEY_ID=rzp_live_TjWTNQzT2o8NCV
 ```
 
@@ -500,7 +500,7 @@ Government ASP.NET portals often undergo maintenance late at night or throttle c
 ### Q2: Why are Razorpay payments marked successful in the Razorpay dashboard, but the user is not activated in the database?
 This happens if the user closes their browser window immediately upon completing payment before the client-side redirect completes.
 - Verify that the Razorpay Webhook is active in the Razorpay dashboard pointing to:
-  `https://tenderhub-backend-jofq.onrender.com/api/v1/billing/webhook`
+  `https://tenderhub-4nbc.onrender.com/api/v1/billing/webhook`
 - Ensure `RAZORPAY_WEBHOOK_SECRET` matches between Render environment variables and the Razorpay Webhook settings.
 - The webhook listener will automatically process `payment.captured` and activate the subscription independently of the browser.
 

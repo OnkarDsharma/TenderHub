@@ -324,20 +324,23 @@ const resolveGoogleCallbackUrl = (req) => {
   // Never send a production Google OAuth response to localhost. Google opens
   // this URL on the user's device, where localhost is the device itself.
   if (isProduction) {
-    const isPublicHttpsCallback = (url) =>
-      url.startsWith('https://') && !isLocalUrl(url);
-    const productionCallback = configuredUrls.find((url) =>
-      isPublicHttpsCallback(url) && url.includes(host)
-    ) || configuredUrls.find(isPublicHttpsCallback);
+    const productionCallback = configuredUrls.find((url) => {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' && parsed.host === host && !isLocalUrl(url);
+      } catch {
+        return false;
+      }
+    });
     if (productionCallback) return productionCallback;
+
+    if (host && !isLocalUrl(host)) {
+      return `https://${host}/api/v1/auth/google/callback`;
+    }
 
     const backendBase = (env.BACKEND_URL || '').trim().replace(/\/+$/, '');
     if (backendBase.startsWith('https://') && !isLocalUrl(backendBase)) {
       return `${backendBase}/api/v1/auth/google/callback`;
-    }
-
-    if (host && !isLocalUrl(host)) {
-      return `https://${host}/api/v1/auth/google/callback`;
     }
     throw new Error('Google OAuth callback is not configured with a public production URL.');
   }

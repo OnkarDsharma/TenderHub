@@ -70,7 +70,7 @@ VITE_RAZORPAY_KEY_ID=rzp_live_TjWTNQzT2o8NCV
 
 ### Production (`frontend/.env.production`)
 ```env
-VITE_API_URL=https://tenderhub-backend-jofq.onrender.com/api/v1
+VITE_API_URL=https://tenderhub-4nbc.onrender.com/api/v1
 VITE_RAZORPAY_KEY_ID=rzp_live_TjWTNQzT2o8NCV
 ```
 
