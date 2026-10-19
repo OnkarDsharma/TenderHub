@@ -315,23 +315,43 @@ export const verifyOtp = async (req, res, next) => {
 const resolveGoogleCallbackUrl = (req) => {
   const host = req.get('host') || '';
   const configured = (env.GOOGLE_CALLBACK_URL || '').trim();
+  const isProduction = env.NODE_ENV === 'production';
+  const isLocalUrl = (value) => /localhost|127\.0\.0\.1/i.test(value);
+  const configuredUrls = configured
+    ? configured.split(',').map((url) => url.trim()).filter(Boolean)
+    : [];
 
-  // If comma-separated list of URLs is provided in env
-  if (configured.includes(',')) {
-    const urls = configured.split(',').map((u) => u.trim());
-    const matched = urls.find((u) => u.includes(host));
-    if (matched) return matched;
-    return env.NODE_ENV === 'production' 
-      ? (urls.find(u => !u.includes('localhost')) || urls[0]) 
-      : urls[0];
+  // Never send a production Google OAuth response to localhost. Google opens
+  // this URL on the user's device, where localhost is the device itself.
+  if (isProduction) {
+    const isPublicHttpsCallback = (url) =>
+      url.startsWith('https://') && !isLocalUrl(url);
+    const productionCallback = configuredUrls.find((url) =>
+      isPublicHttpsCallback(url) && url.includes(host)
+    ) || configuredUrls.find(isPublicHttpsCallback);
+    if (productionCallback) return productionCallback;
+
+    const backendBase = (env.BACKEND_URL || '').trim().replace(/\/+$/, '');
+    if (backendBase.startsWith('https://') && !isLocalUrl(backendBase)) {
+      return `${backendBase}/api/v1/auth/google/callback`;
+    }
+
+    if (host && !isLocalUrl(host)) {
+      return `https://${host}/api/v1/auth/google/callback`;
+    }
+    throw new Error('Google OAuth callback is not configured with a public production URL.');
   }
 
-  // If a single URL was configured, only use it if its host matches the current request
-  if (configured) {
+  // In development, honor a configured callback only when it belongs to this
+  // server. Otherwise derive it from the current request.
+  const matchingConfigured = configuredUrls.find((url) => url.includes(host));
+  if (matchingConfigured) return matchingConfigured;
+
+  if (configuredUrls.length === 1) {
     try {
-      const parsed = new URL(configured);
+      const parsed = new URL(configuredUrls[0]);
       if (parsed.host === host) {
-        return configured;
+        return configuredUrls[0];
       }
     } catch {
       // invalid URL string, fallback to dynamic below

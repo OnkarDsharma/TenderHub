@@ -243,9 +243,7 @@ export const useAuthStore = create((set, get) => ({
     const configuredBackend = (api.defaults.baseURL || '').trim().replace(/\/+$/, '');
     const backendUrl = isLocalFrontend
       ? (configuredBackend || 'http://localhost:8000/api/v1')
-      : (configuredBackend && !/localhost|127\.0\.0\.1/i.test(configuredBackend)
-        ? configuredBackend
-        : PRODUCTION_API_URL);
+      : PRODUCTION_API_URL;
     const currentRedirect = redirectPath || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redirect') : '') || '';
     const originParam = frontendOrigin ? `&frontendUrl=${encodeURIComponent(frontendOrigin)}` : '';
     const redirectParam = currentRedirect ? `&redirect=${encodeURIComponent(currentRedirect)}` : '';
