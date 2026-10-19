@@ -351,7 +351,12 @@ const resolveFrontendUrl = (req) => {
   // If explicit frontendUrl was passed in query or request origin/referer
   const incomingOrigin = (req?.query?.frontendUrl || req?.headers?.origin || '').trim().replace(/\/+$/, '');
   if (incomingOrigin) {
-    if (incomingOrigin.includes('render.com') || (incomingOrigin.includes('localhost') && !isProduction)) {
+    // Accept known production domains (Vercel, Render) or localhost in dev mode
+    if (incomingOrigin.includes('vercel.app') || incomingOrigin.includes('render.com') || (incomingOrigin.includes('localhost') && !isProduction)) {
+      return incomingOrigin;
+    }
+    // Also accept if it matches the configured FRONTEND_URL
+    if (configured && incomingOrigin.includes(new URL(configured.split(',')[0].trim()).hostname)) {
       return incomingOrigin;
     }
   }
@@ -359,7 +364,7 @@ const resolveFrontendUrl = (req) => {
   if (configured.includes(',')) {
     const urls = configured.split(',').map((u) => u.trim());
     if (isProduction) {
-      return urls.find((u) => u.includes('render.com')) || urls.find(u => !u.includes('localhost')) || urls[0];
+      return urls.find((u) => !u.includes('localhost') && !u.includes('127.0.0.1')) || urls[0];
     }
     return urls.find((u) => u.includes('localhost') || u.includes('127.0.0.1')) || urls[0];
   }
@@ -367,12 +372,12 @@ const resolveFrontendUrl = (req) => {
   if (configured) {
     // If backend is on production, never redirect to localhost even if configured is localhost
     if (isProduction && (configured.includes('localhost') || configured.includes('127.0.0.1'))) {
-      return 'https://tenderhub-frontend-ur7t.onrender.com';
+      return 'https://tender-hub-nu.vercel.app';
     }
     return configured;
   }
 
-  return isProduction ? 'https://tenderhub-frontend-ur7t.onrender.com' : 'http://localhost:5173';
+  return isProduction ? 'https://tender-hub-nu.vercel.app' : 'http://localhost:5173';
 };
 
 /**
