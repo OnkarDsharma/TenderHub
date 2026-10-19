@@ -4,7 +4,7 @@
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -396,7 +396,7 @@ export default function Services() {
                         Sign in / Sign up
                       </Button>
                     )}
-                    {dossierLimitReached && <a href="/services#pricing" className="mt-2 inline-flex rounded-md bg-dalBlue px-3 py-2 font-semibold text-white">Unlock Unlimited Dossiers - ₹999/mo</a>}
+                    {dossierLimitReached && <Link to="/pricing" className="mt-2 inline-flex rounded-md bg-dalBlue px-3 py-2 font-semibold text-white hover:bg-dalBlue/90">Unlimited dossiers coming soon · View plans</Link>}
                   </div>
                 )}
                 {!dossierData && exampleTender && (
@@ -915,7 +915,7 @@ export default function Services() {
                     <div className="mx-3 mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
                       <strong>⏳ Free Session Limit Reached (5/5 Queries)</strong>
                       <p className="mt-1">Chat is locked for 24 hours. Resumes in: {(() => { const seconds = Math.max(0, Math.ceil((new Date(chatLockedUntil).getTime() - countdownNow) / 1000)); return `${Math.floor(seconds / 3600)}h : ${Math.floor((seconds % 3600) / 60)}m : ${seconds % 60}s`; })()}</p>
-                      <a href="/services#pricing" className="mt-1 inline-block font-semibold text-blue-700 dark:text-blue-300">⚡ Upgrade to Starter - Instant Unlimited Access</a>
+                      <Link to="/pricing" className="mt-1 inline-block font-semibold text-blue-700 hover:underline dark:text-blue-300">⚡ Unlimited access coming soon · View plans</Link>
                     </div>
                   )}
                   <div className="flex-1 p-4 overflow-y-auto space-y-3">
