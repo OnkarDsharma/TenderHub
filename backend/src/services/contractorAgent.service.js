@@ -18,19 +18,6 @@ class QuotaError extends Error {
   }
 }
 
-function nextMidnightIST(now = new Date()) {
-  const ist = new Date(now.getTime() + 330 * 60 * 1000);
-  ist.setUTCHours(24, 0, 0, 0);
-  return new Date(ist.getTime() - 330 * 60 * 1000);
-}
-
-function sameISTDay(a, b) {
-  if (!a) return false;
-  const shiftedA = new Date(new Date(a).getTime() + 330 * 60 * 1000);
-  const shiftedB = new Date(new Date(b).getTime() + 330 * 60 * 1000);
-  return shiftedA.getUTCFullYear() === shiftedB.getUTCFullYear() && shiftedA.getUTCMonth() === shiftedB.getUTCMonth() && shiftedA.getUTCDate() === shiftedB.getUTCDate();
-}
-
 // Initialize Gemini Client
 const geminiClient = env.GEMINI_API_KEY && env.GEMINI_API_KEY !== 'dummy_key'
   ? new GoogleGenerativeAI(env.GEMINI_API_KEY)
@@ -137,33 +124,8 @@ export class ContractorAgentService {
       return { dossier, personalizedFit };
     }
 
-    // Verify user credits before generating new dossier
+    // Dossier limits are temporarily disabled to support open testing.
     const profile = await this.getOrCreateContractorProfile(userId);
-    if (profile.credits.planTier === 'free_trial') {
-      const now = new Date();
-      if (!sameISTDay(profile.credits.lastDossierDate, now)) profile.credits.dailyDossiersUsed = 0;
-      if (profile.credits.dailyDossiersUsed >= profile.credits.dailyDossiersLimit) {
-        throw new QuotaError(429, {
-          success: false,
-          error: 'DAILY_DOSSIER_LIMIT_REACHED',
-          message: `You have used your ${profile.credits.dailyDossiersLimit} free AI Dossiers for today.`,
-          resetsAt: nextMidnightIST(now).toISOString(),
-          upgradeUrl: '/services#pricing',
-        });
-      }
-      profile.credits.dailyDossiersUsed += 1;
-      profile.credits.lastDossierDate = now;
-      await profile.save();
-    }
-    const isDev = !env.NODE_ENV || env.NODE_ENV === 'development';
-    if (profile.credits.planTier !== 'free_trial' && profile.credits.availableDossiers <= 0) {
-      if (isDev) {
-        profile.credits.availableDossiers = 10;
-        await profile.save();
-      } else {
-        throw new Error('Insufficient AI Analysis credits. Please upgrade your plan in Services.');
-      }
-    }
 
     // Create or mark dossier as PROCESSING
     if (!dossier) {
@@ -213,8 +175,7 @@ export class ContractorAgentService {
       dossier.status = 'COMPLETED';
       await dossier.save();
 
-      // Deduct credit
-      if (profile.credits.planTier !== 'free_trial') profile.credits.availableDossiers -= 1;
+      // Keep usage analytics, but do not enforce or deduct dossier credits while testing.
       profile.credits.usedDossiers += 1;
       if (tender._id && mongoose.isValidObjectId(tender._id) && !profile.analyzedTenders.includes(tender._id)) {
         profile.analyzedTenders.push(tender._id);

@@ -72,7 +72,6 @@ export default function Services() {
   const [dossierData, setDossierData] = useState(null);
   const [personalizedFit, setPersonalizedFit] = useState(null);
   const [error, setError] = useState('');
-  const [dossierLimitReached, setDossierLimitReached] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
 
   // Copilot Chat State
@@ -141,7 +140,6 @@ export default function Services() {
 
     try {
       setError('');
-      setDossierLimitReached(false);
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
 
@@ -215,10 +213,7 @@ export default function Services() {
     } catch (err) {
       console.error('Analysis error:', err);
       const payload = err.response?.data;
-      if (payload?.error === 'DAILY_DOSSIER_LIMIT_REACHED') {
-        setDossierLimitReached(true);
-        setError(`Daily Limit Reached (2/2): You've used your 2 free tender analyses for today. Your quota resets at ${payload.resetsAt ? new Date(payload.resetsAt).toLocaleTimeString() : 'midnight'}, or you can upgrade to Starter for unlimited dossiers.`);
-      } else setError(payload?.message || payload?.error || err.message || 'Error executing AI analysis.');
+      setError(payload?.message || payload?.error || err.message || 'Error executing AI analysis.');
     } finally {
       setAnalyzing(false);
     }
@@ -396,7 +391,6 @@ export default function Services() {
                         Sign in / Sign up
                       </Button>
                     )}
-                    {dossierLimitReached && <Link to="/pricing" className="mt-2 inline-flex rounded-md bg-dalBlue px-3 py-2 font-semibold text-white hover:bg-dalBlue/90">Unlimited dossiers coming soon · View plans</Link>}
                   </div>
                 )}
                 {!dossierData && exampleTender && (
@@ -457,9 +451,9 @@ export default function Services() {
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-slate-400">Available AI Dossiers:</span>
+                  <span className="text-slate-500 dark:text-slate-400">AI Dossier access:</span>
                   <Badge variant="success">
-                      {profile?.credits?.availableDossiers ?? '—'} Dossiers Available
+                      Unlimited for testing
                   </Badge>
                 </div>
               </div>
