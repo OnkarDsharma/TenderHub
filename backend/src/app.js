@@ -19,6 +19,7 @@ import billingRoutes from './modules/billing/billing.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import servicesRoutes from './routes/services.routes.js';
 import gemRoutes from './routes/gem.routes.js';
+import waitlistRoutes from './routes/waitlist.routes.js';
 import { globalErrorHandler } from './middleware/errorHandler.middleware.js';
 
 import { apiLimiter } from './middleware/rateLimiter.middleware.js';
@@ -131,6 +132,7 @@ app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/services', servicesRoutes);
 app.use('/api/v1/gem', gemRoutes);
+app.use('/api/v1/waitlist', waitlistRoutes);
 
 // Fallback aliases (ensures frontend works whether VITE_API_URL includes /api/v1 or just the domain)
 app.use('/auth', authRoutes);
@@ -143,6 +145,7 @@ app.use('/bid-score', bidScoreRoutes);
 app.use('/admin', adminRoutes);
 app.use('/services', servicesRoutes);
 app.use('/gem', gemRoutes);
+app.use('/waitlist', waitlistRoutes);
 
 // 4. 404 Handler
 app.use((req, res, next) => {
