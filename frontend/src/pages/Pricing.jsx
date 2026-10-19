@@ -54,18 +54,26 @@ export default function Pricing() {
                   <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${plan.id === 'contractor_pro' ? 'bg-chinarRed text-white' : 'bg-slate-700 text-white dark:bg-slate-600'}`}>{plan.badge}</span>
                   <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 min-h-10 leading-relaxed">{plan.description}</p>
-                  <div className="mt-5 flex items-baseline gap-2"><span className="text-4xl font-bold text-dalBlue dark:text-white">{plan.price}</span><span className="text-sm text-slate-500 dark:text-slate-400">{plan.billingCycle}</span></div>
                   {plan.isLocked ? (
-                    <div className="mt-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider"><Lock className="w-3.5 h-3.5" /><span>{plan.lockLabel}</span></div>
+                    <div className="relative mt-5 flex min-h-12 items-center">
+                      <div aria-hidden="true" className="flex items-baseline gap-2 select-none blur-sm opacity-50"><span className="text-4xl font-bold text-dalBlue dark:text-white">{plan.price}</span><span className="text-sm text-slate-500 dark:text-slate-400">{plan.billingCycle}</span></div>
+                      <span className="absolute left-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">Coming Soon</span>
+                    </div>
+                  ) : <div className="mt-5 flex items-baseline gap-2"><span className="text-4xl font-bold text-dalBlue dark:text-white">{plan.price}</span><span className="text-sm text-slate-500 dark:text-slate-400">{plan.billingCycle}</span></div>}
+                  {plan.isLocked ? (
+                    <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider"><Lock className="w-3.5 h-3.5" /><span>Paid plan · launching soon</span></div>
                   ) : <div className="mt-5 inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 text-xs font-semibold"><CheckCircle2 className="w-4 h-4" />Available now</div>}
-                  <ul className="mt-5 border-t border-slate-100 dark:border-slate-700 pt-5 space-y-3">
-                    {plan.features.map((feature) => <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span className="leading-snug">{feature}</span></li>)}
-                  </ul>
+                  <div className="relative mt-5 border-t border-slate-100 dark:border-slate-700 pt-5">
+                    <ul className={`space-y-3 ${plan.isLocked ? 'select-none blur-[3px] opacity-45' : ''}`} aria-label={plan.isLocked ? 'Paid features coming soon' : 'Included features'}>
+                      {plan.features.map((feature) => <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span className="leading-snug">{feature}</span></li>)}
+                    </ul>
+                    {plan.isLocked && <div className="absolute inset-0 flex items-center justify-center"><span className="rounded-xl border border-amber-300 bg-white/95 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-md dark:border-amber-700 dark:bg-slate-900/95 dark:text-white">Paid features<br /><span className="text-amber-700 dark:text-amber-300">Coming Soon</span></span></div>}
+                  </div>
                 </div>
                 <div className="mt-7 pt-5 border-t border-slate-100 dark:border-slate-700">
                   {plan.isLocked ? <>
-                    <Button variant="primary" className="w-full bg-linear-to-r from-dalBlue to-blue-600 text-white font-bold py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all gap-2" onClick={() => setWaitlistPlan(plan)}><BellRing className="w-4 h-4" />{plan.ctaText}</Button>
-                    <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Be the first to get 50% early-bird launch discount.</p>
+                    <Button variant="default" className="w-full h-12 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-sm shadow-md hover:bg-amber-400 hover:shadow-lg gap-2" onClick={() => setWaitlistPlan(plan)}><BellRing className="w-5 h-5" />Join the Priority Waitlist</Button>
+                    <p className="mt-2 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Get launch updates and a 50% early-bird offer.</p>
                   </> : <Button variant="outline" className="w-full cursor-default" disabled>{isCurrent ? 'Current Active Plan' : plan.ctaText}<ArrowRight className="w-4 h-4 ml-2" /></Button>}
                 </div>
               </article>
