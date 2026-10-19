@@ -84,6 +84,7 @@ export default function Services() {
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
   const lastAutoAnalyzeRef = useRef('');
+  const analysisInFlightRef = useRef(false);
   useEffect(() => {
     if (!chatLockedUntil) return undefined;
     const timer = setInterval(() => setCountdownNow(Date.now()), 1000);
@@ -118,6 +119,9 @@ export default function Services() {
   }, []);
 
   const handleAnalyze = useCallback(async (idToAnalyze = inputTenderId) => {
+    // State updates do not apply until the next render. This ref also blocks
+    // duplicate calls if the route effect and a user click happen together.
+    if (analysisInFlightRef.current) return;
     const targetId = idToAnalyze?.trim();
     if (!targetId) {
       setError('Please enter a valid Tender ID or Portal Reference.');
@@ -139,6 +143,7 @@ export default function Services() {
     }
 
     try {
+      analysisInFlightRef.current = true;
       setError('');
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
@@ -215,6 +220,7 @@ export default function Services() {
       const payload = err.response?.data;
       setError(payload?.message || payload?.error || err.message || 'Error executing AI analysis.');
     } finally {
+      analysisInFlightRef.current = false;
       setAnalyzing(false);
     }
   }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileReady]);
@@ -230,17 +236,19 @@ export default function Services() {
       .catch((err) => console.error('Failed to load a tender example:', err));
   }, [loadPlansAndProfile]);
 
-  // Auto-analyze if the route contains a tender ID, after profile data loads.
+  // A GeM "AI analysis" action navigates here with a tender ID; run that
+  // requested analysis once. Profile refreshes after completion must not
+  // trigger another paid/long-running analysis for the same route.
   useEffect(() => {
     const targetId = paramTenderId || queryTenderId;
-    if (targetId) {
-      setInputTenderId(targetId);
-      const profileKey = profile?.updatedAt || profile?.companyName || 'missing-profile';
-      const runKey = `${targetId}:${profileKey}`;
-      if (profileReady && lastAutoAnalyzeRef.current !== runKey) {
-        lastAutoAnalyzeRef.current = runKey;
-        handleAnalyze(targetId);
-      }
+    if (!targetId) return;
+
+    setInputTenderId(targetId);
+    // Wait until a usable profile exists. If setup is required, the user can
+    // save it and this effect will then run for the same requested tender.
+    if (profileReady && profile && lastAutoAnalyzeRef.current !== targetId) {
+      lastAutoAnalyzeRef.current = targetId;
+      handleAnalyze(targetId);
     }
   }, [paramTenderId, queryTenderId, profileReady, profile, handleAnalyze]);
 
