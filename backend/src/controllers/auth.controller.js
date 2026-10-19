@@ -386,12 +386,34 @@ const isAllowedFrontendOrigin = (value, isProduction) => {
 const resolveFrontendUrl = (req) => {
   const host = req.get('host') || '';
   const isProduction = host.includes('render.com') || env.NODE_ENV === 'production';
-  const configured = (env.FRONTEND_URL || '').trim();
+  const configuredUrls = (env.FRONTEND_URL || '')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+  const configured = configuredUrls.join(',');
 
-  // Only accept explicitly configured origins in production. Trusting any
-  // *.render.com origin lets an older frontend override the canonical Vercel UI.
+  // In production, FRONTEND_URL is authoritative. A stale frontend bundle can
+  // still send its old origin as `frontendUrl`; reflecting that value here
+  // would send a successful login back to the retired UI. Prefer a configured
+  // non-Render domain when both the canonical site and a legacy Render site are
+  // listed.
+  if (isProduction && configuredUrls.length) {
+    const publicUrls = configuredUrls.filter((url) =>
+      !/localhost|127\.0\.0\.1/i.test(url)
+    );
+    const canonical = publicUrls.find((url) => {
+      try { return !new URL(url).hostname.endsWith('.onrender.com'); }
+      catch { return false; }
+    });
+    if (canonical) return normalizeOrigin(canonical);
+    // `*.onrender.com` is the legacy frontend host; the current public site is
+    // Vercel unless an official custom domain is configured above.
+    return 'https://tender-hub-nu.vercel.app';
+  }
+
+  // During local development, allow an explicitly configured frontend origin.
   const incomingOrigin = (req?.query?.frontendUrl || req?.headers?.origin || '').trim();
-  if (incomingOrigin && isAllowedFrontendOrigin(incomingOrigin, isProduction)) {
+  if (!isProduction && incomingOrigin && isAllowedFrontendOrigin(incomingOrigin, false)) {
     return normalizeOrigin(incomingOrigin);
   }
 
