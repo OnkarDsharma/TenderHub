@@ -229,17 +229,17 @@ export default function Home() {
             {/* Official Procurement Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold tracking-wide mb-5">
               <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
-              <span>Jammu &amp; Kashmir Public Works &amp; Procurement</span>
+              <span>Northern States Public Works &amp; Procurement</span>
             </div>
 
             {/* Primary Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] font-display">
-              Government Tenders Across Jammu &amp; Kashmir
+              Government Tenders Across J&amp;K, Punjab and Himachal
             </h1>
 
             {/* Subtitle */}
             <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl">
-              Discover active civil works, PHE water supply, road macadamization, and electrical contracts published across all 20 J&amp;K districts and northern region departments.
+              Discover active civil works, PHE water supply, road macadamization, and electrical contracts published across all northern states including J&amp;K, Punjab, and Himachal.
             </p>
 
             {/* Search Console & CTA */}
@@ -335,7 +335,7 @@ export default function Home() {
               {/* Stat 4: Districts Covered */}
               <div className="hidden sm:flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl font-black font-display text-slate-900 dark:text-white">
-                  20
+                  50+
                 </span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-[90px] leading-tight">
                   Districts Covered
@@ -533,7 +533,7 @@ export default function Home() {
 
               {/* Subtitle */}
               <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
-                Built specifically to assist local contractors, engineering firms, and suppliers with accurate, official bidding data.
+                Built specifically to assist contractors, engineering firms, and suppliers across northern states with accurate, official bidding data.
               </p>
 
               {/* The 3 Exact Verification Points from Screenshot 4 */}
@@ -549,7 +549,7 @@ export default function Home() {
                       Official NIC Portal Direct
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      All announcements are synchronized directly with official government eProcurement portals (<span className="font-mono">jktenders.gov.in</span>), ensuring complete fidelity to published tenders.
+                      All announcements are synchronized directly with official government eProcurement portals across northern states (<span className="font-mono">jktenders.gov.in</span>, <span className="font-mono">eproc.punjab.gov.in</span>, <span className="font-mono">hptenders.gov.in</span>) and GeM, ensuring complete fidelity to published tenders.
                     </p>
                   </div>
                 </div>

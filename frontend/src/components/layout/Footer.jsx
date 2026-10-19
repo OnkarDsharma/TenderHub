@@ -23,7 +23,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              Public procurement information system for Jammu &amp; Kashmir. Synchronizing published tender notices, technical documents, and BOQ schedules across state engineering divisions.
+              Public procurement information system across northern states including J&amp;K, Punjab, and Himachal Pradesh. Synchronizing published tender notices, technical documents, and BOQ schedules across state engineering divisions.
             </p>
           </div>
 
@@ -40,18 +40,29 @@ export function Footer() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
                 >
-                  <span>JK eProcurement Portal</span>
+                  <span>JK eProcurement</span>
                   <ExternalLink className="w-3 h-3 text-slate-500" />
                 </a>
               </li>
               <li>
                 <a 
-                  href="https://eprocure.gov.in" 
+                  href="https://eproc.punjab.gov.in" 
                   target="_blank" 
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
                 >
-                  <span>Central Public Procurement (CPPP)</span>
+                  <span>Punjab eProcurement</span>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://hptenders.gov.in" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+                >
+                  <span>Himachal eProcurement</span>
                   <ExternalLink className="w-3 h-3 text-slate-500" />
                 </a>
               </li>

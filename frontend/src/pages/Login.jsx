@@ -284,8 +284,8 @@ export default function Login({ defaultMode }) {
             {step === 'otp'
               ? `We sent a 6-digit verification code to ${email}`
               : mode === 'signup'
-                ? 'Register your profile to track civil works, set alert radars, and bookmark tenders across J&K.'
-                : 'Access your saved tenders, alerts, and verified J&K public works procurement.'}
+                ? 'Register your profile to track civil works, set alert radars, and bookmark tenders across J&K, Punjab and Himachal.'
+                : 'Access your saved tenders, alerts, and verified northern states public works procurement.'}
           </p>
         </div>
 
@@ -689,7 +689,7 @@ export default function Login({ defaultMode }) {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
             <BadgeCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Official TenderHub Jammu &amp; Kashmir Portal Identity</span>
+            <span>Official TenderHub Northern States Portal Identity</span>
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500">
             Protected by HttpOnly cookies, session encryption, and rate-limited abuse prevention.

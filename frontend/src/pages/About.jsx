@@ -19,14 +19,14 @@ export default function About() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
-            Public Procurement Intelligence for Jammu &amp; Kashmir
+            Public Procurement Intelligence for Northern States (J&amp;K, Punjab &amp; Himachal)
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Public works contracts published across Jammu and Kashmir represent critical infrastructure, rural water supply (Jal Jeevan Mission), road macadamization, and power grid projects. Historically, discovering these opportunities required navigating fragmented departmental portals with short-lived session timeouts and unindexed attachments.
+            Public works contracts published across northern states—including Jammu &amp; Kashmir, Punjab, and Himachal Pradesh—represent critical infrastructure, rural water supply (Jal Jeevan Mission), road macadamization, and power grid projects. Historically, discovering these opportunities required navigating fragmented departmental portals with short-lived session timeouts and unindexed attachments.
           </p>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            TenderHub was established to provide contractors, civil engineers, and suppliers with a reliable, structured repository of official public tenders. We systematically index gazettes from jktenders.gov.in and GeM, verify document integrity, and provide work site clarity so local bidders can make informed, qualified decisions.
+            TenderHub was established to provide contractors, civil engineers, and suppliers with a reliable, structured repository of official public tenders. We systematically index gazettes across northern state eProcurement portals (J&amp;K, Punjab, Himachal Pradesh) and GeM, verify document integrity, and provide work site clarity so local bidders can make informed, qualified decisions.
           </p>
         </div>
 

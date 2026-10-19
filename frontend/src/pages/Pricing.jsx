@@ -10,7 +10,7 @@ export const UNIFIED_PLANS = [
   {
     id: 'free_starter', name: 'Free Launch Access', badge: 'Active Free Access', price: '₹0', billingCycle: 'free forever',
     description: 'Perfect for local contractors exploring public tenders and AI estimation.', isLocked: false, ctaText: 'Current Active Plan',
-    features: ['Full search & discovery across all 20 J&K districts', '2 Full AI Tender Dossiers per day (BOQ & eligibility)', '5 Interactive Copilot queries / 24-hr session', '2 Targeted WhatsApp tender alerts per week', 'Standard SOR rate schedules & document downloads', 'Save up to 15 bookmarked tenders'],
+    features: ['Full search & discovery across all northern states (J&K, Punjab, HP)', '2 Full AI Tender Dossiers per day (BOQ & eligibility)', '5 Interactive Copilot queries / 24-hr session', '2 Targeted WhatsApp tender alerts per week', 'Standard SOR rate schedules & document downloads', 'Save up to 15 bookmarked tenders'],
   },
   {
     id: 'contractor_pro', name: 'Contractor Pro Suite', badge: 'Most Popular', price: '₹999', billingCycle: '/ month',
@@ -42,7 +42,7 @@ export default function Pricing() {
             <Shield className="w-3.5 h-3.5" /> ✨ ALL-IN-ONE PROCUREMENT SUITE
           </div>
           <h1 className="text-2xl sm:text-4xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Simple, Unified Plans for Government Contractors</h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">Everything you need in one place: live tender indexing across all 20 J&amp;K districts, automated WhatsApp alerts, and instant AI Bill of Quantities (BOQ) estimation.</p>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">Everything you need in one place: live tender indexing across northern states (J&amp;K, Punjab, and Himachal), automated WhatsApp alerts, and instant AI Bill of Quantities (BOQ) estimation.</p>
         </header>
 
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 max-w-6xl mx-auto gap-8 items-stretch">

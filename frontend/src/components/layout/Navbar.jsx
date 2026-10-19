@@ -51,7 +51,7 @@ export function Navbar() {
           {/* Left: data-source context */}
           <div className="flex items-center gap-2 font-medium">
             <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
-            <span>Data sources: <strong className="text-white font-semibold">jktenders.gov.in &amp; GeM</strong></span>
+            <span>Data sources: <strong className="text-white font-semibold">J&amp;K, Punjab, HP Portals &amp; GeM</strong></span>
           </div>
 
           {/* Right: AI Shortcut, Theme Toggle & Saved Bookmarks */}
