@@ -47,6 +47,12 @@ function renderCopilotText(content) {
   });
 }
 
+function formatBoqEstimate(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return `₹${value.toLocaleString('en-IN')}`;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  return '—';
+}
+
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -792,9 +798,9 @@ export default function Services() {
                               <td className="py-2.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">{item.description}</td>
                               <td className="py-2.5 px-4 font-semibold">{item.quantity}</td>
                               <td className="py-2.5 px-4 text-slate-500">{item.unit}</td>
-                              <td className="py-2.5 px-4">₹{item.estimatedRate?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 px-4">{formatBoqEstimate(item.estimatedRate)}</td>
                               <td className="py-2.5 px-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                                ₹{item.estimatedAmount?.toLocaleString('en-IN')}
+                                {formatBoqEstimate(item.estimatedAmount)}
                               </td>
                             </tr>
                           ))}

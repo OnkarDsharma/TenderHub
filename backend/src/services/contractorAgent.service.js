@@ -451,6 +451,7 @@ Analyze the following tender details thoroughly and generate a complete, high-fi
 ${tenderContext}
 
 Return strictly valid JSON with this exact schema:
+For BOQ line items, use numeric values for estimatedRate and estimatedAmount when an estimate is available. If the tender requires the bidder to quote a price and no estimate is available, use the string "To be quoted by bidder" for those fields instead of inventing an amount.
 {
   "summary": "Pointwise executive briefing (3-4 concise bullet points using '• ' format) highlighting: 1) Project Scope & Dept, 2) Budget & Execution Timeline, 3) Minimum Contractor Class & Solvency, 4) Strategic Recommendation",
   "preBidAnalysis": {

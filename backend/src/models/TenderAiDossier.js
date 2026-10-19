@@ -60,8 +60,10 @@ const tenderAiDossierSchema = new mongoose.Schema({
         description: { type: String },
         quantity: { type: Number },
         unit: { type: String },
-        estimatedRate: { type: Number },
-        estimatedAmount: { type: Number }
+        // AI may return a numeric estimate or a bidder-entered note such as
+        // "To be quoted by bidder" when the tender does not publish rates.
+        estimatedRate: { type: mongoose.Schema.Types.Mixed },
+        estimatedAmount: { type: mongoose.Schema.Types.Mixed }
       }]
     },
     riskAndRedFlags: [{
