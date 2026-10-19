@@ -465,15 +465,6 @@ export default function TenderDetails() {
                   <Sparkles className="w-3.5 h-3.5 mr-1.5 text-dalBlue dark:text-blue-400" />
                   Contractor AI Dossier
                 </Button>
-
-                <Button 
-                  onClick={() => navigate(`/check-score/${tender._id || tender.sourceTenderId}`)}
-                  variant="outline"
-                  className="w-full text-xs font-semibold py-2 sm:py-2.5 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750"
-                >
-                  <Calculator className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
-                  Check Win Score
-                </Button>
                 
                 <Button 
                   onClick={handleOpenPortalModal}

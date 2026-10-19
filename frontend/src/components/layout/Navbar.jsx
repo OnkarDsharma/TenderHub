@@ -37,7 +37,6 @@ export function Navbar() {
     { label: 'Browse Tenders', path: '/tenders' },
     { label: 'GeM Bids', path: '/gem-tenders' },
     { label: 'AI Estimator', path: '/services', badge: 'AI' },
-    { label: 'Check Score', path: '/check-score' },
     { label: 'Pricing', path: '/pricing' },
     { label: 'Contact', path: '/contact' },
   ];

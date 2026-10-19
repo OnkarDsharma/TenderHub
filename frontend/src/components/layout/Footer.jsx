@@ -91,11 +91,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/check-score" className="hover:text-white transition-colors">
-                  Check Bid Score &amp; Eligibility
-                </Link>
-              </li>
-              <li>
                 <Link to="/pricing" className="hover:text-white transition-colors">
                   Subscription Plans
                 </Link>

@@ -281,7 +281,7 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* AI Estimator & Score Links */}
+              {/* AI Estimator Link */}
               <div className="flex items-center gap-4 text-xs pt-1">
                 <Link 
                   to="/services" 
@@ -289,13 +289,6 @@ export default function Home() {
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Need AI BOQ Analysis &amp; Estimator?</span>
-                </Link>
-                <span className="text-slate-500">•</span>
-                <Link 
-                  to="/check-score" 
-                  className="font-medium text-slate-300 hover:text-white hover:underline transition-colors"
-                >
-                  Check Bid Score
                 </Link>
               </div>
 

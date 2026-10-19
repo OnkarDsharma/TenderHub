@@ -17,12 +17,10 @@ import {
   X,
   Save,
   Database,
-  MessageSquare,
-  Calculator
+  MessageSquare
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { WhatsAppAlertsTab } from '@/components/profile/WhatsAppAlertsTab';
-import { bidScoreApi } from '@/services/bidScoreApi';
 
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { usePreferenceStore } from '@/store/usePreferenceStore';
@@ -96,18 +94,14 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [dbSyncStatus, setDbSyncStatus] = useState('synced'); // 'synced' | 'offline'
 
-  // Evaluated Bids History State
-  const [evalHistory, setEvalHistory] = useState([]);
-
   // Sync initial state from MongoDB on component load
   useEffect(() => {
     let isMounted = true;
     const fetchFromDb = async () => {
       try {
-        const [dbProfile, dbPrefs, historyData] = await Promise.allSettled([
+        const [dbProfile, dbPrefs] = await Promise.allSettled([
           contractorService.getProfile(),
           contractorService.getPreferences(),
-          bidScoreApi.getHistory(),
         ]);
 
         if (isMounted) {
@@ -118,9 +112,6 @@ export default function Profile() {
           if (dbPrefs.status === 'fulfilled' && dbPrefs.value) {
             updatePreferences(dbPrefs.value);
             setPrefForm(dbPrefs.value);
-          }
-          if (historyData.status === 'fulfilled' && Array.isArray(historyData.value)) {
-            setEvalHistory(historyData.value);
           }
           setDbSyncStatus('synced');
         }
@@ -140,7 +131,6 @@ export default function Profile() {
   const tabs = [
     { id: 'saved', icon: Heart, label: `Saved Tenders (${savedTenders.length})` },
     { id: 'company', icon: Building, label: 'Contractor Profile' },
-    { id: 'bidscores', icon: Calculator, label: `Bid Scores & Capacity (${evalHistory.length})` },
     { id: 'alerts', icon: Sliders, label: 'Filter Preferences' },
     { id: 'whatsapp', icon: MessageSquare, label: 'WhatsApp Alerts (Pro)' }
   ];
@@ -814,82 +804,6 @@ export default function Profile() {
         {/* Tab 4: WhatsApp Alerts (Pro) */}
         {activeTab === 'whatsapp' && (
           <WhatsAppAlertsTab />
-        )}
-
-        {/* Tab 5: Bid Scores & Capacity History */}
-        {activeTab === 'bidscores' && (
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 sm:p-7 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-700">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
-                  <Calculator className="w-5 h-5 text-dalBlue dark:text-blue-400" />
-                  <span>Bid Capacity &amp; Evaluated Scores</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Contract-specific bid allocation scores evaluated using J&amp;K PWD formulas.
-                </p>
-              </div>
-
-              <Link
-                to="/check-score"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold shadow-xs transition-all self-start sm:self-auto"
-              >
-                <Calculator className="w-4 h-4" />
-                <span>Check Score for a Tender</span>
-              </Link>
-            </div>
-
-            {evalHistory.length === 0 ? (
-              <div className="text-center py-10 space-y-3">
-                <Calculator className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-                <p className="text-xs text-slate-500">No contracts evaluated yet. Calculate your bid capacity and winning odds on any tender.</p>
-                <Link
-                  to="/check-score"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-dalBlue text-white text-xs font-bold"
-                >
-                  Calculate First Tender Score
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {evalHistory.map((item) => (
-                  <div
-                    key={item._id}
-                    onClick={() => navigate(`/check-score/${item.tenderSnapshot?.sourceTenderId || item.tenderId}`)}
-                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-dalBlue dark:hover:border-blue-400 bg-slate-50 dark:bg-slate-900/40 space-y-3 cursor-pointer transition-all hover:shadow-xs group"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-dalBlue dark:text-blue-300 border border-slate-200 dark:border-slate-700">
-                        {item.tenderSnapshot?.sourceTenderId}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        item.results?.allocationProbability === 'High' 
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
-                          : item.results?.allocationProbability === 'Moderate'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                          : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
-                      }`}>
-                        {item.results?.allocationProbability}
-                      </span>
-                    </div>
-
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-dalBlue dark:group-hover:text-blue-400">
-                      {item.tenderSnapshot?.title?.replace(/[[\]]/g, '')}
-                    </h4>
-
-                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-200 dark:border-slate-800">
-                      <div className="text-slate-500">
-                        Quote: <strong className="text-slate-800 dark:text-slate-200">{item.inputs?.proposedQuotePercentage}%</strong>
-                      </div>
-                      <div className="font-mono font-bold text-dalBlue dark:text-blue-300">
-                        Score: {item.results?.totalScore} / 100
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         )}
 
       </div>

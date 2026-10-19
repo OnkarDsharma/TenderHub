@@ -4,7 +4,7 @@
  */
 import { useEffect } from 'react';
 import TenderDetails from './pages/TenderDetails';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layout Components
 import { Navbar } from './components/layout/Navbar';
@@ -20,7 +20,6 @@ import Pricing from './pages/Pricing';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
-import CheckScore from './pages/CheckScore';
 import Services from './pages/Services';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -48,8 +47,8 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/tenders" element={<Tenders />} />
             <Route path="/gem-tenders" element={<GeMTenders />} />
-            <Route path="/check-score" element={<CheckScore />} />
-            <Route path="/check-score/:tenderId" element={<CheckScore />} />
+            <Route path="/check-score" element={<Navigate to="/services" replace />} />
+            <Route path="/check-score/:tenderId" element={<Navigate to="/services" replace />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:tenderId" element={<Services />} />
