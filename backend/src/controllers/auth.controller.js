@@ -363,22 +363,33 @@ const resolveGoogleCallbackUrl = (req) => {
   return `${protocol}://${host}/api/v1/auth/google/callback`;
 };
 
+const normalizeOrigin = (value) => {
+  try { return new URL(value).origin; } catch { return ''; }
+};
+
+const isAllowedFrontendOrigin = (value, isProduction) => {
+  const configuredOrigins = (env.FRONTEND_URL || '')
+    .split(',')
+    .map((url) => {
+      try { return new URL(url.trim()).origin; } catch { return ''; }
+    })
+    .filter(Boolean);
+  const origin = normalizeOrigin(value);
+  if (!origin) return false;
+  if (configuredOrigins.includes(origin)) return true;
+  return !isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+};
+
 const resolveFrontendUrl = (req) => {
   const host = req.get('host') || '';
   const isProduction = host.includes('render.com') || env.NODE_ENV === 'production';
   const configured = (env.FRONTEND_URL || '').trim();
 
-  // If explicit frontendUrl was passed in query or request origin/referer
-  const incomingOrigin = (req?.query?.frontendUrl || req?.headers?.origin || '').trim().replace(/\/+$/, '');
-  if (incomingOrigin) {
-    // Accept known production domains (Vercel, Render) or localhost in dev mode
-    if (incomingOrigin.includes('vercel.app') || incomingOrigin.includes('render.com') || (incomingOrigin.includes('localhost') && !isProduction)) {
-      return incomingOrigin;
-    }
-    // Also accept if it matches the configured FRONTEND_URL
-    if (configured && incomingOrigin.includes(new URL(configured.split(',')[0].trim()).hostname)) {
-      return incomingOrigin;
-    }
+  // Only accept explicitly configured origins in production. Trusting any
+  // *.render.com origin lets an older frontend override the canonical Vercel UI.
+  const incomingOrigin = (req?.query?.frontendUrl || req?.headers?.origin || '').trim();
+  if (incomingOrigin && isAllowedFrontendOrigin(incomingOrigin, isProduction)) {
+    return normalizeOrigin(incomingOrigin);
   }
 
   if (configured.includes(',')) {
@@ -466,7 +477,11 @@ export const googleCallback = async (req, res, next) => {
       parsedState = JSON.parse(storedData);
       mode = parsedState.mode || 'login';
       if (parsedState.redirectUri) redirectUri = parsedState.redirectUri;
-      if (parsedState.frontendUrl) frontendRedirect = parsedState.frontendUrl;
+      if (parsedState.frontendUrl) {
+        const stateOrigin = normalizeOrigin(parsedState.frontendUrl);
+        const isProduction = env.NODE_ENV === 'production' || (req.get('host') || '').includes('render.com');
+        if (stateOrigin && isAllowedFrontendOrigin(stateOrigin, isProduction)) frontendRedirect = stateOrigin;
+      }
     } catch {
       mode = storedData;
     }
