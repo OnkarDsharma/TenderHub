@@ -4,7 +4,7 @@
  * BOQ raw material extraction, post-award execution schedules, and interactive Copilot.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -31,6 +31,7 @@ import { api } from '../services/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { useAuthStore } from '@/store/useAuthStore';
 
 function renderCopilotText(content) {
   const parts = String(content || '').split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
@@ -49,6 +50,9 @@ function renderCopilotText(content) {
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const queryTenderId = searchParams.get('tenderId') || '';
   const initialTenderId = paramTenderId || queryTenderId;
 
@@ -112,6 +116,11 @@ export default function Services() {
     const targetId = idToAnalyze?.trim();
     if (!targetId) {
       setError('Please enter a valid Tender ID or Portal Reference.');
+      return;
+    }
+    if (!isAuthenticated) {
+      setError('Sign in or create an account to use the AI estimator.');
+      setShowProfileModal(false);
       return;
     }
     if (!profileReady) {
@@ -207,7 +216,7 @@ export default function Services() {
     } finally {
       setAnalyzing(false);
     }
-  }, [inputTenderId, loadPlansAndProfile, profile, profileReady]);
+  }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileReady]);
 
   // Load the account profile and one real tender as the optional example.
   useEffect(() => {
@@ -370,6 +379,17 @@ export default function Services() {
                 {error && (
                   <div className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
                     <p className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /><span>{error}</span></p>
+                    {!isAuthenticated && (
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => navigate(`/signup?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)}
+                      >
+                        Sign in / Sign up
+                      </Button>
+                    )}
                     {dossierLimitReached && <a href="/services#pricing" className="mt-2 inline-flex rounded-md bg-dalBlue px-3 py-2 font-semibold text-white">Unlock Unlimited Dossiers - ₹999/mo</a>}
                   </div>
                 )}
