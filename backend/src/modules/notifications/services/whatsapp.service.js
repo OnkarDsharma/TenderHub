@@ -7,6 +7,7 @@ import pino from 'pino';
 import ContractorPreference from '../models/ContractorPreference.js';
 import Subscription from '../../billing/models/Subscription.js';
 import User from '../../../models/User.js';
+import ContractorAgentProfile from '../../../models/ContractorAgentProfile.js';
 import { matchingEngine } from './matching.engine.js';
 import { getWhatsAppProvider } from '../adapters/whatsappProvider.js';
 import { env } from '../../../config/env.js';
@@ -51,6 +52,10 @@ export class WhatsAppNotificationService {
       }).select('userId');
 
       const eligibleUserIds = activeSubs.map((s) => s.userId);
+      const freeProfiles = await ContractorAgentProfile.find({ 'credits.planTier': 'free_trial' }).select('userId');
+      for (const profile of freeProfiles) {
+        if (!eligibleUserIds.some((id) => id.toString() === profile.userId.toString())) eligibleUserIds.push(profile.userId);
+      }
 
       // In development mode, also include test admin user if present
       if (env.NODE_ENV !== 'production') {

@@ -41,6 +41,15 @@ const contractorAgentProfileSchema = new mongoose.Schema({
       enum: ['free_trial', 'pay_per_tender', 'copilot_starter', 'bidding_pro', 'enterprise'],
       default: 'free_trial' 
     },
+    dailyDossiersLimit: { type: Number, default: 2 },
+    dailyDossiersUsed: { type: Number, default: 0 },
+    lastDossierDate: { type: Date, default: null },
+    chatQueriesLimit: { type: Number, default: 5 },
+    chatQueriesUsed: { type: Number, default: 0 },
+    chatLockedUntil: { type: Date, default: null },
+    weeklyWhatsAppLimit: { type: Number, default: 2 },
+    weeklyWhatsAppUsed: { type: Number, default: 0 },
+    weekStartDate: { type: Date, default: () => new Date() },
     availableDossiers: { type: Number, default: 2 }, // 2 free trial analyses
     usedDossiers: { type: Number, default: 0 },
     copilotQueriesLimit: { type: Number, default: 30 },

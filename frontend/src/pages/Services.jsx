@@ -62,16 +62,24 @@ export default function Services() {
   const [dossierData, setDossierData] = useState(null);
   const [personalizedFit, setPersonalizedFit] = useState(null);
   const [error, setError] = useState('');
+  const [dossierLimitReached, setDossierLimitReached] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
 
   // Copilot Chat State
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatLockedUntil, setChatLockedUntil] = useState(null);
+  const [countdownNow, setCountdownNow] = useState(Date.now());
 
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
   const lastAutoAnalyzeRef = useRef('');
+  useEffect(() => {
+    if (!chatLockedUntil) return undefined;
+    const timer = setInterval(() => setCountdownNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [chatLockedUntil]);
   const [editProfile, setEditProfile] = useState({
     companyName: '',
     registrationClass: '',
@@ -118,6 +126,7 @@ export default function Services() {
 
     try {
       setError('');
+      setDossierLimitReached(false);
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
 
@@ -190,7 +199,11 @@ export default function Services() {
       }
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err.response?.data?.error || err.message || 'Error executing AI analysis.');
+      const payload = err.response?.data;
+      if (payload?.error === 'DAILY_DOSSIER_LIMIT_REACHED') {
+        setDossierLimitReached(true);
+        setError(`Daily Limit Reached (2/2): You've used your 2 free tender analyses for today. Your quota resets at ${payload.resetsAt ? new Date(payload.resetsAt).toLocaleTimeString() : 'midnight'}, or you can upgrade to Starter for unlimited dossiers.`);
+      } else setError(payload?.message || payload?.error || err.message || 'Error executing AI analysis.');
     } finally {
       setAnalyzing(false);
     }
@@ -234,6 +247,7 @@ export default function Services() {
       const res = await servicesApi.askCopilot(dossierData.tenderId, userText);
       if (res.success) {
         setChatMessages((prev) => [...prev, { role: 'assistant', content: res.reply }]);
+        if (res.chatLockedUntil) setChatLockedUntil(res.chatLockedUntil);
         if (profile?.credits) {
           setProfile((prev) => ({
             ...prev,
@@ -247,7 +261,9 @@ export default function Services() {
         setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Unable to process query. Please retry.' }]);
       }
     } catch (err) {
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${err.response?.data?.error || err.message}` }]);
+      const payload = err.response?.data;
+      if (payload?.error === 'CHAT_LOCKED_24H') setChatLockedUntil(payload.lockedUntil);
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${payload?.message || payload?.error || err.message}` }]);
     } finally {
       setChatLoading(false);
     }
@@ -352,10 +368,10 @@ export default function Services() {
                   </p>
                 )}
                 {error && (
-                  <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>{error}</span>
-                  </p>
+                  <div className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
+                    <p className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /><span>{error}</span></p>
+                    {dossierLimitReached && <a href="/services#pricing" className="mt-2 inline-flex rounded-md bg-dalBlue px-3 py-2 font-semibold text-white">Unlock Unlimited Dossiers - ₹999/mo</a>}
+                  </div>
                 )}
                 {!dossierData && exampleTender && (
                   <button type="button" onClick={() => setInputTenderId(exampleTender.sourceTenderId || exampleTender._id)} className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:underline">
@@ -869,6 +885,13 @@ export default function Services() {
                   </div>
 
                   {/* Messages Area */}
+                  {chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime() && (
+                    <div className="mx-3 mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                      <strong>⏳ Free Session Limit Reached (5/5 Queries)</strong>
+                      <p className="mt-1">Chat is locked for 24 hours. Resumes in: {(() => { const seconds = Math.max(0, Math.ceil((new Date(chatLockedUntil).getTime() - countdownNow) / 1000)); return `${Math.floor(seconds / 3600)}h : ${Math.floor((seconds % 3600) / 60)}m : ${seconds % 60}s`; })()}</p>
+                      <a href="/services#pricing" className="mt-1 inline-block font-semibold text-blue-700 dark:text-blue-300">⚡ Upgrade to Starter - Instant Unlimited Access</a>
+                    </div>
+                  )}
                   <div className="flex-1 p-4 overflow-y-auto space-y-3">
                     {chatMessages.map((msg, idx) => (
                       <div
@@ -934,12 +957,13 @@ export default function Services() {
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       className="text-xs"
+                      disabled={Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())}
                     />
                     <Button
                       type="submit"
                       variant="primary"
                       size="sm"
-                      disabled={chatLoading || !chatInput.trim()}
+                      disabled={chatLoading || !chatInput.trim() || Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())}
                       className="shrink-0"
                     >
                       <Send className="w-3.5 h-3.5 mr-1" />

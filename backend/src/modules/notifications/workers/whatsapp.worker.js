@@ -8,6 +8,7 @@ import pino from 'pino';
 import { env } from '../../../config/env.js';
 import { getWhatsAppProvider } from '../adapters/whatsappProvider.js';
 import ContractorPreference from '../models/ContractorPreference.js';
+import ContractorAgentProfile from '../../../models/ContractorAgentProfile.js';
 
 const logger = pino();
 
@@ -30,6 +31,25 @@ export const whatsappWorker = new Worker(
     const provider = getWhatsAppProvider();
 
     if (job.name === 'send-tender-alert') {
+      if (job.data.userId) {
+        const profile = await ContractorAgentProfile.findOne({ userId: job.data.userId });
+        if (profile?.credits?.planTier === 'free_trial') {
+          const now = new Date();
+          const weekStart = profile.credits.weekStartDate || now;
+          if (now.getTime() - new Date(weekStart).getTime() >= 7 * 24 * 60 * 60 * 1000) {
+            profile.credits.weeklyWhatsAppUsed = 0;
+            profile.credits.weekStartDate = now;
+          }
+          if (profile.credits.weeklyWhatsAppUsed >= profile.credits.weeklyWhatsAppLimit) {
+            logger.info(`[WhatsApp] Weekly free quota reached (2/2) for user: ${job.data.userId}. Skipping WhatsApp ping.`);
+            await profile.save();
+            return { success: false, suppressed: true, reason: 'WEEKLY_FREE_QUOTA_REACHED' };
+          }
+          profile.credits.weeklyWhatsAppUsed += 1;
+          if (profile.credits.weeklyWhatsAppUsed === profile.credits.weeklyWhatsAppLimit) user.weeklyQuotaFooter = "⚡ You've used your 2 free weekly WhatsApp alerts. Upgrade to Starter for real-time daily alerts.";
+          await profile.save();
+        }
+      }
       const result = await provider.sendTenderAlert({
         phone,
         tender,

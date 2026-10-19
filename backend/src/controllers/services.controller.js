@@ -175,7 +175,7 @@ export const analyzeTender = async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error analyzing tender: ${error.message}`);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(error.status || 500).json({ success: false, error: error.error || error.message, message: error.message, resetsAt: error.resetsAt, lockedUntil: error.lockedUntil, remainingSeconds: error.remainingSeconds, upgradeUrl: error.upgradeUrl });
   }
 };
 
@@ -237,11 +237,12 @@ export const postCopilotChat = async (req, res) => {
     return res.status(200).json({
       success: true,
       reply: result.reply,
-      remainingQueries: result.remainingQueries
+      remainingQueries: result.remainingQueries,
+      chatLockedUntil: result.chatLockedUntil
     });
   } catch (error) {
     logger.error(`Error in copilot chat: ${error.message}`);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(error.status || 500).json({ success: false, error: error.error || error.message, message: error.message, resetsAt: error.resetsAt, lockedUntil: error.lockedUntil, remainingSeconds: error.remainingSeconds, upgradeUrl: error.upgradeUrl });
   }
 };
 

@@ -49,7 +49,7 @@ export class AiSensyWhatsAppAdapter extends IWhatsAppProvider {
       `💰 *Estimated Value:* ${valueStr}\n` +
       `📅 *Bid Submission Deadline:* ${closingDate}\n\n` +
       `👉 *View Full Details & BOQ:* ${portalUrl}\n\n` +
-      `_TenderHub J&K • Real-Time Contractor Intelligence_`;
+      `_TenderHub J&K • Real-Time Contractor Intelligence_` + (user?.weeklyQuotaFooter ? `\n\n${user.weeklyQuotaFooter}` : '');
 
     if (this.isMockMode) {
       logger.info(`\n[AISENSY MOCK TENDER ALERT to ${formattedPhone}]:\n${textSummary}\n`);
@@ -70,7 +70,8 @@ export class AiSensyWhatsAppAdapter extends IWhatsAppProvider {
             dept.slice(0, 40),
             valueStr,
             closingDate,
-            portalUrl
+            portalUrl,
+            user?.weeklyQuotaFooter || ''
           ],
           source: 'tenderhub-alert-engine'
         }),

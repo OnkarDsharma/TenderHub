@@ -10,6 +10,27 @@ import pino from 'pino';
 
 const logger = pino();
 
+class QuotaError extends Error {
+  constructor(status, details) {
+    super(details.message);
+    this.status = status;
+    Object.assign(this, details);
+  }
+}
+
+function nextMidnightIST(now = new Date()) {
+  const ist = new Date(now.getTime() + 330 * 60 * 1000);
+  ist.setUTCHours(24, 0, 0, 0);
+  return new Date(ist.getTime() - 330 * 60 * 1000);
+}
+
+function sameISTDay(a, b) {
+  if (!a) return false;
+  const shiftedA = new Date(new Date(a).getTime() + 330 * 60 * 1000);
+  const shiftedB = new Date(new Date(b).getTime() + 330 * 60 * 1000);
+  return shiftedA.getUTCFullYear() === shiftedB.getUTCFullYear() && shiftedA.getUTCMonth() === shiftedB.getUTCMonth() && shiftedA.getUTCDate() === shiftedB.getUTCDate();
+}
+
 // Initialize Gemini Client
 const geminiClient = env.GEMINI_API_KEY && env.GEMINI_API_KEY !== 'dummy_key'
   ? new GoogleGenerativeAI(env.GEMINI_API_KEY)
@@ -46,9 +67,9 @@ export class ContractorAgentService {
         customInstructions: 'Strictly check liquidated damages, bank guarantee duration, and material price escalation.',
         credits: {
           planTier: 'free_trial',
-          availableDossiers: 3,
+          availableDossiers: 2,
           usedDossiers: 0,
-          copilotQueriesLimit: 50,
+          copilotQueriesLimit: 5,
           copilotQueriesUsed: 0,
         }
       });
@@ -118,8 +139,24 @@ export class ContractorAgentService {
 
     // Verify user credits before generating new dossier
     const profile = await this.getOrCreateContractorProfile(userId);
+    if (profile.credits.planTier === 'free_trial') {
+      const now = new Date();
+      if (!sameISTDay(profile.credits.lastDossierDate, now)) profile.credits.dailyDossiersUsed = 0;
+      if (profile.credits.dailyDossiersUsed >= profile.credits.dailyDossiersLimit) {
+        throw new QuotaError(429, {
+          success: false,
+          error: 'DAILY_DOSSIER_LIMIT_REACHED',
+          message: `You have used your ${profile.credits.dailyDossiersLimit} free AI Dossiers for today.`,
+          resetsAt: nextMidnightIST(now).toISOString(),
+          upgradeUrl: '/services#pricing',
+        });
+      }
+      profile.credits.dailyDossiersUsed += 1;
+      profile.credits.lastDossierDate = now;
+      await profile.save();
+    }
     const isDev = !env.NODE_ENV || env.NODE_ENV === 'development';
-    if (profile.credits.availableDossiers <= 0) {
+    if (profile.credits.planTier !== 'free_trial' && profile.credits.availableDossiers <= 0) {
       if (isDev) {
         profile.credits.availableDossiers = 10;
         await profile.save();
@@ -177,7 +214,7 @@ export class ContractorAgentService {
       await dossier.save();
 
       // Deduct credit
-      profile.credits.availableDossiers -= 1;
+      if (profile.credits.planTier !== 'free_trial') profile.credits.availableDossiers -= 1;
       profile.credits.usedDossiers += 1;
       if (tender._id && mongoose.isValidObjectId(tender._id) && !profile.analyzedTenders.includes(tender._id)) {
         profile.analyzedTenders.push(tender._id);
@@ -1260,10 +1297,27 @@ Return strictly valid JSON with this exact schema:
    */
   async processCopilotChat(userId, tenderId, userQuestion) {
     const profile = await this.getOrCreateContractorProfile(userId);
-    
+    const isFree = profile.credits.planTier === 'free_trial';
+    if (isFree) {
+      const now = new Date();
+      if (profile.credits.chatLockedUntil && now < profile.credits.chatLockedUntil) {
+        throw new QuotaError(429, { success: false, error: 'CHAT_LOCKED_24H', message: 'Free Copilot limit reached (5/5 queries). Chat is locked for 24 hours.', lockedUntil: profile.credits.chatLockedUntil.toISOString(), remainingSeconds: Math.ceil((profile.credits.chatLockedUntil - now) / 1000), upgradeUrl: '/services#pricing' });
+      }
+      if (profile.credits.chatLockedUntil && now >= profile.credits.chatLockedUntil) {
+        profile.credits.chatQueriesUsed = 0;
+        profile.credits.chatLockedUntil = null;
+      }
+      if (profile.credits.chatQueriesUsed + 1 >= profile.credits.chatQueriesLimit) {
+        profile.credits.chatQueriesUsed = profile.credits.chatQueriesLimit;
+        profile.credits.chatLockedUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      } else profile.credits.chatQueriesUsed += 1;
+      profile.credits.copilotQueriesUsed = profile.credits.chatQueriesUsed;
+      profile.credits.copilotQueriesLimit = profile.credits.chatQueriesLimit;
+      await profile.save();
+    }
     // Check query quota
     const isDev = !env.NODE_ENV || env.NODE_ENV === 'development';
-    if (profile.credits.copilotQueriesLimit - profile.credits.copilotQueriesUsed <= 0) {
+    if (!isFree && profile.credits.copilotQueriesLimit - profile.credits.copilotQueriesUsed <= 0) {
       if (isDev) {
         profile.credits.copilotQueriesLimit += 50;
         await profile.save();
@@ -1352,12 +1406,12 @@ RESPONSE RULES (STRICT):
     await session.save();
 
     // Deduct user query quota
-    profile.credits.copilotQueriesUsed += 1;
-    await profile.save();
+    if (!isFree) { profile.credits.copilotQueriesUsed += 1; await profile.save(); }
 
     return {
       reply: assistantResponse,
-      remainingQueries: profile.credits.copilotQueriesLimit - profile.credits.copilotQueriesUsed,
+      remainingQueries: isFree ? profile.credits.chatQueriesLimit - profile.credits.chatQueriesUsed : profile.credits.copilotQueriesLimit - profile.credits.copilotQueriesUsed,
+      chatLockedUntil: isFree ? profile.credits.chatLockedUntil : null,
       session
     };
   }
