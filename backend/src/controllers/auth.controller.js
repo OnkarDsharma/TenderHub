@@ -23,6 +23,7 @@ import {
 import { sendOtpEmail } from '../services/emailService.js';
 import { redis } from '../config/redis.js';
 import { env } from '../config/env.js';
+import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 
 const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes in seconds
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -683,15 +684,16 @@ export const getMe = async (req, res, next) => {
       currentPeriodEnd: { $gt: now },
     });
     const isPro = !!activeSub || isPlatformAdmin;
+    const hasUnlimitedViews = isPro || isUnlimitedAccessUser(user);
 
-    const viewsLimit = isPro ? 'Unlimited' : 5;
+    const viewsLimit = hasUnlimitedViews ? 'Unlimited' : 5;
     const currentExpiry = user.dailyTenderViews?.expiresAt ? new Date(user.dailyTenderViews.expiresAt).getTime() : 0;
     const isWindowExpired = !user.dailyTenderViews || !currentExpiry || now.getTime() >= currentExpiry;
 
     const tenderIds = isWindowExpired ? [] : (user.dailyTenderViews.tenderIds || []);
-    const viewsUsed = isPro ? 0 : tenderIds.length;
-    const viewsRemaining = isPro ? 'Unlimited' : Math.max(0, viewsLimit - viewsUsed);
-    const expiresAt = (isWindowExpired || isPro) ? null : user.dailyTenderViews?.expiresAt;
+    const viewsUsed = hasUnlimitedViews ? 0 : tenderIds.length;
+    const viewsRemaining = hasUnlimitedViews ? 'Unlimited' : Math.max(0, viewsLimit - viewsUsed);
+    const expiresAt = (isWindowExpired || hasUnlimitedViews) ? null : user.dailyTenderViews?.expiresAt;
     const msRemaining = expiresAt ? Math.max(0, new Date(expiresAt).getTime() - now.getTime()) : null;
 
     return res.status(200).json({

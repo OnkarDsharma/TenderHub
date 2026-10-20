@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { redis } from '../config/redis.js';
+import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 
 export const apiLimiter = rateLimit({
   // Create a dedicated store instance with a unique prefix
@@ -78,6 +79,21 @@ export const aiAnalyzeLimiter = rateLimit({
   message: { error: 'AI analysis rate limit exceeded. Please wait a few minutes before requesting more analyses.' },
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+});
+
+export const aiDossierLimiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redis.call(...args),
+    prefix: 'rl-ai-dossier:',
+  }),
+  passOnStoreError: true,
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: { error: 'AI analysis rate limit exceeded. Please wait a few minutes before requesting more analyses.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  // The allowlisted accounts have unlimited dossier generation requests.
+  skip: (req) => isUnlimitedAccessUser(req.user?.email),
 });
 
 export const waitlistLimiter = rateLimit({

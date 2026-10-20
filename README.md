@@ -99,7 +99,10 @@ R2_ACCOUNT_ID=...
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
 R2_BUCKET_NAME=tenderhub
+UNLIMITED_TENDER_ACCESS_EMAILS=contractor1@example.com,contractor2@example.com
 ```
+
+Set `UNLIMITED_TENDER_ACCESS_EMAILS` on the backend service to grant listed accounts unlimited tender detail views, ZIP downloads, and AI dossier requests (including exemption from the 10-per-15-minute analysis throttle). Separate email addresses with commas. Emails are matched case-insensitively. Dossier credit deductions are currently disabled for all users while the service is in testing.
 
 ### Key Frontend Environment Variables (`frontend/.env.production`)
 ```env

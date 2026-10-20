@@ -43,6 +43,8 @@ services:
         sync: false # Cloudflare account ID
       - key: R2_BUCKET_NAME
         value: tenderhub
+      - key: UNLIMITED_TENDER_ACCESS_EMAILS
+        sync: false # Comma-separated email allowlist for unlimited tender detail and ZIP access
       - key: OPENAI_API_KEY
         value: dummy_key
 

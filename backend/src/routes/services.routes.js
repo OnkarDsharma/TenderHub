@@ -9,7 +9,7 @@ import {
   getMyDossiers,
 } from '../controllers/services.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
-import { aiAnalyzeLimiter } from '../middleware/rateLimiter.middleware.js';
+import { aiAnalyzeLimiter, aiDossierLimiter } from '../middleware/rateLimiter.middleware.js';
 
 const router = express.Router();
 
@@ -22,9 +22,9 @@ router.use(verifyToken);
 router.get('/contractor-profile', getContractorProfile);
 router.put('/contractor-profile', updateContractorProfile);
 
-router.post('/analyze', aiAnalyzeLimiter, analyzeTender);
-router.post('/analyze/:tenderId', aiAnalyzeLimiter, analyzeTender);
-router.post('/analyze/*splat', aiAnalyzeLimiter, analyzeTender);
+router.post('/analyze', aiDossierLimiter, analyzeTender);
+router.post('/analyze/:tenderId', aiDossierLimiter, analyzeTender);
+router.post('/analyze/*splat', aiDossierLimiter, analyzeTender);
 
 router.get('/dossier', getTenderDossier);
 router.get('/dossier/:tenderId', getTenderDossier);

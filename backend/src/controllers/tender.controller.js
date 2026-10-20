@@ -10,6 +10,7 @@ import User from '../models/User.js';
 import Subscription from '../modules/billing/models/Subscription.js';
 import { aiQueue } from '../workers/queue.js';
 import { getTenderR2Object } from '../utils/r2Storage.js';
+import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 
 /**
  * Helper to get current date formatted as YYYY-MM-DD in Asia/Kolkata (IST)
@@ -370,13 +371,14 @@ export const getTenderById = async (req, res, next) => {
       currentPeriodEnd: { $gt: now },
     });
     const isPro = !!activeSub || isAdmin;
+    const hasUnlimitedAccess = isPro || isUnlimitedAccessUser(user);
 
     let viewsUsed = 0;
     const viewsLimit = 5; // 5 tenders per user per 24 hours for free users
     let viewsRemaining = 5;
     let expiresAt = null;
 
-    if (!isPro) {
+    if (!hasUnlimitedAccess) {
       // 1. Check if the 24-hour window has expired or is uninitialized
       const currentExpiry = user.dailyTenderViews?.expiresAt ? new Date(user.dailyTenderViews.expiresAt).getTime() : 0;
       const isWindowExpired = !user.dailyTenderViews || !currentExpiry || now.getTime() >= currentExpiry;
@@ -460,9 +462,9 @@ export const getTenderById = async (req, res, next) => {
       relatedTenders,
       viewsInfo: {
         viewsUsed,
-        viewsLimit: isPro ? 'Unlimited' : viewsLimit,
-        viewsRemaining: isPro ? 'Unlimited' : viewsRemaining,
-        resetsAt: isPro ? null : expiresAt,
+        viewsLimit: hasUnlimitedAccess ? 'Unlimited' : viewsLimit,
+        viewsRemaining: hasUnlimitedAccess ? 'Unlimited' : viewsRemaining,
+        resetsAt: hasUnlimitedAccess ? null : expiresAt,
         date: getTodayISTString()
       }
     });
@@ -659,8 +661,9 @@ export const downloadTenderZip = async (req, res, next) => {
       currentPeriodEnd: { $gt: new Date() },
     });
     const isPro = !!activeSub || isAdmin;
+    const hasUnlimitedAccess = isPro || isUnlimitedAccessUser(user);
 
-    if (!isPro) {
+    if (!hasUnlimitedAccess) {
       const viewedTenderIds = user?.dailyTenderViews?.tenderIds || [];
       const tenderIdentifier = tender._id.toString();
       const hasViewed = viewedTenderIds.includes(tenderIdentifier) || (tender.sourceTenderId && viewedTenderIds.includes(tender.sourceTenderId));
