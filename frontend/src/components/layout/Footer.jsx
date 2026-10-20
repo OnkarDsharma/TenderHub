@@ -4,7 +4,7 @@
  * regional operations desk information, and directory shortcuts.
  */
 import { Link } from 'react-router-dom';
-import { Landmark, Mail, MapPin, ExternalLink } from 'lucide-react';
+import { Mail, MapPin, ExternalLink } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -14,14 +14,10 @@ export function Footer() {
           
           {/* Brand & Description */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-dalBlue text-white flex items-center justify-center shrink-0">
-                <Landmark className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-display font-bold tracking-tight text-white">
-                Tec<span className="text-techCoral">b</span>byte <span className="text-xs text-slate-400 font-normal">/ TenderHub</span>
-              </span>
-            </div>
+            <Link to="/" className="inline-flex flex-col items-start" aria-label="tndrr home">
+              <img src="/tndrr-wordmark.png" alt="tndrr" className="w-[148px] h-auto brightness-0 invert" />
+              <span className="mt-1 text-[8px] font-semibold uppercase tracking-[0.17em] text-slate-400">Every tender. One search.</span>
+            </Link>
             <p className="text-xs text-slate-400 leading-relaxed font-normal">
               Public procurement intelligence for northern states. Live tenders, documents and BOQ data from official portals.
             </p>
@@ -142,7 +138,7 @@ export function Footer() {
 
         {/* Bottom Legal Bar */}
         <div className="mt-10 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-3 text-center sm:text-left">
-          <p>© {new Date().getFullYear()} TenderHub. Official tender notices remain the copyright of their respective issuing government authorities.</p>
+          <p>© {new Date().getFullYear()} tndrr. Official tender notices remain the copyright of their respective issuing government authorities.</p>
           <div className="flex gap-4">
             <Link to="/about" className="hover:text-slate-300 transition-colors">Privacy</Link>
             <Link to="/contact" className="hover:text-slate-300 transition-colors">Contact</Link>

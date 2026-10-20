@@ -1028,7 +1028,7 @@ export default function Tenders() {
                                   <span>Viewing 15 of {totalCount} Active Notices</span>
                                 </div>
                                 <h3 className="text-base sm:text-lg font-display font-bold">
-                                  {isAuthenticated ? 'Upgrade to TenderHub Pro' : 'Unlock All Tender Notices & Technical Details'}
+                                  {isAuthenticated ? 'Upgrade to tndrr Pro' : 'Unlock All Tender Notices & Technical Details'}
                                 </h3>
                                 <p className="text-xs text-blue-100/80 mt-1 max-w-xl leading-relaxed">
                                   {isAuthenticated 

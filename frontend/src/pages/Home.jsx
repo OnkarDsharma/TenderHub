@@ -294,7 +294,7 @@ export default function Home() {
             <div className="home-preview-document rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl shadow-slate-900/10">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <span className="text-[10px] uppercase tracking-[.16em] text-slate-500">TenderHub intelligence</span>
+                  <span className="text-[10px] uppercase tracking-[.16em] text-slate-500">tndrr intelligence</span>
                   <h2 className="mt-1 text-base font-bold text-slate-900">Regional opportunity brief</h2>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Updated daily</span>

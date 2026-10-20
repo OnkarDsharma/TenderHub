@@ -7,7 +7,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { 
-  Landmark, 
   Mail, 
   ShieldCheck, 
   ArrowRight, 
@@ -263,12 +262,7 @@ export default function Login({ defaultMode }) {
         {/* Brand Card Header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2.5 mx-auto">
-            <div className="w-10 h-10 rounded-xl bg-dalBlue text-white flex items-center justify-center shadow-xs">
-              <Landmark className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-2xl font-display font-black tracking-tight text-dalBlue dark:text-white leading-none">
-              Tender<span className="text-chinarRed">Hub</span>
-            </span>
+            <img src="/tndrr-wordmark.png" alt="tndrr — Every tender. One search." className="w-[142px] h-auto dark:brightness-0 dark:invert" />
             <span className="text-[10px] font-semibold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
               J&amp;K
             </span>
@@ -584,7 +578,7 @@ export default function Login({ defaultMode }) {
                   </span>
                 ) : (
                   <span>
-                    New to TenderHub?{' '}
+                    New to tndrr?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('signup')}
@@ -689,7 +683,7 @@ export default function Login({ defaultMode }) {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
             <BadgeCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Official TenderHub Northern States Portal Identity</span>
+            <span>Official tndrr Northern States Portal Identity</span>
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500">
             Protected by HttpOnly cookies, session encryption, and rate-limited abuse prevention.

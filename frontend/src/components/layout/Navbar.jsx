@@ -98,24 +98,16 @@ export function Navbar() {
       <div className="bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-[#262832] shadow-xs">
         <div className="navbar-main-row max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
           
-          {/* Left Block: Coral accent brand container + Logo */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            {/* Peach / Coral brand icon */}
-            <Link 
-              to="/"
-              className="bg-techCoral text-white w-10 h-10 sm:w-11 sm:h-11 rounded flex items-center justify-center hover:bg-techCoral-dark transition-colors cursor-pointer shrink-0 shadow-xs"
-              aria-label="TenderHub Home"
-            >
-              <Landmark className="w-5 h-5 text-white" />
-            </Link>
-
-            {/* Brand Logo: TenderHub */}
-            <Link to="/" className="flex flex-col group">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white font-display leading-none">
-                Tender<span className="text-techCoral">Hub</span>
-              </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-normal mt-0.5 hidden sm:block">
-                Procurement Intelligence
+          {/* Brand wordmark */}
+          <div className="flex items-center shrink-0">
+            <Link to="/" className="flex flex-col items-start" aria-label="tndrr home">
+              <img
+                src="/tndrr-wordmark.png"
+                alt="tndrr"
+                className={`w-[112px] sm:w-[132px] h-auto ${isDark ? 'brightness-0 invert' : ''}`}
+              />
+              <span className="mt-0.5 text-[7px] sm:text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                Every tender. One search.
               </span>
             </Link>
           </div>

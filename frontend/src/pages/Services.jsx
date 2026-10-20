@@ -263,7 +263,7 @@ export default function Services() {
         }
 
         if (!gemTender) {
-          throw new Error('This GeM bid is not in the TenderHub index yet. Choose it from GeM Bids or sync the bid before analyzing it.');
+          throw new Error('This GeM bid is not in the tndrr index yet. Choose it from GeM Bids or sync the bid before analyzing it.');
         }
         analysisTenderId = gemTender._id || gemTender.sourceTenderId || targetId;
       } else if (/^[a-f\d]{24}$/i.test(targetId)) {
@@ -281,7 +281,7 @@ export default function Services() {
             .some((value) => normalizeId(value) === normalizeId(targetId))
         );
         if (!tender) {
-          throw new Error('Tender reference was not found in the TenderHub index. Choose an active tender from Browse Tenders and try again.');
+          throw new Error('Tender reference was not found in the tndrr index. Choose an active tender from Browse Tenders and try again.');
         }
         analysisTenderId = tender._id || tender.sourceTenderId || targetId;
       }
@@ -402,7 +402,7 @@ export default function Services() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `TenderHub_BOQ_Materials_${inputTenderId || 'Schedule'}.csv`);
+    link.setAttribute('download', `tndrr_BOQ_Materials_${inputTenderId || 'Schedule'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -591,7 +591,7 @@ export default function Services() {
                   <span className="text-xs text-slate-500 font-mono">
                     Ref: {dossierData.sourceTenderId || dossierData.tenderId}
                   </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">TenderHub record</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">tndrr record</span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                   {dossierData.executiveOverview?.title}
