@@ -210,35 +210,25 @@ export default function Home() {
       />
 
       {/* =========================================================================
-          SECTION 1: HERO SECTION (Techbyte Layout + TenderHUB1.jpg Background)
+          SECTION 1: PRODUCT-STYLE HERO WITH LIVE PROCUREMENT SNAPSHOT
           ========================================================================= */}
-      <section className="home-hero relative min-h-[620px] lg:min-h-[700px] flex flex-col justify-between bg-black overflow-hidden select-none">
-        {/* Background Image: TenderHUB1.jpg */}
-        <div 
-          className="home-hero-image absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700"
-          style={{ backgroundImage: `url('/images/TenderHUB1.jpg')` }}
-        >
-          {/* Dark Overlay Gradient for clean contrast */}
-          <div className="home-hero-overlay absolute inset-0 bg-gradient-to-r from-black/92 via-black/80 to-black/55" />
-        </div>
-
-        {/* Hero Content Over Image */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 lg:pt-24 pb-12 w-full">
-          <div className="max-w-3xl">
+      <section className="home-hero relative overflow-hidden select-none">
+        <div className="home-hero-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className="relative z-10 max-w-2xl">
             
             {/* Official Procurement Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold tracking-wide mb-5">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold tracking-wide mb-5 shadow-sm">
               <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
               <span>Northern States Public Works &amp; Procurement</span>
             </div>
 
             {/* Primary Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] font-display">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.04] font-display">
               Government tenders across J&amp;K, Punjab &amp; Himachal
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl">
+            <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
               Active civil, road, water and electrical contracts — synced daily from official portals.
             </p>
 
@@ -246,35 +236,35 @@ export default function Home() {
             <div className="mt-7 sm:mt-8 space-y-4">
               <form 
                 onSubmit={handleSearch}
-                className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white/10 backdrop-blur-md border border-white/25 rounded p-1.5 shadow-lg focus-within:border-techCoral transition-colors max-w-2xl gap-2"
+                className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white border border-slate-200 rounded-xl p-1.5 shadow-lg shadow-slate-900/5 focus-within:border-techCoral transition-colors max-w-2xl gap-2"
               >
                 <div className="flex items-center flex-1 px-3 py-1.5 min-w-0">
-                  <Search className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                  <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by tender, department or district…"
-                    className="w-full text-xs sm:text-sm text-white placeholder:text-slate-400 bg-transparent focus:outline-none truncate"
+                    className="w-full text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none truncate"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm uppercase tracking-wider rounded-sm transition-colors shrink-0 shadow-sm cursor-pointer"
+                  className="px-6 py-2.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm rounded-lg transition-colors shrink-0 shadow-sm cursor-pointer"
                 >
                   Search Tenders
                 </button>
               </form>
 
               {/* Popular Quick Filter Chips */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                <span className="font-semibold text-slate-400">Popular:</span>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <span className="font-semibold text-slate-500">Popular:</span>
                 {quickLocations.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => handleQuickClick(item.query)}
-                    className="px-2.5 py-1 rounded text-[11px] font-medium bg-white/10 hover:bg-techCoral hover:text-white text-slate-200 transition-colors cursor-pointer border border-white/10"
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-white hover:bg-techCoral hover:text-white text-slate-700 transition-colors cursor-pointer border border-slate-200"
                   >
                     {item.label}
                   </button>
@@ -285,13 +275,49 @@ export default function Home() {
               <div className="flex items-center gap-4 text-xs pt-1">
                 <Link 
                   to="/services" 
-                  className="inline-flex items-center gap-1.5 font-bold text-techCoral hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 font-bold text-techCoral hover:text-techCoral-dark transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Need AI BOQ analysis?</span>
                 </Link>
               </div>
 
+            </div>
+          </div>
+
+          <div className="home-hero-preview relative mx-auto w-full max-w-[540px]">
+            <div className="home-preview-document rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl shadow-slate-900/10">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <span className="text-[10px] uppercase tracking-[.16em] text-slate-500">TenderHub intelligence</span>
+                  <h2 className="mt-1 text-base font-bold text-slate-900">Regional opportunity brief</h2>
+                </div>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Updated daily</span>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-slate-100 py-4 text-center">
+                <div className="px-2"><span className="block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.activeTendersCount ?? 29)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Active notices</span></div>
+                <div className="px-2"><span className="block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.authoritiesCount ?? 13)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Authorities</span></div>
+                <div className="px-2"><span className="block text-lg sm:text-xl font-bold text-techCoral">{isStatsLoading ? '—' : formatCurrencyINR(stats?.totalValue ?? 30146323)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Estimated value</span></div>
+              </div>
+              <div className="border-t border-slate-100 pt-4">
+                <div className="mb-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500"><span>Active authorities</span><span>Live pipeline</span></div>
+                <div className="space-y-3">
+                  {activeSectorCards.slice(0, 3).map((item, index) => (
+                    <div key={`${item.title}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(60px,.9fr)_auto] items-center gap-3 text-xs">
+                      <span className="truncate font-medium text-slate-700" title={item.title}>{item.title}</span>
+                      <span className="h-1.5 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-techCoral" style={{ width: `${100 - index * 22}%` }} /></span>
+                      <span className="font-mono text-slate-500">{item.count.replace(' Active Notices', '')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Link to="/tenders" className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-semibold text-techCoral hover:text-techCoral-dark">
+                <span>Explore the live pipeline</span><ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="home-preview-float absolute -bottom-5 -left-5 hidden sm:flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-techCoral/10 text-techCoral"><ShieldCheck className="h-4 w-4" /></span>
+              <span><strong className="block text-xs text-slate-800">Official sources</strong><small className="text-[10px] text-slate-500">Portals + GeM, synced daily</small></span>
             </div>
           </div>
         </div>

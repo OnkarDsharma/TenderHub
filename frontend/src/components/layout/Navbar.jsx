@@ -128,10 +128,10 @@ export function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`whitespace-nowrap text-[13px] font-semibold transition-all py-1 flex items-center gap-1.5 ${
+                  className={`whitespace-nowrap text-[13px] font-semibold transition-all px-3 py-2 rounded-lg flex items-center gap-1.5 ${
                     isActive
-                      ? 'text-techCoral font-bold border-b-2 border-techCoral'
-                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral'
+                      ? 'text-techCoral font-bold bg-techCoral-50 dark:bg-techCoral/15'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral hover:bg-slate-50 dark:hover:bg-slate-800/70'
                   }`}
                 >
                   <span>{link.label}</span>

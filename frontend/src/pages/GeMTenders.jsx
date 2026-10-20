@@ -253,7 +253,7 @@ export default function GeMTenders() {
         </div>
 
         {/* 2. Search & Interactive Filter Bar */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="gem-filter-panel bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
           
           {/* State Filter Navigation Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -370,6 +370,7 @@ export default function GeMTenders() {
           </div>
         </div>
 
+        <div className="gem-results-column">
         {/* 3. Tenders Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
@@ -554,6 +555,7 @@ export default function GeMTenders() {
           </div>
         )}
 
+        </div>
       </div>
 
       {/* 5. Interactive Specifications Modal */}
