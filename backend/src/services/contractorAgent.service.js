@@ -148,8 +148,16 @@ export class ContractorAgentService {
       const computedVal = tender.estimatedValue || (tender.gemData?.pdfData?.minTurnoverLakhs ? tender.gemData.pdfData.minTurnoverLakhs * 100000 : 4500000);
       const computedEmd = tender.emdAmount || Math.round(computedVal * 0.02);
 
-      // Save extracted dossier
-      dossier.summary = aiResult.summary;
+      // Save extracted dossier with normalized newline bullets
+      if (typeof aiResult.summary === 'string' && aiResult.summary.trim()) {
+        let normSummary = aiResult.summary.replace(/(?:\r?\n\s*|\s+)•\s*/g, '\n• ').trim();
+        if (!normSummary.startsWith('•')) {
+          normSummary = '• ' + normSummary;
+        }
+        dossier.summary = normSummary;
+      } else {
+        dossier.summary = aiResult.summary;
+      }
       dossier.executiveOverview = {
         title: tender.title,
         department: tender.departmentName || tender.organisationChain || (domain === 'IT_HARDWARE' ? 'Information Technology Department' : 'Public Works'),
@@ -414,7 +422,7 @@ ${tenderContext}
 Return strictly valid JSON with this exact schema:
 For BOQ line items, use numeric values for estimatedRate and estimatedAmount when an estimate is available. If the tender requires the bidder to quote a price and no estimate is available, use the string "To be quoted by bidder" for those fields instead of inventing an amount.
 {
-  "summary": "Pointwise executive briefing (3-4 concise bullet points using '• ' format) highlighting: 1) Project Scope & Dept, 2) Budget & Execution Timeline, 3) Minimum Contractor Class & Solvency, 4) Strategic Recommendation",
+  "summary": "Pointwise executive briefing (3-4 concise bullet points, each starting on a new line with '• ') highlighting: 1) Project Scope & Dept, 2) Budget & Execution Timeline, 3) Minimum Contractor Class & Solvency, 4) Strategic Recommendation",
   "preBidAnalysis": {
     "eligibilityCriteria": {
       "requiredTurnover": "String with required turnover INR and criteria",
@@ -436,7 +444,7 @@ For BOQ line items, use numeric values for estimatedRate and estimatedAmount whe
       }
     ],
     "boqMaterialBreakdown": {
-      "summary": "Pointwise overview of raw materials using '• ' format with key quantities, budget share, and Phase 1 staging",
+      "summary": "Pointwise overview of raw materials (3-4 concise bullet points, each on a new line with '• ') with key quantities, budget share, and Phase 1 staging",
       "materials": [
         {
           "name": "e.g. Portland Pozzolana Cement (PPC 43)",

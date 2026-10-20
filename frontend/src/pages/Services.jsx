@@ -55,6 +55,87 @@ function formatBoqEstimate(value) {
   return '—';
 }
 
+function parseSummaryBullets(text) {
+  if (!text) return [];
+  if (Array.isArray(text)) return text.filter(Boolean);
+  if (typeof text !== 'string') return [String(text)];
+
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  // 1. Check if contains bullet symbols (•, -, *, etc.)
+  if (/[•\-\*]/.test(trimmed)) {
+    const cleaned = trimmed.replace(/^[•\-\*]\s*/, '');
+    const points = cleaned
+      .split(/(?:\r?\n\s*|\s+)[•\-\*]\s+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (points.length > 0) return points;
+  }
+
+  // 2. Check if numbered list (e.g. 1. or 1))
+  if (/^\d+[\.\)]\s+/.test(trimmed) || /(?:\r?\n|\s+)\d+[\.\)]\s+/.test(trimmed)) {
+    const cleaned = trimmed.replace(/^\d+[\.\)]\s*/, '');
+    const points = cleaned
+      .split(/(?:\r?\n\s*|\s+)\d+[\.\)]\s+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (points.length > 0) return points;
+  }
+
+  // 3. Check for multiple newlines
+  if (trimmed.includes('\n')) {
+    const lines = trimmed
+      .split(/\r?\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length > 1) return lines;
+  }
+
+  return [trimmed];
+}
+
+function renderSummaryBullets(summaryText, listClassName = 'space-y-2.5') {
+  const points = parseSummaryBullets(summaryText);
+  if (!points || points.length === 0) return null;
+
+  return (
+    <ul className={listClassName}>
+      {points.map((point, index) => {
+        const boldPrefixMatch = point.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
+        const colonMatch = !boldPrefixMatch && point.match(/^([A-Za-z0-9\s&/()-]{2,35}):\s+(.+)$/);
+
+        let title = null;
+        let body = point;
+
+        if (boldPrefixMatch) {
+          title = boldPrefixMatch[1] + ':';
+          body = boldPrefixMatch[2];
+        } else if (colonMatch) {
+          title = colonMatch[1] + ':';
+          body = colonMatch[2];
+        }
+
+        return (
+          <li key={index} className="flex items-start gap-2.5 leading-relaxed">
+            <span className="w-1.5 h-1.5 rounded-full bg-dalBlue dark:bg-blue-400 mt-2 shrink-0" />
+            <span className="flex-1">
+              {title ? (
+                <>
+                  <strong className="font-semibold text-slate-800 dark:text-slate-100">{title} </strong>
+                  {renderCopilotText(body)}
+                </>
+              ) : (
+                renderCopilotText(body)
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -515,9 +596,11 @@ export default function Services() {
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                   {dossierData.executiveOverview?.title}
                 </h2>
-                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-lg border border-slate-200/70 dark:border-slate-700/60 leading-relaxed">
-                  {dossierData.summary}
-                </div>
+                {dossierData.summary && (
+                  <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-lg border border-slate-200/70 dark:border-slate-700/60">
+                    {renderSummaryBullets(dossierData.summary)}
+                  </div>
+                )}
               </div>
 
               {/* Personalized Match Pill */}
@@ -758,9 +841,11 @@ export default function Services() {
                         <Boxes className="w-4 h-4 text-dalBlue dark:text-blue-400" />
                         <span>Bill of Quantities: Primary Raw Material Breakdown</span>
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                        {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary}
-                      </p>
+                      {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary && (
+                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-300">
+                          {renderSummaryBullets(dossierData.preBidAnalysis.boqMaterialBreakdown.summary, 'space-y-1.5')}
+                        </div>
+                      )}
                     </div>
                     <Button
                       variant="primary"
