@@ -957,11 +957,19 @@ html:not(.dark) [role="dialog"] > div {
 
 .gem-page > div > :first-child { grid-column: 1 / -1; }
 
+.gem-search-sticky {
+  position: sticky;
+  top: 7rem;
+  z-index: 40;
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
 .gem-filter-panel {
   position: sticky;
   top: 6.5rem;
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 3;
   padding: 1rem;
   border-radius: 14px;
   box-shadow: 0 4px 18px rgba(16, 34, 54, .045);
@@ -990,7 +998,7 @@ html:not(.dark) [role="dialog"] > div {
 .gem-results-column {
   min-width: 0;
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 3;
 }
 
 .gem-results-column > .gem-bid-list {
@@ -1075,6 +1083,7 @@ html:not(.dark) [role="dialog"] > div {
 @media (max-width: 900px) {
   .gem-page > div { display: flex; flex-direction: column; }
   .gem-page > div > :first-child,
+  .gem-page > div > .gem-search-sticky,
   .gem-page > div > .gem-filter-panel,
   .gem-page > div > .gem-results-column { width: 100%; }
   .gem-filter-panel { position: static; }
