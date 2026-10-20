@@ -15,9 +15,10 @@ export const apiLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: (req) => {
+    if (req.path === '/health') return true;
     // Never throttle during development or for local development requests
     if (process.env.NODE_ENV === 'development') return true;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = req.ip || req.connection?.remoteAddress || '';
     if (ip === '127.0.0.1' || ip === '::1' || ip.includes('localhost')) return true;
     return false;
   },
@@ -75,6 +76,30 @@ export const aiAnalyzeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 10, // Max 10 AI analyze requests per 15 minutes
   message: { error: 'AI analysis rate limit exceeded. Please wait a few minutes before requesting more analyses.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+
+export const waitlistLimiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redis.call(...args),
+    prefix: 'rl-waitlist:',
+  }),
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10, // Max 10 waitlist submissions per IP per 15 min
+  message: { error: 'Too many waitlist submissions from this IP. Please try again later.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+
+export const notificationLimiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redis.call(...args),
+    prefix: 'rl-notification-test:',
+  }),
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Max 5 test alert dispatches per 15 minutes
+  message: { error: 'Too many test notifications requested. Please wait before requesting another alert.' },
   standardHeaders: 'draft-7',
   legacyHeaders: false,
 });

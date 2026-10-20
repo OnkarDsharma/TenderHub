@@ -6,11 +6,11 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/admin';
 
 export function getStoredAdminKey() {
-  return sessionStorage.getItem('TENDERHUB_ADMIN_KEY') || localStorage.getItem('TENDERHUB_ADMIN_KEY') || '11112222';
+  return sessionStorage.getItem('TENDERHUB_ADMIN_KEY') || localStorage.getItem('TENDERHUB_ADMIN_KEY') || '';
 }
 
 export function getStoredAdminEmail() {
-  return sessionStorage.getItem('TENDERHUB_ADMIN_EMAIL') || localStorage.getItem('TENDERHUB_ADMIN_EMAIL') || 'bgmiwale@gmail.com';
+  return sessionStorage.getItem('TENDERHUB_ADMIN_EMAIL') || localStorage.getItem('TENDERHUB_ADMIN_EMAIL') || '';
 }
 
 export function setStoredAdminCredentials(key, email, persist = false) {

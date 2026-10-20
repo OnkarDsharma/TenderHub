@@ -42,10 +42,10 @@ export const verifyPayment = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
 
-    if (!orderId || !paymentId || !planId) {
+    if (!orderId || !paymentId || !signature || !planId) {
       return res.status(400).json({
         success: false,
-        message: 'Missing payment verification parameters (orderId, paymentId, planId).',
+        message: 'Missing payment verification parameters (orderId, paymentId, signature, planId).',
       });
     }
 

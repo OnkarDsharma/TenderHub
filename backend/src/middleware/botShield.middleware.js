@@ -27,15 +27,16 @@ const SCRAPER_UA_PATTERNS = [
 ];
 
 /**
- * Extracts normalized client IP address from express request
+/**
+ * Extracts normalized client IP address from express request.
+ * Relies on Express trust proxy configuration to prevent client header spoofing.
  */
 export const getClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const list = forwarded.split(',');
-    return list[0].trim();
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (ip.startsWith('::ffff:')) {
+    return ip.replace('::ffff:', '');
   }
-  return req.ip || req.connection?.remoteAddress || 'unknown';
+  return ip;
 };
 
 /**

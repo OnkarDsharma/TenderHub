@@ -30,6 +30,8 @@ import {
 } from './middleware/botShield.middleware.js';
 
 const app = express();
+app.set('trust proxy', 1);
+
 const logger = pino({
   transport: env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
 });
@@ -106,8 +108,8 @@ app.use(pinoHttp({ logger }));
 // Apply BotShield IP Blacklist globally
 app.use(checkIpBlacklist);
 
-// Apply rate limiting to all /api/ endpoints to prevent DoS attacks
-app.use('/api/', apiLimiter);
+// Apply rate limiting globally to prevent DoS attacks across all endpoints
+app.use(apiLimiter);
 
 // 2. Base Routes & Honeypot Traps
 app.get('/health', (req, res) => {
@@ -136,7 +138,7 @@ app.use('/api/v1/waitlist', waitlistRoutes);
 
 // Fallback aliases (ensures frontend works whether VITE_API_URL includes /api/v1 or just the domain)
 app.use('/auth', authRoutes);
-app.use('/tenders', tenderRoutes);
+app.use('/tenders', blockScraperUserAgents, tenderRoutes);
 app.use('/bids', bidRoutes);
 app.use('/organizations', organizationRoutes);
 app.use('/documents', documentRoutes);

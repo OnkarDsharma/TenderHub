@@ -59,8 +59,8 @@ export const getTenders = async (req, res, next) => {
     }
 
     // Dedicated Separation: Browse Tenders displays standard public procurement notices, excluding GeM (which has its own dedicated /gem-tenders portal)
-    if (req.query.portal) {
-      baseConditions.push({ sourcePortal: req.query.portal });
+    if (typeof req.query.portal === 'string' && req.query.portal.trim()) {
+      baseConditions.push({ sourcePortal: req.query.portal.trim().slice(0, 50) });
     } else {
       baseConditions.push({ sourcePortal: { $ne: 'GEM' } });
     }
@@ -510,7 +510,7 @@ export const getTenderStats = async (req, res, next) => {
   try {
     const now = new Date();
     const { portal, state } = req.query;
-    const portalFilter = portal ? { sourcePortal: portal } : { sourcePortal: { $ne: 'GEM' } };
+    const portalFilter = (typeof portal === 'string' && portal.trim()) ? { sourcePortal: portal.trim().slice(0, 50) } : { sourcePortal: { $ne: 'GEM' } };
 
     // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
     const stateFilter = (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL')

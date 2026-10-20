@@ -79,11 +79,13 @@ router.get('/tenders', async (req, res, next) => {
     }
 
     // Closing days filter (e.g., closing in 2 days, 7 days)
-    if (closingDays && !isNaN(closingDays)) {
-      const days = parseInt(closingDays, 10);
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + days);
-      query.closingDate = { $gte: now, $lte: targetDate };
+    if (closingDays !== undefined) {
+      const days = parseInt(String(closingDays), 10);
+      if (!Number.isNaN(days) && days >= 0 && days <= 365) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + days);
+        query.closingDate = { $gte: now, $lte: targetDate };
+      }
     }
 
     // Sorting
@@ -188,26 +190,33 @@ router.get('/tenders/:id', async (req, res, next) => {
   }
 });
 
+import { adminAuth } from '../middleware/adminAuth.middleware.js';
+
 /**
  * @route POST /api/v1/gem/sync
- * @desc On-demand trigger to execute GeM regional crawl
+ * @desc On-demand trigger to execute GeM regional crawl (Admin restricted)
  */
-router.post('/sync', async (req, res, next) => {
+router.post('/sync', adminAuth, async (req, res, next) => {
   try {
     const { 
       limit = 20, 
       maxPages = 2, 
       delay = 1200, 
       state = 'JAMMU & KASHMIR' 
-    } = req.body;
+    } = req.body || {};
+
+    const safeLimit = Math.min(50, Math.max(1, parseInt(String(limit), 10) || 20));
+    const safeMaxPages = Math.min(5, Math.max(1, parseInt(String(maxPages), 10) || 2));
+    const safeDelay = Math.max(1000, parseInt(String(delay), 10) || 1200);
+    const safeState = typeof state === 'string' && state.trim() ? state.trim().slice(0, 50) : 'JAMMU & KASHMIR';
 
     // Run crawl in background with regional state filter
-    gemAdapter.fetchList(1, { limit, maxPages, delay, state })
-      .catch((err) => console.error(`[GeM Async Sync Error - ${state}]`, err.message));
+    gemAdapter.fetchList(1, { limit: safeLimit, maxPages: safeMaxPages, delay: safeDelay, state: safeState })
+      .catch((err) => console.error(`[GeM Async Sync Error - ${safeState}]`, err.message));
 
     res.status(200).json({
       success: true,
-      message: `GeM crawl started in background for ${state} with rate limiting gap.`
+      message: `GeM crawl started in background for ${safeState} with rate limiting gap.`
     });
   } catch (err) {
     next(err);

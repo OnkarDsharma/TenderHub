@@ -168,7 +168,7 @@ export class BillingService {
     };
   }
 
-  async verifyAndActivateSubscription(userId, { orderId, paymentId, signature, planId, phone }) {
+  async verifyAndActivateSubscription(userId, { orderId, paymentId, signature, planId, phone }, isInternalWebhook = false) {
     const plan = PLANS[planId];
     if (!plan) {
       throw new Error(`Invalid plan selected: "${planId}".`);
@@ -185,7 +185,11 @@ export class BillingService {
     }
 
     // 2. Verify cryptographic signature from Gateway
-    if (signature !== 'webhook_verified') {
+    if (!isInternalWebhook) {
+      if (!signature || signature === 'webhook_verified') {
+        throw new Error('Valid cryptographic payment signature is required.');
+      }
+
       const isValidSignature = razorpayAdapter.verifyPaymentSignature({
         orderId,
         paymentId,
@@ -345,7 +349,7 @@ export class BillingService {
             signature: 'webhook_verified',
             planId,
             phone,
-          });
+          }, true);
         } else {
           logger.info(`Webhook event already processed for payment ${paymentId}`);
         }

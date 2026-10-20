@@ -639,9 +639,14 @@ export const googleCallback = async (req, res, next) => {
     setAuthCookies(res, appAccessToken, appRefreshToken);
 
     // 8. Redirect user back to frontend dashboard with token for seamless cross-domain SPA hydration
-    const targetPath = (parsedState?.redirectPath && parsedState.redirectPath.startsWith('/'))
-      ? parsedState.redirectPath 
-      : '/profile';
+    const rawTargetPath = parsedState?.redirectPath;
+    const isValidRelativePath = typeof rawTargetPath === 'string' &&
+      rawTargetPath.startsWith('/') &&
+      !rawTargetPath.startsWith('//') &&
+      !rawTargetPath.startsWith('/\\') &&
+      !rawTargetPath.includes('://');
+
+    const targetPath = isValidRelativePath ? rawTargetPath : '/profile';
     const glue = targetPath.includes('?') ? '&' : '?';
     return res.redirect(`${frontendRedirect}${targetPath}${glue}token=${encodeURIComponent(appAccessToken)}&auth=success`);
   } catch (error) {

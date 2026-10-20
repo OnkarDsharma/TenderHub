@@ -72,13 +72,17 @@ export class RazorpayAdapter extends IPaymentGateway {
     }
 
     try {
+      if (!signature || typeof signature !== 'string') return false;
       const body = `${orderId}|${paymentId}`;
       const expectedSignature = crypto
         .createHmac('sha256', this.keySecret)
         .update(body.toString())
         .digest('hex');
 
-      return expectedSignature === signature;
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const sigBuf = Buffer.from(signature, 'utf8');
+      if (expectedBuf.length !== sigBuf.length) return false;
+      return crypto.timingSafeEqual(expectedBuf, sigBuf);
     } catch (err) {
       logger.error(`Signature verification failed: ${err.message}`);
       return false;
@@ -88,12 +92,16 @@ export class RazorpayAdapter extends IPaymentGateway {
   verifyWebhookSignature(rawBody, signature) {
     const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
+      if (env.NODE_ENV === 'production') {
+        logger.error('CRITICAL: RAZORPAY_WEBHOOK_SECRET is not configured in production. Rejecting webhook.');
+        return false;
+      }
       logger.warn('RAZORPAY_WEBHOOK_SECRET is not configured. Webhook verification bypassed for dev.');
       return true;
     }
 
-    if (!signature) {
-      logger.error('Missing X-Razorpay-Signature header in webhook request.');
+    if (!signature || typeof signature !== 'string') {
+      logger.error('Missing or invalid X-Razorpay-Signature header in webhook request.');
       return false;
     }
 
@@ -103,7 +111,10 @@ export class RazorpayAdapter extends IPaymentGateway {
         .update(typeof rawBody === 'string' ? rawBody : (rawBody?.toString('utf8') || ''))
         .digest('hex');
 
-      return expectedSignature === signature;
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const sigBuf = Buffer.from(signature, 'utf8');
+      if (expectedBuf.length !== sigBuf.length) return false;
+      return crypto.timingSafeEqual(expectedBuf, sigBuf);
     } catch (err) {
       logger.error(`Webhook signature verification error: ${err.message}`);
       return false;

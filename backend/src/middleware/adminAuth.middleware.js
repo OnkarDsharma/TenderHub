@@ -38,6 +38,13 @@ export const adminAuth = (req, res, next) => {
         });
       }
 
+      if (!ADMIN_SECRET || !ADMIN_EMAIL) {
+        return res.status(500).json({
+          error: 'Server Misconfiguration',
+          message: 'Administrative credentials are not properly configured on the server.',
+        });
+      }
+
       const isKeyValid = safeCompare(adminKeyHeader, ADMIN_SECRET);
       const isEmailValid = safeCompare(adminEmailHeader.toLowerCase().trim(), ADMIN_EMAIL);
 
@@ -63,7 +70,10 @@ export const adminAuth = (req, res, next) => {
       try {
         // Try verifying with ADMIN_SECRET first
         const decoded = jwt.verify(token, ADMIN_SECRET);
-        if (decoded.role === 'SUPER_ADMIN' || decoded.role === 'admin' || decoded.email === ADMIN_EMAIL) {
+        if (
+          (decoded.role === 'SUPER_ADMIN' || decoded.role === 'admin') &&
+          (!ADMIN_EMAIL || (decoded.email && decoded.email.toLowerCase() === ADMIN_EMAIL))
+        ) {
           req.adminUser = decoded;
           return next();
         }
@@ -71,7 +81,12 @@ export const adminAuth = (req, res, next) => {
         // Fallback to JWT_ACCESS_SECRET
         try {
           const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-          if ((decoded.role === 'admin' || decoded.isAdmin) && (!decoded.email || decoded.email.toLowerCase() === ADMIN_EMAIL)) {
+          if (
+            ADMIN_EMAIL &&
+            decoded.email &&
+            decoded.email.toLowerCase() === ADMIN_EMAIL &&
+            (decoded.role === 'SUPER_ADMIN' || decoded.role === 'admin' || decoded.role === 'superadmin' || decoded.isAdmin)
+          ) {
             req.adminUser = decoded;
             return next();
           }

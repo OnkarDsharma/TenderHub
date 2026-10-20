@@ -2,17 +2,17 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
 export const verifyToken = async (req, res, next) => {
-  // Test port / test mode bypass - STRICTLY allowed only on localhost during development
+  // Test port / test mode bypass - STRICTLY allowed only when explicit ALLOW_TEST_BYPASS is set and on localhost during development
   const clientIp = req.ip || req.connection?.remoteAddress || '';
   const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('localhost') || clientIp === '::ffff:127.0.0.1';
-  if (env.NODE_ENV === 'development' && isLocalhost && (
+  if (process.env.ALLOW_TEST_BYPASS === 'true' && env.NODE_ENV === 'development' && isLocalhost && (
     req.headers['x-bypass-auth'] === 'true' || 
     req.headers.origin?.includes(':5175') || 
     req.headers.referer?.includes(':5175')
   )) {
     req.user = {
       userId: '6abe2b7f4ec335668fdc702a', // valid ObjectId for testing
-      role: 'admin',
+      role: 'contractor',
       email: 'test-browser@tenderhub.local',
     };
     req.organizationId = '6abe2b7f4ec335668fdc702b';
@@ -109,14 +109,14 @@ export const verifyToken = async (req, res, next) => {
 export const optionalAuth = (req, res, next) => {
   const clientIp = req.ip || req.connection?.remoteAddress || '';
   const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('localhost') || clientIp === '::ffff:127.0.0.1';
-  if (env.NODE_ENV === 'development' && isLocalhost && (
+  if (process.env.ALLOW_TEST_BYPASS === 'true' && env.NODE_ENV === 'development' && isLocalhost && (
     req.headers['x-bypass-auth'] === 'true' || 
     req.headers.origin?.includes(':5175') || 
     req.headers.referer?.includes(':5175')
   )) {
     req.user = {
       userId: '6abe2b7f4ec335668fdc702a',
-      role: 'admin',
+      role: 'contractor',
       email: 'test-browser@tenderhub.local',
     };
     req.organizationId = '6abe2b7f4ec335668fdc702b';
