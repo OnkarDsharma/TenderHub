@@ -234,12 +234,12 @@ export default function Home() {
 
             {/* Primary Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] font-display">
-              Government Tenders Across J&amp;K, Punjab and Himachal
+              Government tenders across J&amp;K, Punjab &amp; Himachal
             </h1>
 
             {/* Subtitle */}
             <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl">
-              Discover active civil works, PHE water supply, road macadamization, and electrical contracts published across all northern states including J&amp;K, Punjab, and Himachal.
+              Active civil, road, water and electrical contracts — synced daily from official portals.
             </p>
 
             {/* Search Console & CTA */}
@@ -254,7 +254,7 @@ export default function Home() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search tender name, department, or district..."
+                    placeholder="Search by tender, department or district…"
                     className="w-full text-xs sm:text-sm text-white placeholder:text-slate-400 bg-transparent focus:outline-none truncate"
                   />
                 </div>
@@ -288,7 +288,7 @@ export default function Home() {
                   className="inline-flex items-center gap-1.5 font-bold text-techCoral hover:text-white transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Need AI BOQ Analysis &amp; Estimator?</span>
+                  <span>Need AI BOQ analysis?</span>
                 </Link>
               </div>
 
@@ -308,7 +308,7 @@ export default function Home() {
                   + {isStatsLoading ? '—' : (stats?.activeTendersCount ?? 29)}
                 </span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-[120px] leading-tight">
-                  Active Tender Notices
+                Active Notices
                 </span>
               </div>
 
@@ -318,7 +318,7 @@ export default function Home() {
                   {isStatsLoading ? '—' : formatCurrencyINR(stats?.totalValue ?? 30146323)}
                 </div>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-[110px] leading-tight">
-                  Total Estimated Value
+                Estimated Value
                 </span>
               </div>
 
@@ -328,7 +328,7 @@ export default function Home() {
                   {isStatsLoading ? '—' : (stats?.authoritiesCount ?? 13)}
                 </span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-[100px] leading-tight">
-                  Procuring Authorities
+                Authorities
                 </span>
               </div>
 
@@ -338,7 +338,7 @@ export default function Home() {
                   50+
                 </span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-[90px] leading-tight">
-                  Districts Covered
+                  Districts
                 </span>
               </div>
 
@@ -371,10 +371,10 @@ export default function Home() {
                 <span>ACTIVE PIPELINE</span>
               </div>
               <h2 className="text-xl sm:text-3xl font-black font-display text-slate-900 dark:text-white">
-                Active Procurement Sectors &amp; Departments
+                Live opportunities by authority
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Current opportunities grouped by issuing authority and classified engineering domain.
+                Active notices, estimated values and issuing departments.
               </p>
             </div>
 
@@ -406,12 +406,12 @@ export default function Home() {
                     <span className="text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate">
                       {item.count}
                     </span>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate" title={item.subtitle}>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug" title={item.subtitle}>
                       {item.subtitle}
                     </span>
                   </div>
 
-                  <h3 className="text-xs sm:text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors line-clamp-2 leading-snug">
+                  <h3 className="text-xs sm:text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
                     {item.title}
                   </h3>
                 </div>
@@ -441,15 +441,15 @@ export default function Home() {
           <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-4 bg-white dark:bg-slate-800 shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
-              <span>CLASSIFIED PROCUREMENT SECTORS</span>
+              <span>CLASSIFIED SECTORS</span>
               <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
             </div>
 
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white font-display tracking-tight leading-tight">
-              Browse Tenders by Work Domain
+              Browse by work domain
             </h2>
             <p className="mt-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-              Select a classified public works domain to inspect current open bidding opportunities.
+              Explore active opportunities across six public works domains.
             </p>
           </div>
 
@@ -528,12 +528,12 @@ export default function Home() {
 
               {/* Section Headline */}
               <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white font-display tracking-tight leading-tight">
-                Procurement Integrity &amp; Verification
+                Official data. Permanent archives. Clear locations.
               </h2>
 
               {/* Subtitle */}
               <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
-                Built specifically to assist contractors, engineering firms, and suppliers across northern states with accurate, official bidding data.
+                Synced directly from state eProcurement portals and GeM, for contractors, engineering firms and suppliers who need accurate official bidding data.
               </p>
 
               {/* The 3 Exact Verification Points from Screenshot 4 */}
@@ -549,7 +549,7 @@ export default function Home() {
                       Official NIC Portal Direct
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      All announcements are synchronized directly with official government eProcurement portals across northern states (<span className="font-mono">jktenders.gov.in</span>, <span className="font-mono">eproc.punjab.gov.in</span>, <span className="font-mono">hptenders.gov.in</span>) and GeM, ensuring complete fidelity to published tenders.
+                      Live sync with <span className="font-mono">jktenders.gov.in</span>, <span className="font-mono">eproc.punjab.gov.in</span>, <span className="font-mono">hptenders.gov.in</span> and GeM keeps notices aligned with official publications.
                     </p>
                   </div>
                 </div>
@@ -564,7 +564,7 @@ export default function Home() {
                       Permanent Document Archives
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Official NIT PDFs and corrigenda are archived to secure storage so contractors can review specifications without worrying about government server timeouts.
+                      NIT PDFs and corrigenda are securely archived, even when government links time out.
                     </p>
                   </div>
                 </div>
@@ -579,7 +579,7 @@ export default function Home() {
                       Clear Work Site Locations
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Detailed site identification and district mapping help contractors quickly determine project proximity, terrain parameters, and logistics feasibility.
+                      District-level mapping helps assess proximity, terrain and logistics.
                     </p>
                   </div>
                 </div>

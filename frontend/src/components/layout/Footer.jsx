@@ -23,7 +23,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-normal">
-              Public procurement information system across northern states including J&amp;K, Punjab, and Himachal Pradesh. Synchronizing published tender notices, technical documents, and BOQ schedules across state engineering divisions.
+              Public procurement intelligence for northern states. Live tenders, documents and BOQ data from official portals.
             </p>
           </div>
 

@@ -5,5 +5,5 @@ export const createBidSchema = Joi.object({
 });
 
 export const updateBidSchema = Joi.object({
-  status: Joi.string().valid('draft', 'review', 'submitted', 'won', 'lost').required()
+  status: Joi.string().valid('draft', 'review', 'submitted', 'won', 'lost', 'withdrawn').required()
 });

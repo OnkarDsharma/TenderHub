@@ -34,3 +34,33 @@ export const confirmDocumentUpload = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDocuments = async (req, res, next) => {
+  try {
+    const documents = await CompanyDocument.find({
+      organizationId: req.organizationId
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, documents });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteDocument = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const document = await CompanyDocument.findOneAndDelete({
+      _id: id,
+      organizationId: req.organizationId
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found or access denied.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Document deleted successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
