@@ -176,7 +176,7 @@ export const getTenders = async (req, res, next) => {
       }
     ];
 
-    // Compute live counts for all 3 tabs (Active, Archived, Expired)
+    // Compute live counts for all 3 tabs (Active, Archived, Expired) and 48h closing soon
     const activeCount = await Tender.countDocuments(
       baseConditions.length > 0 ? { $and: [...baseConditions, activeFilter] } : activeFilter
     );
@@ -189,6 +189,16 @@ export const getTenders = async (req, res, next) => {
       baseConditions.length > 0 
         ? { $and: [...baseConditions, { $or: expiredFilterConditions }] } 
         : { $or: expiredFilterConditions }
+    );
+    const closingSoonDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const closingSoonFilter = {
+      $and: [
+        activeFilter,
+        { closingDate: { $gte: now, $lte: closingSoonDate } }
+      ]
+    };
+    const closingSoonCount = await Tender.countDocuments(
+      baseConditions.length > 0 ? { $and: [...baseConditions, closingSoonFilter] } : closingSoonFilter
     );
 
     // 5. Build final query with status and closing date criteria
@@ -296,6 +306,12 @@ export const getTenders = async (req, res, next) => {
       'relatedTenderIds',
       'isDocumentAvailable',
       'tenderReferenceNumber',
+      'state',
+      'emdAmount',
+      'emdExemptionAllowed',
+      'pdfUrls',
+      'nitDocuments',
+      'detailsUrl',
     ].join(' ');
 
     const tenders = await Tender.find(query)
@@ -317,7 +333,8 @@ export const getTenders = async (req, res, next) => {
         limit: safeLimit,
         activeCount,
         archivedCount,
-        expiredCount
+        expiredCount,
+        closingSoonCount
       }
     });
   } catch (error) {
