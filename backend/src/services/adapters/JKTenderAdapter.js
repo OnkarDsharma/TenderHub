@@ -210,38 +210,139 @@ export class JKTenderAdapter extends TenderSourceAdapter {
           }
         }
 
-        logger.info(`👉 [${currentCount + 1}/${maxTenders}] Opening Latest Tender: ${item.sourceTenderId}`);
+        try {
+          logger.info(`👉 [${currentCount + 1}/${maxTenders}] Opening Latest Tender: ${item.sourceTenderId}`);
 
-        // Click tender link to open Tender Details in the same tab
-        let tenderLink = page.locator("table.list_table tr").filter({ hasText: item.sourceTenderId }).locator("a[href*='FrontEndTenderDetails'], a").first();
-        const exists = await tenderLink.count().catch(() => 0);
-        if (exists === 0) {
-          tenderLink = page.locator("table.list_table tr").nth(i + 1).locator("a[href*='FrontEndTenderDetails'], a").first();
+          // Click tender link to open Tender Details in the same tab
+          let tenderLink = page.locator("table.list_table tr").filter({ hasText: item.sourceTenderId }).locator("a[href*='FrontEndTenderDetails'], a").first();
+          const exists = await tenderLink.count().catch(() => 0);
+          if (exists === 0) {
+            tenderLink = page.locator("table.list_table tr").nth(i + 1).locator("a[href*='FrontEndTenderDetails'], a").first();
+          }
+
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
+            tenderLink.click({ noWaitAfter: true, timeout: 20000 }).catch(() => tenderLink.click({ force: true, noWaitAfter: true }))
+          ]);
+          await this.humanDelay(page, 400, 650);
+
+          // Check if loaded page is an intermediate multi-item sub-table ("Tender List : Open Tender")
+          const isMultiTenderList = await page.evaluate(() => {
+            const text = document.body ? document.body.innerText : '';
+            const hasSubTable = !!document.querySelector("table.list_table tr[id^='informal']");
+            const hasBasicDetails = text.includes('Basic Details') || !!document.querySelector("table:has(td:has-text('Basic Details'))");
+            return (text.includes('Tender List : Open Tender') || text.includes('Tender List :')) && hasSubTable && !hasBasicDetails;
+          }).catch(() => false);
+
+          if (isMultiTenderList) {
+            logger.info(`🗂️ [MULTI-TENDER DETECTED] Portal opened multi-work table for NIT: ${item.sourceTenderId}`);
+
+            const workRows = await page.evaluate(() => {
+              const rows = Array.from(document.querySelectorAll("table.list_table tr[id^='informal']"));
+              return rows.map((r, idx) => {
+                const tds = r.querySelectorAll('td');
+                if (tds.length < 5) return null;
+                const fullText = r.innerText.trim();
+                const bracketMatches = fullText.match(/\[(.*?)\]/g) || [];
+                const tenderId = bracketMatches.length >= 1 ? bracketMatches[bracketMatches.length - 1].replace(/[\[\]]/g, '').trim() : '';
+                const a = tds[4].querySelector('a');
+                return {
+                  index: idx,
+                  sourceTenderId: tenderId,
+                  title: a ? a.innerText.trim() : tds[4].innerText.trim(),
+                  publishedDate: tds[1] ? tds[1].innerText.trim() : '',
+                  publishedDateStr: tds[1] ? tds[1].innerText.trim() : '',
+                  closingDate: tds[2] ? tds[2].innerText.trim() : '',
+                  closingDateStr: tds[2] ? tds[2].innerText.trim() : '',
+                  openingDate: tds[3] ? tds[3].innerText.trim() : '',
+                  openingDateStr: tds[3] ? tds[3].innerText.trim() : '',
+                  hasLink: !!a
+                };
+              }).filter(w => w && w.hasLink && w.sourceTenderId);
+            });
+
+            logger.info(`   📋 Found ${workRows.length} work items in multi-tender table.`);
+            const allWorkIds = workRows.map(w => w.sourceTenderId);
+            const baseId = item.sourceTenderId.replace(/_\d+$/, '') || item.sourceTenderId;
+
+            for (let w = 0; w < workRows.length && currentCount < maxTenders; w++) {
+              const workSummary = workRows[w];
+              logger.info(`   🔨 [Multi-Work Item ${w + 1}/${workRows.length}] Opening: ${workSummary.sourceTenderId}`);
+
+              if (filters.shouldSkipTender && workSummary.sourceTenderId) {
+                const shouldSkip = await filters.shouldSkipTender(workSummary.sourceTenderId, workSummary.publishedDate);
+                if (shouldSkip) {
+                  logger.info(`⏩ [Skip Already Ingested] Multi-work tender ${workSummary.sourceTenderId} is already in DB.`);
+                  if (filters.countSkippedTowardsLimit !== false) currentCount++;
+                  continue;
+                }
+              }
+
+              let workRow = page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${workSummary.sourceTenderId}]` }).first();
+              let hasExactWork = (await workRow.count().catch(() => 0)) > 0;
+              let workLink;
+              if (hasExactWork) {
+                workLink = workRow.locator("td:nth-child(5) a, a").first();
+              } else {
+                workLink = page.locator("table.list_table tr[id^='informal']").nth(workSummary.index).locator("td:nth-child(5) a, a").first();
+              }
+
+              await Promise.all([
+                page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+                workLink.click({ noWaitAfter: true, timeout: 15000 }).catch(() => workLink.click({ force: true, noWaitAfter: true }))
+              ]);
+              await page.waitForSelector("table:has-text('Basic Details'), table:has-text('Critical Dates')", { timeout: 30000 }).catch(() => {});
+              await this.humanDelay(page, 400, 650);
+
+              const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeTenderDetailAndPdfInPage(page, workSummary, item.organisationChain || 'Latest');
+              if (pdfCount > 0) pdfCountTotal += pdfCount;
+              else if (processedItem.pdfFetchStatus === 'PENDING') missingCountTotal++;
+
+              const isActuallyMulti = workRows.length > 1;
+              processedItem.isMultiTender = isActuallyMulti;
+              processedItem.baseTenderId = isActuallyMulti ? baseId : null;
+              processedItem.relatedTenderIds = isActuallyMulti ? allWorkIds.filter(id => id !== workSummary.sourceTenderId) : [];
+
+              const saved = await this.saveTenderAndUploadR2(processedItem, hasDocuments, docReason);
+              currentCount++;
+
+              if (onPageScraped) {
+                await onPageScraped([saved]);
+              }
+
+              // Return from work details to intermediate "Tender List : Open Tender"
+              await this.navigateBackFromTenderDetails(page);
+              await this.humanDelay(page, 300, 500);
+            }
+
+            // Return from intermediate multi-tender list to main Latest Active list
+            await this.ensureOnLatestActiveTendersList(page, currentPage);
+            await this.humanDelay(page, 400, 650);
+
+          } else {
+            // Standard single tender
+            const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeTenderDetailAndPdfInPage(page, item, item.organisationChain || 'Latest');
+            if (pdfCount > 0) pdfCountTotal += pdfCount;
+            else if (processedItem.pdfFetchStatus === 'PENDING') missingCountTotal++;
+
+            // Save to MongoDB Atlas and upload tender.json to Cloudflare R2
+            const saved = await this.saveTenderAndUploadR2(processedItem, hasDocuments, docReason);
+            currentCount++;
+
+            if (onPageScraped) {
+              await onPageScraped([saved]);
+            }
+
+            // Return to Latest Active Tenders list
+            logger.info(`🔙 Returning from Tender Details to Latest Active List...`);
+            await this.ensureOnLatestActiveTendersList(page, currentPage);
+            await this.humanDelay(page, 400, 650);
+          }
+        } catch (tenderErr) {
+          logger.error(`⚠️ Transient error on tender ${item.sourceTenderId || 'unknown'}: ${tenderErr.message}`);
+          await this.ensureOnLatestActiveTendersList(page, currentPage).catch(() => {});
+          await this.humanDelay(page, 500, 800);
         }
-
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
-          tenderLink.click({ noWaitAfter: true, timeout: 20000 }).catch(() => tenderLink.click({ force: true, noWaitAfter: true }))
-        ]);
-        await this.humanDelay(page, 400, 650);
-
-        // Scrape tender details & download documents directly in page
-        const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeTenderDetailAndPdfInPage(page, item, item.organisationChain || 'Latest');
-        if (pdfCount > 0) pdfCountTotal += pdfCount;
-        else if (processedItem.pdfFetchStatus === 'PENDING') missingCountTotal++;
-
-        // Save to MongoDB Atlas and upload tender.json to Cloudflare R2
-        const saved = await this.saveTenderAndUploadR2(processedItem, hasDocuments, docReason);
-        currentCount++;
-
-        if (onPageScraped) {
-          await onPageScraped([saved]);
-        }
-
-        // Return to Latest Active Tenders list
-        logger.info(`🔙 Returning from Tender Details to Latest Active List...`);
-        await this.ensureOnLatestActiveTendersList(page, currentPage);
-        await this.humanDelay(page, 400, 650);
       }
 
       if (!hasMorePages) break;
@@ -1967,7 +2068,14 @@ export class JKTenderAdapter extends TenderSourceAdapter {
       }
     }
 
-    // Manual fallback
+    // In headless mode, manual GUI interaction is impossible
+    const isHeadless = this.isHeadless !== undefined ? this.isHeadless : (process.env.SCRAPER_HEADLESS !== 'false');
+    if (isHeadless) {
+      logger.warn(`⚠️ [Auto-Captcha] In headless mode, cannot prompt for manual input on "${formName}".`);
+      return false;
+    }
+
+    // Manual fallback for visual browser sessions
     console.log(`\n🔑 Please solve captcha for "${formName}" in browser (Timeout: 2 mins)...`);
     try {
       await page.waitForFunction(() => {

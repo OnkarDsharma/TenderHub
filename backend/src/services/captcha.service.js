@@ -185,49 +185,74 @@ export class CaptchaService {
    * Directly solves via Google Gemini Flash Vision (Free tier, ultra-fast, exact uppercase/lowercase preservation)
    */
   async solveWithGemini(base64Body) {
-    let model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    if (model === 'gemini-1.5-flash' || model === 'gemini-3.6-flash' || !model) {
-      model = 'gemini-2.5-flash';
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`;
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-flash'
+    ].filter(Boolean);
+    const uniqueModels = Array.from(new Set(candidateModels));
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
+    let lastError = null;
+
+    for (const model of uniqueModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
               {
-                inline_data: {
-                  mime_type: 'image/png',
-                  data: base64Body
-                }
-              },
-              {
-                text: 'This image contains an alphanumeric code with exactly 6 characters. Transcribe the 6 characters carefully. Pay extreme attention to uppercase vs lowercase letters (e.g. distinguishing uppercase D vs lowercase d, uppercase B vs lowercase b, uppercase E vs lowercase e, uppercase C vs lowercase c). Output ONLY the exact 6 characters in their correct case, with no spaces, punctuation, explanations, or any other text.'
+                parts: [
+                  {
+                    inline_data: {
+                      mime_type: 'image/png',
+                      data: base64Body
+                    }
+                  },
+                  {
+                    text: 'This image contains an alphanumeric code with exactly 6 characters. Transcribe the 6 characters carefully. Pay extreme attention to uppercase vs lowercase letters (e.g. distinguishing uppercase D vs lowercase d, uppercase B vs lowercase b, uppercase E vs lowercase e, uppercase C vs lowercase c). Output ONLY the exact 6 characters in their correct case, with no spaces, punctuation, explanations, or any other text.'
+                  }
+                ]
               }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.0,
-          maxOutputTokens: 15
-        }
-      }),
-      signal: AbortSignal.timeout(15000)
-    });
+            ],
+            generationConfig: {
+              temperature: 0.0,
+              maxOutputTokens: 15
+            }
+          }),
+          signal: AbortSignal.timeout(15000)
+        });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini HTTP ${response.status}: ${errText}`);
+        if (response.status === 429) {
+          logger.warn(`[CaptchaService] Gemini model ${model} quota exhausted (HTTP 429). Trying alternative model...`);
+          continue;
+        }
+
+        if (!response.ok) {
+          const errText = await response.text();
+          logger.warn(`[CaptchaService] Gemini ${model} HTTP ${response.status}: ${errText}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const solution = raw.replace(/[^a-zA-Z0-9]/g, '').trim();
+        if (solution && solution.length >= 4) {
+          return solution;
+        }
+      } catch (err) {
+        lastError = err;
+        logger.warn(`[CaptchaService] Gemini attempt with ${model} failed: ${err.message}`);
+      }
     }
 
-    const data = await response.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return raw.replace(/[^a-zA-Z0-9]/g, '').trim();
+    if (lastError) throw lastError;
+    return null;
   }
 
   /**
