@@ -1081,6 +1081,80 @@ html:not(.dark) [role="dialog"] > div {
 .dark .gem-filter-panel,
 .dark .gem-results-column .gem-bid-row { box-shadow: 0 4px 18px rgba(0,0,0,.15); }
 
+/* Match the landing page sections to the hero's crisp, premium typography. */
+.home-page {
+  --home-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --home-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.home-pipeline,
+.home-domains,
+.home-integrity,
+.home-latest {
+  font-family: var(--home-body);
+}
+
+.home-pipeline h2,
+.home-domains h2,
+.home-integrity h2,
+.home-latest h2,
+.home-pipeline h3,
+.home-domains h3,
+.home-latest h3 {
+  font-family: var(--home-display);
+  letter-spacing: -.045em;
+  font-weight: 700;
+}
+
+.home-pipeline h2,
+.home-latest h2 { font-size: clamp(1.65rem, 2.5vw, 2.15rem); line-height: 1.16; }
+.home-domains h2,
+.home-integrity h2 { font-size: clamp(2rem, 3.8vw, 3.25rem); line-height: 1.08; }
+
+.home-pipeline > div > div:first-child p,
+.home-domains > div > div:first-child p,
+.home-integrity > div > div > div:last-child > p,
+.home-latest > div:first-child p {
+  font-size: .95rem;
+  line-height: 1.7;
+  color: #5b6b80;
+}
+
+.home-pipeline-card,
+.home-domains article,
+.home-integrity > div > div > div:last-child > div > div,
+.home-latest article {
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(16, 42, 82, .055);
+}
+
+.home-domains [class*="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"] > div,
+.home-latest [class*="grid-cols-1 md:grid-cols-2"] > div {
+  border-radius: 16px;
+}
+
+.home-pipeline-card h3,
+.home-domains h3,
+.home-latest h3 { line-height: 1.4; }
+
+.home-integrity h4 {
+  font-family: var(--home-display);
+  font-size: .98rem;
+  letter-spacing: -.025em;
+  font-weight: 700;
+}
+
+.home-integrity p,
+.home-domains p,
+.home-latest p { line-height: 1.7; }
+
+.home-integrity .font-mono { font-family: var(--home-body); font-weight: 600; }
+
+.dark .home-pipeline > div > div:first-child p,
+.dark .home-domains > div > div:first-child p,
+.dark .home-integrity > div > div > div:last-child > p,
+.dark .home-latest > div:first-child p { color: #b8c7dc; }
+
 @media (max-width: 900px) {
   .gem-page > div { display: flex; flex-direction: column; }
   .gem-page > div > :first-child,
