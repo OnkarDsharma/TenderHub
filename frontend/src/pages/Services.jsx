@@ -185,6 +185,11 @@ export default function Services() {
           throw new Error('This GeM bid is not in the TenderHub index yet. Choose it from GeM Bids or sync the bid before analyzing it.');
         }
         analysisTenderId = gemTender._id || gemTender.sourceTenderId || targetId;
+      } else if (/^[a-f\d]{24}$/i.test(targetId)) {
+        // TenderDetails links with Mongo's _id. The text search below only
+        // searches tender fields (it cannot match Mongo's _id), while the
+        // dossier endpoint already resolves valid ObjectIds directly.
+        analysisTenderId = targetId;
       } else {
         const tenderSearch = await api.get('/tenders', {
           params: { search: targetId, status: 'all', limit: 10 },
