@@ -2,11 +2,38 @@ name: Automated Live Tender Ingestion
 
 on:
   schedule:
-    # 03:30 UTC = 09:00 AM IST (Monday to Saturday) - Morning New Tenders Sweep
-    - cron: '30 3 * * 1-6'
-    # 13:00 UTC = 06:30 PM IST (Monday to Saturday) - Evening Wrap-up Sweep
-    - cron: '0 13 * * 1-6'
-  workflow_dispatch: # Allows manual 1-click trigger from GitHub Actions tab
+    # 03:30 UTC = 09:00 AM IST (Daily) - Morning New Tenders Sweep
+    - cron: '30 3 * * *'
+    # 08:30 UTC = 02:00 PM IST (Daily) - Midday Live Tenders Sweep
+    - cron: '30 8 * * *'
+    # 13:30 UTC = 07:00 PM IST (Daily) - Evening Wrap-up Sweep
+    - cron: '30 13 * * *'
+  workflow_dispatch:
+    inputs:
+      limit_jk:
+        description: 'Target Limit: Jammu & Kashmir Tenders'
+        required: false
+        default: '400'
+      limit_punjab:
+        description: 'Target Limit: Punjab Tenders'
+        required: false
+        default: '300'
+      limit_hp:
+        description: 'Target Limit: Himachal Pradesh Tenders'
+        required: false
+        default: '300'
+      limit_gem:
+        description: 'Target Limit: GeM Bids per State'
+        required: false
+        default: '150'
+      sync_mode:
+        description: 'Crawl Mode (LATEST: fast chronological live feed, DEPARTMENT: department traversal)'
+        required: false
+        default: 'LATEST'
+        type: choice
+        options:
+          - LATEST
+          - DEPARTMENT
 
 env:
   NODE_ENV: production
@@ -28,10 +55,15 @@ jobs:
   crawl-jk:
     name: 🏛️ Jammu & Kashmir Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Install System Dependencies & Ghostscript
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ghostscript
 
       - name: Setup Node.js (v20)
         uses: actions/setup-node@v4
@@ -49,16 +81,23 @@ jobs:
       - name: Ingest Jammu & Kashmir Tenders
         run: |
           cd backend
-          echo "🏛️ Ingesting Latest Jammu & Kashmir Tenders..."
-          node src/scripts/fetchLatestDailyTenders.js 50
+          LIMIT="${{ inputs.limit_jk || '400' }}"
+          MODE="${{ inputs.sync_mode || 'LATEST' }}"
+          echo "🏛️ Ingesting Latest Jammu & Kashmir Tenders (Limit: $LIMIT, Mode: $MODE)..."
+          node src/scripts/fetchLatestDailyTenders.js "$LIMIT" --mode="$MODE"
 
   crawl-punjab:
     name: 🌾 Punjab Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Install System Dependencies & Ghostscript
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ghostscript
 
       - name: Setup Node.js (v20)
         uses: actions/setup-node@v4
@@ -76,16 +115,23 @@ jobs:
       - name: Ingest Punjab Tenders
         run: |
           cd backend
-          echo "🏛️ Ingesting Latest Punjab Tenders..."
-          node src/scripts/fetchPunjabTenders.js 40
+          LIMIT="${{ inputs.limit_punjab || '300' }}"
+          MODE="${{ inputs.sync_mode || 'LATEST' }}"
+          echo "🌾 Ingesting Latest Punjab Tenders (Limit: $LIMIT, Mode: $MODE)..."
+          node src/scripts/fetchPunjabTenders.js "$LIMIT" --mode="$MODE"
 
   crawl-hp:
     name: 🏔️ Himachal Pradesh Tenders
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Install System Dependencies & Ghostscript
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ghostscript
 
       - name: Setup Node.js (v20)
         uses: actions/setup-node@v4
@@ -103,13 +149,15 @@ jobs:
       - name: Ingest Himachal Pradesh Tenders
         run: |
           cd backend
-          echo "🏛️ Ingesting Latest Himachal Pradesh Tenders..."
-          node src/scripts/fetchHPTenders.js 40
+          LIMIT="${{ inputs.limit_hp || '300' }}"
+          MODE="${{ inputs.sync_mode || 'LATEST' }}"
+          echo "🏔️ Ingesting Latest Himachal Pradesh Tenders (Limit: $LIMIT, Mode: $MODE)..."
+          node src/scripts/fetchHPTenders.js "$LIMIT" --mode="$MODE"
 
   crawl-gem:
     name: 📦 GeM Multi-State Bids
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -130,5 +178,6 @@ jobs:
       - name: Ingest GeM Multi-State Bids
         run: |
           cd backend
-          echo "📦 Ingesting Latest GeM Bids across Northern States..."
-          node src/scripts/fetchGeMBids.js --state=ALL --limit=60
+          LIMIT="${{ inputs.limit_gem || '150' }}"
+          echo "📦 Ingesting Latest GeM Bids across Northern States (Limit: $LIMIT)..."
+          node src/scripts/fetchGeMBids.js --state=ALL --limit="$LIMIT"

@@ -7,13 +7,15 @@ import { telegramService } from '../services/telegram.service.js';
 
 async function run() {
   const startTime = Date.now();
-  // Default to 600 tenders unless overridden by user
-  const limit = parseInt(process.argv[2], 10) || 600;
+  const args = process.argv.slice(2);
+  const limitArg = args.find(a => /^\d+$/.test(a));
+  const limit = limitArg ? parseInt(limitArg, 10) : 600;
+  const syncMode = args.some(a => a.toLowerCase().includes('department')) ? 'DEPARTMENT' : 'LATEST';
 
   // Send Telegram crawl started update
   await telegramService.sendCrawlStarted({
     mode: 'DAILY',
-    targetLimit: `${limit} tenders`
+    targetLimit: `${limit} tenders (${syncMode} mode)`
   });
 
   await connectDB();
@@ -34,11 +36,11 @@ async function run() {
   console.log(`\n======================================================================`);
   console.log(`🚀 [COMMAND 2] DAILY INCREMENTAL CRAWL: LATEST TENDERS`);
   console.log(`======================================================================`);
-  console.log(`📌 Source: Tenders by Organisation (FrontEndTendersByOrganisation)`);
+  console.log(`📌 Source Mode: ${syncMode === 'LATEST' ? 'Latest Active Tenders (FrontEndLatestActiveTenders - Fast & Chronological)' : 'Department-by-Department (FrontEndTendersByOrganisation)'}`);
   console.log(`📌 Previous Scraping Time: ${lastScrapedTime ? lastScrapedTime.toISOString() : 'None (First Run)'}`);
   console.log(`📌 Most Recent Tender in DB: ${latestTender ? latestTender.sourceTenderId : 'None'}`);
   console.log(`📌 Target Limit: ${limit} new tenders`);
-  console.log(`📌 Catch-Up Rule: If 5 consecutive tenders are already scraped -> Stop department (Tenders are latest)`);
+  console.log(`📌 Catch-Up Rule: If 5 consecutive tenders are already scraped -> Stop crawl (Tenders are latest)`);
   console.log(`📌 Deduplication: Atomic MongoDB upsert + R2 key idempotency`);
   console.log(`======================================================================\n`);
 
@@ -60,7 +62,7 @@ async function run() {
     });
 
     const result = await adapter.fetchList(1, {
-      syncMode: 'DEPARTMENT',
+      syncMode,
       limit,
       stopAfterConsecutiveSkips: 5,
       countSkippedTowardsLimit: false,

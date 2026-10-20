@@ -26,8 +26,10 @@ const getArg = (flag, defaultValue) => {
 };
 const hasFlag = (flag) => args.some(a => a === flag || a.startsWith(`${flag}=`));
 
-const maxPages = parseInt(getArg('--pages', '5'), 10);
-const limit = parseInt(getArg('--limit', String(maxPages * 10)), 10);
+const limitArg = getArg('--limit', null);
+const pagesArg = getArg('--pages', null);
+const limit = limitArg ? parseInt(limitArg, 10) : 120;
+const maxPages = pagesArg ? parseInt(pagesArg, 10) : Math.max(5, Math.ceil(limit / 10));
 const delay = parseInt(getArg('--delay', '1200'), 10);
 const isHeadless = getArg('--headless', 'true') !== 'false';
 const isMock = hasFlag('--mock') || hasFlag('--seed');

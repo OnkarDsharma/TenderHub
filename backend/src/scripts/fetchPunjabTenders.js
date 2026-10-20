@@ -10,10 +10,15 @@ import { connectDB, closeDB } from '../config/db.js';
 import Tender from '../models/Tender.js';
 
 async function run() {
-  const limit = parseInt(process.argv[2], 10) || 20;
+  const args = process.argv.slice(2);
+  const limitArg = args.find(a => /^\d+$/.test(a));
+  const limit = limitArg ? parseInt(limitArg, 10) : 100;
+  const syncMode = args.some(a => a.toLowerCase().includes('department')) ? 'DEPARTMENT' : 'LATEST';
+
   console.log(`\n======================================================`);
-  console.log(`🚀 Starting Punjab Tenders Ingestion (Target: ${limit})`);
+  console.log(`🚀 Starting Punjab Tenders Ingestion (Target: ${limit}, Mode: ${syncMode})`);
   console.log(`📌 Portal: eproc.punjab.gov.in (PB_TENDERS)`);
+  console.log(`📌 Source: ${syncMode === 'LATEST' ? 'Latest Active Tenders (Chronological)' : 'Department Scan'}`);
   console.log(`📌 State: Punjab`);
   console.log(`======================================================\n`);
 
@@ -25,7 +30,7 @@ async function run() {
     let pdfCount = 0;
 
     await punjabTenderAdapter.fetchList(1, {
-      syncMode: 'DEPARTMENT',
+      syncMode,
       limit,
       stopAfterConsecutiveSkips: 5,
       countSkippedTowardsLimit: false,
