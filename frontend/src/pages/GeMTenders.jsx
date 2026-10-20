@@ -103,6 +103,9 @@ const ALL_LOCATION_OPTIONS = [
   { label: 'Kargil', value: 'Kargil' }
 ];
 
+const cleanDisplayText = (value, fallback = '—') =>
+  String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
+
 export default function GeMTenders() {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState([]);
@@ -223,10 +226,10 @@ export default function GeMTenders() {
               <span>Government e-Marketplace (GeM) • {selectedState || 'Northern Region'}</span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
-              GeM Bid Directory
+              Government e-Marketplace (GeM) tenders
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Central Government, Defence, PSU, and departmental procurement bids with consignee delivery stations in {selectedState || 'Jammu & Kashmir, Himachal Pradesh, Punjab, and Ladakh'}.
+              Live bids from Central Government, Defence, PSUs and departments, with delivery locations across {selectedState || 'Jammu & Kashmir, Himachal Pradesh, Punjab and Ladakh'}.
             </p>
           </div>
 
@@ -245,10 +248,10 @@ export default function GeMTenders() {
                 {stats?.closingSoon || 0}
               </span>
               <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
-                Closing &lt; 48h
+                Closing within 48h
               </span>
             </div>
-            <p className="gem-source-note text-[11px] text-slate-500 dark:text-slate-400">Source: Government e-Marketplace (GeM)</p>
+            <p className="gem-source-note text-[11px] text-slate-500 dark:text-slate-400">Source: bidplus.gem.gov.in</p>
           </div>
         </div>
 
@@ -283,7 +286,7 @@ export default function GeMTenders() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by Bid Number (GEM/2026/B/...), Item Category, Ministry..."
+                placeholder="Search bid number, item, ministry or department…"
                 className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-dalBlue"
               />
             </div>
@@ -400,6 +403,9 @@ export default function GeMTenders() {
           <div className="gem-bid-list">
             {tenders.map((item) => {
               const isUrgent = item._isClosingSoon;
+              const cleanTitle = cleanDisplayText(item.title, 'Untitled GeM bid');
+              const cleanDepartment = cleanDisplayText(item.departmentName || item.organisationChain);
+              const fullOrganisation = cleanDisplayText(item.organisationChain, cleanDepartment);
               const docUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
 
               return (
@@ -444,19 +450,19 @@ export default function GeMTenders() {
 
                     {/* Title / Item Category */}
                     <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors break-words">
-                      {item.title}
+                      {cleanTitle}
                     </h2>
 
                     {/* Ministry / Organisation */}
                     <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
                       <div className="flex items-start gap-1.5">
                         <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span className="break-words">{item.organisationChain || item.departmentName || '—'}</span>
+                        <span className="break-words" title={fullOrganisation}>{cleanDepartment}</span>
                       </div>
                       <div className="flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-chinarRed shrink-0 mt-0.5" />
                         <span className="font-semibold text-slate-700 dark:text-slate-200 break-words">
-                          {item.location || 'Jammu & Kashmir'}
+                          {cleanDisplayText(item.location, 'Location not specified')}
                         </span>
                       </div>
                     </div>
@@ -569,7 +575,7 @@ export default function GeMTenders() {
                   Government e-Marketplace (GeM)
                 </span>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  {selectedBid.title}
+                  {cleanDisplayText(selectedBid.title, 'Untitled GeM bid')}
                 </h3>
                 <span className="text-xs font-mono font-bold text-dalBlue dark:text-blue-400">
                   {selectedBid.sourceTenderId}
@@ -588,11 +594,11 @@ export default function GeMTenders() {
               <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-100 dark:border-slate-750">
                 <div>
                   <span className="text-slate-400 block font-medium">Department</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedBid.departmentName}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanDisplayText(selectedBid.departmentName)}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block font-medium">Organisation</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedBid.organisationChain}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanDisplayText(selectedBid.organisationChain)}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block font-medium">EMD Deposit</span>
@@ -609,10 +615,10 @@ export default function GeMTenders() {
               {/* Delivery Stations in J&K */}
               <div className="space-y-1.5">
                 <span className="font-bold text-slate-700 dark:text-slate-300 block">
-                  J&amp;K Consignee Stations
+                  Consignee locations
                 </span>
                 <p className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-dalBlue dark:text-blue-300 font-medium">
-                  {selectedBid.location}
+                  {cleanDisplayText(selectedBid.location, 'Location not specified')}
                 </p>
               </div>
 

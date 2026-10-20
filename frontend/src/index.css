@@ -846,6 +846,63 @@ html:not(.dark) [role="dialog"] > div {
 .home-preview-float { z-index: 2; }
 .home-statbar { background: #fff; border-color: #dce5ee; }
 .home-statbar > div { padding-top: 1.1rem; padding-bottom: 1.1rem; }
+.home-hero-art {
+  z-index: 0;
+  background-size: cover;
+  background-position: center 48%;
+  opacity: .24;
+  filter: saturate(.7);
+}
+.home-hero-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(243,247,252,.93), rgba(237,244,252,.85) 55%, rgba(233,241,251,.74));
+}
+.home-hero-main { position: relative; z-index: 1; }
+.home-hero > .home-hero-main {
+  padding-top: clamp(3rem, 7vw, 5rem);
+  padding-bottom: clamp(3rem, 7vw, 5rem);
+}
+.dark .home-hero-art::after {
+  background: linear-gradient(90deg, rgba(16,29,43,.93), rgba(20,37,56,.86) 55%, rgba(23,44,66,.78));
+}
+
+.home-pipeline-marquee {
+  position: relative;
+  overflow: hidden;
+  padding: .25rem 0 .6rem;
+  mask-image: linear-gradient(90deg, transparent, #000 2.5%, #000 97.5%, transparent);
+}
+.home-pipeline-track {
+  display: flex;
+  width: max-content;
+  animation: home-pipeline-scroll 48s linear infinite;
+}
+.home-pipeline-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 1rem;
+  padding-right: 1rem;
+}
+.home-pipeline-card {
+  width: clamp(260px, 25vw, 310px);
+  min-height: 155px;
+  flex: 0 0 auto;
+  box-shadow: 0 3px 12px rgba(16, 34, 54, .045);
+}
+.home-pipeline-card:hover,
+.home-pipeline-card:focus-visible { transform: translateY(-3px); }
+.home-pipeline-marquee:hover .home-pipeline-track,
+.home-pipeline-marquee:focus-within .home-pipeline-track { animation-play-state: paused; }
+@keyframes home-pipeline-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.tenders-layout { grid-template-columns: minmax(245px, 285px) minmax(0, 1fr); }
+.tenders-layout > aside { position: sticky; top: 6.5rem; }
+.tenders-layout > main { min-width: 0; }
 
 .gem-page > div {
   display: grid;
@@ -988,4 +1045,15 @@ html:not(.dark) [role="dialog"] > div {
   .gem-results-column .gem-bid-content > div:nth-child(4) { grid-column: 1 / -1; grid-row: auto; }
   .gem-results-column .gem-bid-content > div:nth-child(5) { grid-column: 1 / -1; grid-row: auto; }
   .gem-results-column .gem-bid-actions { justify-content: flex-start; }
+}
+
+@media (min-width: 1024px) {
+  .tenders-filter-toggle { display: none; }
+  .tenders-layout > aside { display: flex !important; max-height: calc(100vh - 7.5rem); }
+  .tenders-layout > aside .filter-grid { grid-template-columns: minmax(0, 1fr); overflow-y: auto; max-height: calc(100vh - 14rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-pipeline-track { animation: none; }
+  .home-pipeline-marquee { overflow-x: auto; mask-image: none; }
 }

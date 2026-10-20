@@ -511,7 +511,7 @@ export default function Tenders() {
         </div>
 
         {/* Mobile/Tablet Filter Accordion Toggle (< lg) */}
-        <div className="mb-4">
+        <div className="tenders-filter-toggle mb-4">
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
@@ -540,7 +540,7 @@ export default function Tenders() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 items-start">
+        <div className="tenders-layout grid grid-cols-1 gap-5 items-start">
           
           {/* ---------------- FILTER SIDEBAR ---------------- */}
           <aside className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xs flex flex-col overflow-hidden transition-all ${

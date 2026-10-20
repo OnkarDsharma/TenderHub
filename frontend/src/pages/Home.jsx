@@ -213,6 +213,11 @@ export default function Home() {
           SECTION 1: PRODUCT-STYLE HERO WITH LIVE PROCUREMENT SNAPSHOT
           ========================================================================= */}
       <section className="home-hero relative overflow-hidden select-none">
+        <div
+          aria-hidden="true"
+          className="home-hero-art absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "url('/images/TenderHUB1.jpg')" }}
+        />
         <div className="home-hero-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className="relative z-10 max-w-2xl">
             
@@ -408,49 +413,55 @@ export default function Home() {
               to="/tenders"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-techCoral hover:underline uppercase tracking-wider shrink-0"
             >
-              <span>Explore all sectors</span>
+                <span>Explore more</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {/* 8 Department Cards (Screenshot 1) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {activeSectorCards.map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  if (item.query?.category) params.set('category', item.query.category);
-                  if (item.query?.organisation) params.set('organisation', item.query.organisation);
-                  if (item.query?.department) params.set('department', item.query.department);
-                  navigate(`/tenders?${params.toString()}`);
-                }}
-                className="relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-sm p-4 sm:p-5 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate">
-                      {item.count}
-                    </span>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug" title={item.subtitle}>
-                      {item.subtitle}
-                    </span>
-                  </div>
-
-                  <h3 className="text-xs sm:text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
-                    {item.title}
-                  </h3>
+          <div className="home-pipeline-marquee" aria-label="Live opportunities by authority">
+            <div className="home-pipeline-track">
+              {[0, 1].map((copy) => (
+                <div className="home-pipeline-group" key={copy} aria-hidden={copy === 1}>
+                  {activeSectorCards.map((item, idx) => (
+                    <button
+                      key={`${copy}-${idx}`}
+                      type="button"
+                      tabIndex={copy === 1 ? -1 : 0}
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        if (item.query?.category) params.set('category', item.query.category);
+                        if (item.query?.organisation) params.set('organisation', item.query.organisation);
+                        if (item.query?.department) params.set('department', item.query.department);
+                        navigate(`/tenders?${params.toString()}`);
+                      }}
+                      className="home-pipeline-card relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between text-left"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate">
+                            {item.count}
+                          </span>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug" title={item.subtitle}>
+                            {item.subtitle}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-medium">Estimated Value</span>
+                          <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{item.value}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </button>
+                  ))}
                 </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-medium">Estimated Value</span>
-                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{item.value}</span>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-1" />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
         </div>
