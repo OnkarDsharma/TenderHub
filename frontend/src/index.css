@@ -967,7 +967,8 @@ html:not(.dark) [role="dialog"] > div {
 
 .gem-filter-panel {
   position: sticky;
-  top: 6.5rem;
+  /* Keep the sidebar below the sticky search bar (7rem top + bar + grid gap). */
+  top: 13rem;
   grid-column: 1;
   grid-row: 3;
   padding: 1rem;
