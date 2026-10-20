@@ -8,7 +8,7 @@ import { Mail, MapPin, ExternalLink } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-slate-900 text-white pt-12 pb-8 border-t border-slate-800 mt-auto">
+    <footer className="bg-blue-950 text-white pt-12 pb-8 border-t border-blue-900 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 lg:gap-8">
           

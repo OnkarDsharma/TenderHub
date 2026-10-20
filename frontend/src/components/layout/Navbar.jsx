@@ -45,7 +45,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full transition-colors duration-200">
       
       {/* Top Utility Bar (Clean, uncluttered top strip) */}
-      <div className="navbar-source-strip bg-[#141416] text-[#A0A5B1] text-[11px] sm:text-xs py-1 px-4 sm:px-6 lg:px-8 border-b border-[#24262E] hidden md:block">
+      <div className="navbar-source-strip bg-blue-950 text-blue-100/75 text-[11px] sm:text-xs py-1 px-4 sm:px-6 lg:px-8 border-b border-blue-900 hidden md:block">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           
           {/* Left: data-source context */}
@@ -64,12 +64,12 @@ export function Navbar() {
               <span>AI BOQ Estimator</span>
             </Link>
 
-            <div className="h-3 w-px bg-[#2D313A]" />
+            <div className="h-3 w-px bg-blue-800" />
 
             {/* Light/Dark Mode Switch */}
             <button
               onClick={toggleTheme}
-              className="text-[#B2B7C2] hover:text-white transition-colors cursor-pointer"
+              className="text-blue-100/75 hover:text-white transition-colors cursor-pointer"
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
             >
@@ -79,7 +79,7 @@ export function Navbar() {
             {/* Saved Tenders Bookmark */}
             <Link
               to="/profile"
-              className="relative text-[#B2B7C2] hover:text-techCoral transition-colors cursor-pointer flex items-center gap-1"
+              className="relative text-blue-100/75 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
               title="Saved Tenders"
               aria-label="Saved Tenders"
             >
@@ -142,7 +142,7 @@ export function Navbar() {
             {/* Quick Explore Button */}
             <Link
               to="/tenders"
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-slate-900 hover:bg-techCoral text-white dark:bg-slate-800 dark:hover:bg-techCoral text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-dalBlue hover:bg-dalBlue-700 text-white dark:bg-dalBlue-800 dark:hover:bg-dalBlue-700 text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
             >
               <span>Explore Tenders</span>
               <ArrowUpRight className="w-3.5 h-3.5" />

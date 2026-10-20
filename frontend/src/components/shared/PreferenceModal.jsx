@@ -109,7 +109,7 @@ export function PreferenceModal() {
             <Button variant="ghost" onClick={() => updatePreferences({ isConfigured: true })} className="w-full sm:w-auto text-xs sm:text-sm">
               Skip for Now
             </Button>
-            <Button type="submit" variant="default" className="w-full sm:w-auto bg-chinarRed hover:bg-chinarRed-700 text-white gap-2 text-xs sm:text-sm">
+            <Button type="submit" variant="default" className="w-full sm:w-auto bg-dalBlue hover:bg-dalBlue-700 text-white gap-2 text-xs sm:text-sm">
               Apply Filters <ArrowRight className="w-4 h-4" />
             </Button>
           </div>

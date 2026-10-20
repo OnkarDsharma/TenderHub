@@ -479,7 +479,7 @@ export default function Tenders() {
           <Button 
             variant="outline" 
             onClick={handleReset} 
-            className="gap-1.5 text-xs self-start sm:self-auto hover:border-chinarRed hover:text-chinarRed transition-colors shrink-0"
+            className="gap-1.5 text-xs self-start sm:self-auto hover:border-dalBlue hover:text-dalBlue transition-colors shrink-0"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset Filters
           </Button>
@@ -505,7 +505,7 @@ export default function Tenders() {
               {activeFilterCount > 0 && (
                 <span 
                   onClick={(e) => { e.stopPropagation(); handleReset(); }}
-                  className="text-[11px] text-chinarRed hover:underline font-semibold"
+                  className="text-[11px] text-dalBlue hover:underline font-semibold"
                 >
                   Reset
                 </span>
@@ -569,7 +569,7 @@ export default function Tenders() {
                   {advancedSearch && (
                     <button 
                       onClick={() => { setAdvancedSearch(''); setCurrentPage(1); }}
-                      className="text-[10px] text-slate-400 hover:text-chinarRed"
+                      className="text-[10px] text-slate-400 hover:text-dalBlue"
                     >
                       Clear
                     </button>
@@ -599,7 +599,7 @@ export default function Tenders() {
                   {tenderCategory && (
                     <button 
                       onClick={() => { setTenderCategory(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -620,12 +620,12 @@ export default function Tenders() {
               <div>
                 <label className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-chinarRed" /> {state ? `District (${state})` : 'District / Region'}
+                    <MapPin className="w-3.5 h-3.5 text-techCoral" /> {state ? `District (${state})` : 'District / Region'}
                   </span>
                   {location && (
                     <button 
                       onClick={() => { setLocation(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -651,7 +651,7 @@ export default function Tenders() {
                   {category && (
                     <button 
                       onClick={() => { setCategory(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -677,7 +677,7 @@ export default function Tenders() {
                   {organisation && (
                     <button 
                       onClick={() => { setOrganisation(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -701,7 +701,7 @@ export default function Tenders() {
                   {department && (
                     <button 
                       onClick={() => { setDepartment(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -727,7 +727,7 @@ export default function Tenders() {
                   {contractType && (
                     <button 
                       onClick={() => { setContractType(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -753,7 +753,7 @@ export default function Tenders() {
                   {closingDate && (
                     <button 
                       onClick={() => { setClosingDate(''); setCurrentPage(1); }}
-                      className="text-[10px] text-chinarRed font-bold hover:underline"
+                      className="text-[10px] text-dalBlue font-bold hover:underline"
                     >
                       Reset
                     </button>
@@ -778,7 +778,7 @@ export default function Tenders() {
                   variant="outline" 
                   size="sm" 
                   onClick={handleReset}
-                  className="w-full text-xs text-chinarRed border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 font-semibold"
+                  className="w-full text-xs text-dalBlue border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-semibold"
                 >
                   Clear All Filters ({activeFilterCount})
                 </Button>
@@ -908,7 +908,7 @@ export default function Tenders() {
                 {advancedSearch && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <span>Search: &quot;{advancedSearch}&quot;</span>
-                    <button onClick={() => setAdvancedSearch('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setAdvancedSearch('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -918,7 +918,7 @@ export default function Tenders() {
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <Briefcase className="w-3 h-3" />
                     <span>Type: {tenderCategory}</span>
-                    <button onClick={() => setTenderCategory('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setTenderCategory('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -926,9 +926,9 @@ export default function Tenders() {
 
                 {location && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
-                    <MapPin className="w-3 h-3 text-chinarRed" />
+                    <MapPin className="w-3 h-3 text-techCoral" />
                     <span>District: {location}</span>
-                    <button onClick={() => setLocation('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setLocation('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -938,7 +938,7 @@ export default function Tenders() {
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <Layers className="w-3 h-3" />
                     <span>Category: {category}</span>
-                    <button onClick={() => setCategory('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setCategory('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -948,7 +948,7 @@ export default function Tenders() {
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <Building2 className="w-3 h-3" />
                     <span className="truncate max-w-[160px]">Authority: {organisation}</span>
-                    <button onClick={() => setOrganisation('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setOrganisation('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -957,7 +957,7 @@ export default function Tenders() {
                 {department && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <span className="truncate max-w-[160px]">Division: {department}</span>
-                    <button onClick={() => setDepartment('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setDepartment('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -967,7 +967,7 @@ export default function Tenders() {
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <FileCheck className="w-3 h-3" />
                     <span>Contract: {contractType}</span>
-                    <button onClick={() => setContractType('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setContractType('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -977,7 +977,7 @@ export default function Tenders() {
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-200 border border-dalBlue/20 font-medium">
                     <Calendar className="w-3 h-3" />
                     <span>Deadline: &le; {closingDate} days</span>
-                    <button onClick={() => setClosingDate('')} className="hover:text-chinarRed font-bold ml-0.5">
+                    <button onClick={() => setClosingDate('')} className="hover:text-dalBlue font-bold ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -985,7 +985,7 @@ export default function Tenders() {
 
                 <button
                   onClick={handleReset}
-                  className="text-chinarRed font-bold hover:underline text-xs ml-auto cursor-pointer"
+                  className="text-dalBlue font-bold hover:underline text-xs ml-auto cursor-pointer"
                 >
                   Clear All
                 </button>
@@ -1021,7 +1021,7 @@ export default function Tenders() {
                           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                             <div className="flex items-start gap-4">
                               <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-                                <Lock className="w-6 h-6 text-chinarRed" />
+                                <Lock className="w-6 h-6 text-blue-200" />
                               </div>
                               <div>
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-mono font-bold text-blue-200 mb-1.5">
@@ -1043,7 +1043,7 @@ export default function Tenders() {
                                 <Button
                                   type="button"
                                   onClick={() => navigate('/pricing')}
-                                  className="w-full sm:w-auto bg-chinarRed hover:bg-chinarRed/90 text-white font-semibold text-xs py-2 px-5 rounded-lg shadow-sm cursor-pointer"
+                                  className="w-full sm:w-auto bg-dalBlue hover:bg-dalBlue/90 text-white font-semibold text-xs py-2 px-5 rounded-lg shadow-sm cursor-pointer"
                                 >
                                   View Pro Plans
                                 </Button>
@@ -1055,7 +1055,7 @@ export default function Tenders() {
                                     subtitle: 'Sign in to unlock all tender notices and view full details (5 views/24 hours).',
                                     redirectUrl: '/tenders'
                                   })}
-                                  className="w-full sm:w-auto bg-chinarRed hover:bg-chinarRed/90 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg cursor-pointer"
+                                  className="w-full sm:w-auto bg-dalBlue hover:bg-dalBlue/90 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg cursor-pointer"
                                 >
                                   Log In to View More Tenders
                                 </Button>

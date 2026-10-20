@@ -251,7 +251,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, variant =
 
           {/* Location */}
           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded text-[11px] font-medium border border-slate-200 dark:border-slate-700">
-            <MapPin className="w-3 h-3 text-chinarRed shrink-0" />
+            <MapPin className="w-3 h-3 text-techCoral shrink-0" />
             <span className="truncate max-w-[130px] sm:max-w-[170px]" title={extractFamousLocation(tender)}>
               {extractFamousLocation(tender)}
             </span>

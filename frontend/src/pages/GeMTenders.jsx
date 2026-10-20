@@ -460,7 +460,7 @@ export default function GeMTenders() {
                         <span className="break-words" title={fullOrganisation}>{cleanDepartment}</span>
                       </div>
                       <div className="flex items-start gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-chinarRed shrink-0 mt-0.5" />
+                        <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0 mt-0.5" />
                         <span className="font-semibold text-slate-700 dark:text-slate-200 break-words">
                           {cleanDisplayText(item.location, 'Location not specified')}
                         </span>

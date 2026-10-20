@@ -51,7 +51,7 @@ export default function Pricing() {
             return (
               <article key={plan.id} className={`relative flex flex-col justify-between rounded-2xl p-6 sm:p-7 bg-white dark:bg-slate-800 shadow-sm ${plan.isLocked ? 'border border-amber-300 dark:border-amber-700/70' : 'border border-emerald-300 dark:border-emerald-700/70'}`}>
                 <div>
-                  <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${plan.id === 'contractor_pro' ? 'bg-chinarRed text-white' : 'bg-slate-700 text-white dark:bg-slate-600'}`}>{plan.badge}</span>
+                  <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${plan.id === 'contractor_pro' ? 'bg-dalBlue text-white' : 'bg-slate-700 text-white dark:bg-slate-600'}`}>{plan.badge}</span>
                   <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 min-h-10 leading-relaxed">{plan.description}</p>
                   {plan.isLocked ? (

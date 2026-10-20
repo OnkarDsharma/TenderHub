@@ -247,7 +247,7 @@ export default function Profile() {
                   ID: {profile.contractorId || 'NIT-S-2026'}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-chinarRed" /> {profile.divisionBadge || 'J&K Public Works Division'}
+                  <MapPin className="w-3.5 h-3.5 text-techCoral" /> {profile.divisionBadge || 'J&K Public Works Division'}
                 </span>
               </div>
             </div>
@@ -670,7 +670,7 @@ export default function Profile() {
                       <button
                         type="button"
                         onClick={() => setPrefForm({ ...prefForm, targetSectors: [] })}
-                        className="text-[11px] text-chinarRed font-semibold hover:underline cursor-pointer"
+                        className="text-[11px] text-dalBlue font-semibold hover:underline cursor-pointer"
                       >
                         Clear
                       </button>

@@ -20,7 +20,7 @@ export function Button({
     outline: "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:text-slate-900 dark:hover:text-white shadow-xs",
     secondary: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80",
     ghost: "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white",
-    accent: "bg-chinarRed text-white hover:bg-chinarRed/90 shadow-xs",
+    accent: "bg-dalBlue text-white hover:bg-dalBlue/90 shadow-xs",
   };
 
   const sizes = {

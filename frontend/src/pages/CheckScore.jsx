@@ -355,7 +355,7 @@ export default function CheckScore() {
                     <button 
                       type="button"
                       onClick={() => setSelectedTender(null)}
-                      className="text-xs font-semibold text-chinarRed hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-dalBlue hover:underline cursor-pointer"
                     >
                       Change Tender
                     </button>

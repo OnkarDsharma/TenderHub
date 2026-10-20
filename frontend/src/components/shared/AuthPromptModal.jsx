@@ -36,7 +36,7 @@ export function AuthPromptModal({
         {/* Top Header Graphic Banner */}
         <div className="relative bg-gradient-to-br from-dalBlue via-dalBlue-700 to-slate-900 dark:from-slate-900 dark:via-blue-950 dark:to-slate-900 p-6 text-white overflow-hidden">
           {/* Subtle background glow */}
-          <div className="absolute top-0 right-0 w-36 h-36 bg-chinarRed/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-36 h-36 bg-dalBlue/20 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
           
           <button 
@@ -49,7 +49,7 @@ export function AuthPromptModal({
           </button>
 
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-semibold text-blue-100 mb-3 border border-white/10">
-            <Lock className="w-3.5 h-3.5 text-chinarRed" />
+            <Lock className="w-3.5 h-3.5 text-dalBlue" />
             <span>Contractor Access Required</span>
           </div>
 
@@ -83,7 +83,7 @@ export function AuthPromptModal({
             </div>
 
             <div className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-chinarRed shrink-0 mt-0.5" />
+              <ShieldCheck className="w-4 h-4 text-dalBlue shrink-0 mt-0.5" />
               <span>
                 <strong>Unlimited tender directory browsing</strong> across all 20 J&amp;K districts and departments.
               </span>
@@ -107,7 +107,7 @@ export function AuthPromptModal({
               onClick={handleNavigateSignup}
               className="w-full border-slate-300 dark:border-slate-700 hover:border-dalBlue text-slate-800 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-chinarRed" />
+              <Sparkles className="w-3.5 h-3.5 text-dalBlue" />
               <span>Create Free Contractor Account</span>
             </Button>
 
