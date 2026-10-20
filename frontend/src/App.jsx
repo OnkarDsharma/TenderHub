@@ -35,7 +35,7 @@ export default function App() {
   }, [checkAuth]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-paper dark:bg-slate-900 text-charcoal dark:text-slate-100 w-full max-w-[100vw] overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-paper dark:bg-slate-900 text-charcoal dark:text-slate-100 w-full max-w-[100vw] overflow-x-clip">
       <CursorFollower />
       <ScrollToTop />
       <Navbar />

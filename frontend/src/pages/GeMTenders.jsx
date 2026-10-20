@@ -21,11 +21,13 @@ import {
   Sparkles,
   Download,
   X,
-  Landmark
+  Landmark,
+  Heart
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
@@ -108,6 +110,7 @@ const cleanDisplayText = (value, fallback = '—') =>
 
 export default function GeMTenders() {
   const navigate = useNavigate();
+  const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [tenders, setTenders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -398,6 +401,7 @@ export default function GeMTenders() {
               const cleanTitle = cleanDisplayText(item.title, 'Untitled GeM bid');
               const cleanDepartment = cleanDisplayText(item.departmentName || item.organisationChain);
               const fullOrganisation = cleanDisplayText(item.organisationChain, cleanDepartment);
+              const bookmarked = isBookmarked(item._id || item.sourceTenderId);
               const docUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
 
               return (
@@ -415,12 +419,17 @@ export default function GeMTenders() {
                           </div>
                         )}
                       </div>
-                      {isUrgent && (
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold shrink-0">
-                          <Clock className="w-3 h-3" />
-                          <span>Closing Soon</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isUrgent && (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold shrink-0">
+                            <Clock className="w-3 h-3" />
+                            <span>Closing Soon</span>
+                          </div>
+                        )}
+                        <button type="button" onClick={() => toggleBookmark(item)} className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${bookmarked ? 'bg-red-50 border-red-200 text-chinarRed dark:bg-red-950/40 dark:border-red-800 shadow-xs' : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-chinarRed hover:border-red-200 hover:bg-red-50/50 dark:hover:bg-red-950/20 bg-white dark:bg-slate-800'}`} title={bookmarked ? 'Remove from Saved' : 'Save this GeM bid'} aria-label={bookmarked ? 'Remove GeM bid from favorites' : 'Add GeM bid to favorites'}>
+                          <Heart className={`w-3.5 h-3.5 transition-transform active:scale-125 ${bookmarked ? 'fill-current text-chinarRed' : ''}`} />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Bid Number */}

@@ -701,7 +701,7 @@
 
 /* Prevent accidental horizontal document scroll on smaller touch screens */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   -webkit-tap-highlight-color: transparent;
 }
@@ -960,7 +960,7 @@ html:not(.dark) [role="dialog"] > div {
 .gem-search-sticky {
   position: sticky;
   top: 7rem;
-  z-index: 40;
+  z-index: 55;
   grid-column: 1 / -1;
   grid-row: 2;
 }
