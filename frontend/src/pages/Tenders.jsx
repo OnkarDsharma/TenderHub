@@ -26,7 +26,6 @@ import { useTenders } from '@/hooks/useTenders';
 import { useDebounce } from '@/hooks/useDebounce';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
-import { DailyAccessMeter } from '@/components/shared/DailyAccessMeter';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/Button';
 
@@ -148,14 +147,6 @@ export default function Tenders() {
 
   const handleViewDetails = (tender) => {
     const tenderId = tender._id || tender.sourceTenderId;
-    if (!isAuthenticated) {
-      handleRequestAuth({
-        title: 'Sign In to View Full Tender Details',
-        subtitle: `Notice ${tender.sourceTenderId || tender.tenderReferenceNumber || 'NIT'}: ${tender.title?.slice(0, 80) || ''}...`,
-        redirectUrl: `/tenders/${tenderId}`
-      });
-      return;
-    }
     navigate(`/tenders/${tenderId}`);
   };
 
@@ -181,8 +172,8 @@ export default function Tenders() {
     ? DISTRICTS_BY_STATE[state]
     : ALL_LOCATION_OPTIONS;
 
-  // Unauthenticated guests get up to 25 items on page 1 so 15 are visible and remaining are blurred
-  const queryLimit = isAuthenticated ? 12 : 25;
+  // Standard query pagination limit for directory listings
+  const queryLimit = 12;
 
   // Construct API Query
   const queryFilters = {
@@ -235,14 +226,6 @@ export default function Tenders() {
 
   const handlePageChange = (newPage) => {
     const targetPage = Math.min(totalPages, Math.max(1, Math.trunc(Number(newPage) || 1)));
-    if (!isAuthenticated && targetPage > 1) {
-      handleRequestAuth({
-        title: 'Sign In to View More Tenders',
-        subtitle: 'Guests are limited to previewing the 15 latest tender notices. Sign in to browse all pages and view details.',
-        redirectUrl: '/tenders'
-      });
-      return;
-    }
     setCurrentPage(targetPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -267,29 +250,6 @@ export default function Tenders() {
                 <Landmark className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
                 <span>Public Procurement Portal • {state || 'Northern Region'}</span>
               </div>
-
-              {(import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175')) ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
-                  <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                  <span>Port 5175: Full Access Unlocked</span>
-                </span>
-              ) : !isAuthenticated ? (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  <Lock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span>Guest Preview (15 Notices)</span>
-                </span>
-              ) : isPro ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                  Pro Unlimited
-                </span>
-              ) : (
-                <DailyAccessMeter 
-                  viewsUsed={user?.dailyViews?.viewsUsed ?? 0}
-                  viewsLimit={typeof user?.dailyViews?.viewsLimit === 'number' ? user.dailyViews.viewsLimit : 5}
-                  resetsAt={user?.dailyViews?.resetsAt}
-                  isPro={isPro}
-                />
-              )}
             </div>
 
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
@@ -571,86 +531,15 @@ export default function Tenders() {
 
           {/* Tenders Bid List matching GeM Feed */}
           {!isLoading && !isError && tenders.length > 0 && (
-            <div className="gem-bid-list">
-              {tenders.map((tender, index) => {
-                const isBlurredCard = !isPro && index >= 15;
-                return (
-                  <div key={tender._id || tender.sourceTenderId} className="space-y-4">
-                    {/* Banner injected before first blurred tender card (index 15) */}
-                    {!isPro && index === 15 && (
-                      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-dalBlue to-slate-950 text-white p-5 sm:p-7 shadow-xl border border-dalBlue/50 my-6">
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-                              <Lock className="w-6 h-6 text-blue-200" />
-                            </div>
-                            <div>
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-mono font-bold text-blue-200 mb-1.5">
-                                <span>Viewing 15 of {totalCount} Active Notices</span>
-                              </div>
-                              <h3 className="text-base sm:text-lg font-display font-bold">
-                                {isAuthenticated ? 'Upgrade to tndrr Pro' : 'Unlock All Tender Notices & Technical Details'}
-                              </h3>
-                              <p className="text-xs text-blue-100/80 mt-1 max-w-xl leading-relaxed">
-                                {isAuthenticated 
-                                  ? 'Get unlimited tender views, 1-click BOQ Excel downloads, and automated WhatsApp alerts for your preferred J&K departments & districts.'
-                                  : 'Cards below are blurred for preview. Log in or create a free contractor account to unlock all active tenders, search across 20 districts, and download BOQs.'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
-                            {isAuthenticated ? (
-                              <Button
-                                type="button"
-                                onClick={() => navigate('/pricing')}
-                                className="w-full sm:w-auto bg-dalBlue hover:bg-dalBlue/90 text-white font-semibold text-xs py-2 px-5 rounded-lg shadow-sm cursor-pointer"
-                              >
-                                View Pro Plans
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                onClick={() => handleRequestAuth({
-                                  title: 'Sign In to View More Tenders',
-                                  subtitle: 'Sign in to unlock all tender notices and view full details (5 views/24 hours).',
-                                  redirectUrl: '/tenders'
-                                })}
-                                className="w-full sm:w-auto bg-dalBlue hover:bg-dalBlue/90 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg cursor-pointer"
-                              >
-                                Log In to View More Tenders
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div 
-                      onClick={() => {
-                        if (isBlurredCard) {
-                          if (!isAuthenticated) {
-                            handleRequestAuth({
-                              title: 'Sign In to View More Tenders',
-                              subtitle: 'Sign in to unlock all tender notices and view full details.',
-                              redirectUrl: '/tenders'
-                            });
-                          } else {
-                            navigate('/pricing');
-                          }
-                        }
-                      }}
-                      className={isBlurredCard ? 'cursor-pointer' : ''}
-                    >
-                      <TenderCard 
-                        tender={tender} 
-                        isBlurred={isBlurredCard}
-                        onViewDetails={() => handleViewDetails(tender)}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="gem-bid-list space-y-4">
+              {tenders.map((tender) => (
+                <TenderCard 
+                  key={tender._id || tender.sourceTenderId}
+                  tender={tender} 
+                  isBlurred={false}
+                  onViewDetails={() => handleViewDetails(tender)}
+                />
+              ))}
             </div>
           )}
 

@@ -34,8 +34,7 @@ export const isProUser = (user) => {
     user.subscription?.status === 'active' ||
     user.role === 'admin' ||
     user.role === 'superadmin' ||
-    user.role === 'owner' ||
-    user.dailyViews?.viewsLimit === 'Unlimited'
+    user.role === 'owner'
   );
 };
 

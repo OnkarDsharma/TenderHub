@@ -684,17 +684,13 @@ export const getMe = async (req, res, next) => {
       currentPeriodEnd: { $gt: now },
     });
     const isPro = !!activeSub || isPlatformAdmin;
-    const hasUnlimitedViews = isPro || isUnlimitedAccessUser(user);
+    const hasUnlimitedViews = true;
 
-    const viewsLimit = hasUnlimitedViews ? 'Unlimited' : 5;
-    const currentExpiry = user.dailyTenderViews?.expiresAt ? new Date(user.dailyTenderViews.expiresAt).getTime() : 0;
-    const isWindowExpired = !user.dailyTenderViews || !currentExpiry || now.getTime() >= currentExpiry;
-
-    const tenderIds = isWindowExpired ? [] : (user.dailyTenderViews.tenderIds || []);
-    const viewsUsed = hasUnlimitedViews ? 0 : tenderIds.length;
-    const viewsRemaining = hasUnlimitedViews ? 'Unlimited' : Math.max(0, viewsLimit - viewsUsed);
-    const expiresAt = (isWindowExpired || hasUnlimitedViews) ? null : user.dailyTenderViews?.expiresAt;
-    const msRemaining = expiresAt ? Math.max(0, new Date(expiresAt).getTime() - now.getTime()) : null;
+    const viewsLimit = 'Unlimited';
+    const viewsUsed = 0;
+    const viewsRemaining = 'Unlimited';
+    const expiresAt = null;
+    const msRemaining = null;
 
     return res.status(200).json({
       success: true,

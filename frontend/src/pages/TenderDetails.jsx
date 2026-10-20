@@ -43,7 +43,6 @@ import JSZip from 'jszip';
 import { useTender } from '@/hooks/useTenders';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { DailyAccessMeter } from '@/components/shared/DailyAccessMeter';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Modal';
@@ -83,20 +82,6 @@ export default function TenderDetails() {
       updateDailyViews(tender.viewsInfo);
     }
   }, [tender?.viewsInfo, updateDailyViews]);
-
-  // Sync if daily limit exceeded error was encountered
-  useEffect(() => {
-    if (error?.response?.data?.code === 'DAILY_LIMIT_EXCEEDED' || error?.response?.status === 403) {
-      const errorData = error.response.data;
-      updateDailyViews({
-        viewsUsed: errorData?.viewsUsed ?? 5,
-        viewsLimit: 5,
-        viewsRemaining: 0,
-        resetsAt: errorData?.resetsAt,
-        resetsInMs: errorData?.resetsInMs,
-      });
-    }
-  }, [error, updateDailyViews]);
 
   // In-browser ZIP extraction state
   const [isUnzipping, setIsUnzipping] = useState(false);
@@ -176,129 +161,11 @@ export default function TenderDetails() {
     setIsPortalModalOpen(true);
   };
 
-  if (authLoading || (isAuthenticated && isLoading)) return (
+  if (isLoading) return (
     <div className="min-h-screen bg-paper dark:bg-slate-900 flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-3 border-dalBlue border-t-transparent animate-spin" />
     </div>
   );
-
-  // 1. Unauthenticated guest or expired session (401)
-  const isAuthRequired = !isAuthenticated || error?.response?.status === 401 || error?.response?.data?.requireLogin;
-
-  if (isAuthRequired) {
-    return (
-      <div className="min-h-screen bg-paper dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden p-6 sm:p-8 text-center space-y-6">
-          <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/60 border border-dalBlue/30 text-dalBlue dark:text-blue-400 mx-auto flex items-center justify-center shadow-inner">
-            <Lock className="w-8 h-8 text-chinarRed" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
-              <span>Contractor Login Required</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-display font-bold text-slate-900 dark:text-white">
-              Official Tender Details Locked
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Unauthenticated visitors can browse 15 latest tender cards. To view full specifications, BOQs, and authority details, please log in. Registered contractors can view <strong>5 full tender details per 24 hours</strong>.
-            </p>
-          </div>
-
-          <div className="space-y-2.5 pt-2">
-            <Button
-              onClick={() => navigate(`/login?redirect=${encodeURIComponent(`/tenders/${id}`)}`)}
-              className="w-full bg-dalBlue hover:bg-dalBlue-700 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm shadow-md"
-            >
-              Sign In to View Tender
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/signup?redirect=${encodeURIComponent(`/tenders/${id}`)}`)}
-              className="w-full border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm hover:border-dalBlue"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-techCoral mr-1.5" /> Create Free Contractor Account
-            </Button>
-            <button
-              type="button"
-              onClick={() => navigate('/tenders')}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium block mx-auto pt-1 cursor-pointer"
-            >
-              ← Back to Directory
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Daily limit exceeded (403 DAILY_LIMIT_EXCEEDED)
-  const errorData = error?.response?.data;
-  const isDailyLimitExceeded = errorData?.code === 'DAILY_LIMIT_EXCEEDED' || error?.response?.status === 403;
-
-  if (isDailyLimitExceeded) {
-    const resetTimeFormatted = errorData?.resetTime || (errorData?.resetsAt ? new Date(errorData.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'in 24 hours');
-    const resetsAtFull = errorData?.resetsAt ? new Date(errorData.resetsAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'after 24 hours';
-
-    return (
-      <div className="min-h-screen bg-paper dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl border border-amber-200 dark:border-amber-900/60 shadow-xl overflow-hidden p-6 sm:p-8 text-center space-y-6">
-          <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center shadow-inner">
-            <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-xs font-semibold text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>Daily Limit Reached (5/5)</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-display font-bold text-slate-900 dark:text-white">
-              Daily Tender View Limit Reached
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
-              You have viewed details of <strong>5 tenders</strong> in your 24-hour window. Free contractor accounts can view up to 5 complete tender details every 24 hours.
-            </p>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 text-left space-y-2">
-            <div className="flex justify-between">
-              <span className="font-semibold text-slate-500">Daily Allowance:</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">5 Tenders / 24 Hours</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold text-slate-500">Viewed in Window:</span>
-              <span className="font-bold text-chinarRed font-mono">5 (Limit Expired)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold text-slate-500">Limit Resets In:</span>
-              <span className="font-bold text-dalBlue dark:text-blue-400 font-mono">{resetTimeFormatted}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200/60 dark:border-slate-800 pt-1.5 text-[11px]">
-              <span className="text-slate-400">Reset Date &amp; Time:</span>
-              <span className="text-slate-600 dark:text-slate-300 font-mono">{resetsAtFull}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2.5 pt-2">
-            <Button
-              onClick={() => navigate('/tenders')}
-              className="w-full bg-dalBlue hover:bg-dalBlue-700 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm shadow-md"
-            >
-              Browse Directory Listings
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/profile')}
-              className="w-full border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm hover:border-dalBlue"
-            >
-              Go to Saved Tenders
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // 3. Fallback error / 404 handling
   if (isError || !tender) {
@@ -407,15 +274,6 @@ export default function TenderDetails() {
                   <span className="text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                     {tender.status || 'Active'}
                   </span>
-                  {!isPro && tender.viewsInfo && tender.viewsInfo.viewsLimit !== 'Unlimited' && (
-                    <DailyAccessMeter
-                      viewsUsed={tender.viewsInfo.viewsUsed ?? 0}
-                      viewsLimit={typeof tender.viewsInfo.viewsLimit === 'number' ? tender.viewsInfo.viewsLimit : 5}
-                      resetsAt={tender.viewsInfo.resetsAt}
-                      isPro={isPro}
-                      variant="compact"
-                    />
-                  )}
                   {(totalDocsCount === 0 || tender.isDocumentAvailable === false) && (
                     <span className="text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 flex items-center gap-1" title={(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate) ? `Documents available on ${formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate)}` : 'Pending portal release'}>
                       <FileClock className="w-3 h-3 text-amber-600 dark:text-amber-400" />

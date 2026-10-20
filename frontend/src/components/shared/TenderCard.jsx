@@ -34,10 +34,6 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
       onViewDetails(tender);
       return;
     }
-    if (!isAuthenticated) {
-      navigate(`/login?redirect=${encodeURIComponent(`/tenders/${tenderId}`)}`);
-      return;
-    }
     navigate(`/tenders/${tenderId}`);
   };
 

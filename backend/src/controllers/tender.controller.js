@@ -259,20 +259,9 @@ export const getTenders = async (req, res, next) => {
       sortConfig = { publishedDate: -1, createdAt: -1, _id: -1 };
     }
 
-    // 7. Enforce Authentication-Aware Limits & Data Minimization Projection
-    const isGuest = !req.user || !req.user.userId;
+    // 7. Enforce Query Limits & Data Minimization Projection
     const safePage = Math.max(1, parseInt(page, 10) || 1);
-
-    // Hard ceiling for unauthenticated visitors: max 2 pages to prevent automated deep scraping
-    if (isGuest && safePage > 2) {
-      return res.status(401).json({
-        error: 'Guest preview limit reached. Sign in to browse the complete directory and access documents.',
-        code: 'GUEST_PAGE_LIMIT',
-        requireLogin: true,
-      });
-    }
-
-    const maxAllowedLimit = isGuest ? 15 : 50;
+    const maxAllowedLimit = 50;
     const safeLimit = Math.min(Math.max(1, parseInt(limit, 10) || 10), maxAllowedLimit);
 
     // Strictly project only public listing metadata. 
@@ -363,103 +352,6 @@ export const getTenderById = async (req, res, next) => {
     // Handle case where record does not exist
     if (!tender) return res.status(404).json({ error: 'Tender not found' });
 
-    // Authentication check
-    if (!req.user || !req.user.userId) {
-      return res.status(401).json({
-        error: 'Authentication required. Please sign in to view tender details.',
-        requireLogin: true
-      });
-    }
-
-    // Daily 5 views per user enforcement (bypassed for active Pro subscribers and Admins)
-    let user = await User.findById(req.user.userId);
-    const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin' || req.user?.role === 'admin');
-    if (!user && !isAdmin) {
-      return res.status(401).json({ error: 'User account not found', requireLogin: true });
-    }
-
-    const now = new Date();
-    const tenderIdentifier = tender._id.toString();
-
-    // Check if user has an active Pro subscription in DB
-    const activeSub = await Subscription.findOne({
-      userId: user._id,
-      status: 'active',
-      currentPeriodEnd: { $gt: now },
-    });
-    const isPro = !!activeSub || isAdmin;
-    const hasUnlimitedAccess = isPro || isUnlimitedAccessUser(user);
-
-    let viewsUsed = 0;
-    const viewsLimit = 5; // 5 tenders per user per 24 hours for free users
-    let viewsRemaining = 5;
-    let expiresAt = null;
-
-    if (!hasUnlimitedAccess) {
-      // 1. Check if the 24-hour window has expired or is uninitialized
-      const currentExpiry = user.dailyTenderViews?.expiresAt ? new Date(user.dailyTenderViews.expiresAt).getTime() : 0;
-      const isWindowExpired = !user.dailyTenderViews || !currentExpiry || now.getTime() >= currentExpiry;
-
-      if (isWindowExpired) {
-        // Start a fresh 24-hour allowance window
-        expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        user.dailyTenderViews = {
-          date: getTodayISTString(),
-          tenderIds: [tenderIdentifier],
-          windowStart: now,
-          expiresAt,
-        };
-        user.markModified('dailyTenderViews');
-        await user.save();
-      } else {
-        expiresAt = new Date(user.dailyTenderViews.expiresAt);
-        const viewedTenderIds = user.dailyTenderViews.tenderIds || [];
-        const alreadyViewedToday = viewedTenderIds.includes(tenderIdentifier) || 
-                                  (tender.sourceTenderId && viewedTenderIds.includes(tender.sourceTenderId));
-
-        if (!alreadyViewedToday) {
-          if (viewedTenderIds.length >= viewsLimit) {
-            const msRemaining = Math.max(0, expiresAt.getTime() - now.getTime());
-            const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
-            const minutesRemaining = Math.ceil((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
-            const resetFormatted = hoursRemaining > 0 
-              ? `${hoursRemaining}h ${minutesRemaining}m` 
-              : `${minutesRemaining} minutes`;
-
-            return res.status(403).json({
-              error: `Daily limit reached. You can view full details of up to 5 tenders per day. Your limit resets in ${resetFormatted}.`,
-              code: 'DAILY_LIMIT_EXCEEDED',
-              dailyLimitReached: true,
-              viewsUsed: viewsLimit,
-              viewsLimit,
-              viewsRemaining: 0,
-              resetsAt: expiresAt,
-              resetsInMs: msRemaining,
-              resetTime: resetFormatted,
-            });
-          }
-
-          // Record new unique tender view
-          user.dailyTenderViews.tenderIds.push(tenderIdentifier);
-          
-          // When the 5th tender is viewed (limit reached/expired), ensure a full 24-hour countdown from this moment
-          if (user.dailyTenderViews.tenderIds.length >= viewsLimit) {
-            user.dailyTenderViews.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-            expiresAt = user.dailyTenderViews.expiresAt;
-          }
-
-          user.markModified('dailyTenderViews');
-          await user.save();
-        }
-      }
-
-      viewsUsed = user.dailyTenderViews.tenderIds.length;
-      viewsRemaining = Math.max(0, viewsLimit - viewsUsed);
-    } else {
-      viewsUsed = 0;
-      viewsRemaining = 999999;
-    }
-    
     // A tender has siblings ONLY IF explicitly detected during scraping on an intermediate multi-item page
     let relatedTenders = [];
     if (tender.isMultiTender && Array.isArray(tender.relatedTenderIds) && tender.relatedTenderIds.length > 0) {
@@ -473,15 +365,16 @@ export const getTenderById = async (req, res, next) => {
 
     const isMultiTender = !!(tender.isMultiTender && relatedTenders.length > 0);
 
+    // Unrestricted tender access for all visitors and registered users
     res.status(200).json({
       ...tender,
       isMultiTender,
       relatedTenders,
       viewsInfo: {
-        viewsUsed,
-        viewsLimit: hasUnlimitedAccess ? 'Unlimited' : viewsLimit,
-        viewsRemaining: hasUnlimitedAccess ? 'Unlimited' : viewsRemaining,
-        resetsAt: hasUnlimitedAccess ? null : expiresAt,
+        viewsUsed: 0,
+        viewsLimit: 'Unlimited',
+        viewsRemaining: 'Unlimited',
+        resetsAt: null,
         date: getTodayISTString()
       }
     });
@@ -659,37 +552,9 @@ export const downloadTenderZip = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Authentication check
-    if (!req.user || !req.user.userId) {
-      return res.status(401).json({ message: 'Authentication required to download tender packet', requireLogin: true });
-    }
-
     const tender = await Tender.findById(id).lean();
     if (!tender) {
       return res.status(404).json({ message: 'Tender not found' });
-    }
-
-    // Authorization & Pro Plan check
-    const user = await User.findById(req.user.userId);
-    const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin' || req.user?.role === 'admin');
-    const activeSub = await Subscription.findOne({
-      userId: user?._id,
-      status: 'active',
-      currentPeriodEnd: { $gt: new Date() },
-    });
-    const isPro = !!activeSub || isAdmin;
-    const hasUnlimitedAccess = isPro || isUnlimitedAccessUser(user);
-
-    if (!hasUnlimitedAccess) {
-      const viewedTenderIds = user?.dailyTenderViews?.tenderIds || [];
-      const tenderIdentifier = tender._id.toString();
-      const hasViewed = viewedTenderIds.includes(tenderIdentifier) || (tender.sourceTenderId && viewedTenderIds.includes(tender.sourceTenderId));
-      if (!hasViewed) {
-        return res.status(403).json({
-          message: 'Tender packet download requires viewing this tender notice first or upgrading to Pro.',
-          code: 'PRO_REQUIRED'
-        });
-      }
     }
 
     const zipUrl = tender.boqZipUrl || (tender.boqFileUrl && tender.boqFileUrl.toLowerCase().endsWith('.zip') ? tender.boqFileUrl : null);

@@ -34,16 +34,16 @@ router.get('/:id/documents/:kind/:index', streamTenderDocument);
 /**
  * @route GET /api/tenders/:id/zip
  * Stream the ZIP archive directly with CORS headers to avoid client browser CORS blocks.
- * Protected by authentication.
+ * Accessible to all visitors.
  */
-router.get('/:id/zip', verifyToken, downloadTenderZip);
+router.get('/:id/zip', optionalAuth, downloadTenderZip);
 
 /**
  * @route GET /api/tenders/:id
- * Fetch a single tender document by its unique MongoDB ObjectId.
- * Strictly protected by authentication and limited to 10 tender detail views per day per user.
+ * Fetch a single tender document by its unique MongoDB ObjectId or sourceTenderId.
+ * Unrestricted access for all visitors.
  */
-router.get('/:id', verifyToken, getTenderById);
+router.get('/:id', optionalAuth, getTenderById);
 
 /**
  * @route POST /api/tenders/:id/analyze
