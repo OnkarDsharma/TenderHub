@@ -25,6 +25,8 @@ import {
   Search,
   Sliders,
   Scale,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
 import { api } from '../services/api';
@@ -407,6 +409,24 @@ export default function Services() {
                     <span className="font-mono text-slate-500 dark:text-slate-400">{exampleTender.sourceTenderId || exampleTender._id}</span>
                   </button>
                 )}
+
+                {/* Current Limitations Advisory Callout */}
+                <div className="mt-4 p-3 sm:p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 flex items-start gap-2.5 text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-amber-900 dark:text-amber-200 text-xs">
+                        Current System Limitations:
+                      </span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-300">
+                        Advisory Analysis
+                      </span>
+                    </div>
+                    <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed text-[11px] sm:text-xs pt-0.5">
+                      Estimates and checklists are derived from indexed tender metadata, published gazettes, and standard CPWD/PWD SOR benchmarks. Bespoke special conditions in attached non-searchable/scanned PDFs and live vendor rates must always be verified in the official NIT document.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1000,18 +1020,86 @@ export default function Services() {
                   </form>
                 </div>
               )}
+
+              {/* Advisory Footnote in Active Dossier */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+                <Info className="w-4 h-4 text-dalBlue dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="text-slate-800 dark:text-slate-200">Advisory Notice &amp; Scope: </strong>
+                  All AI-generated BOQ breakdowns, contractor compatibility scores, and risk clauses are advisory estimations intended to speed up pre-bid due diligence. Always cross-check mandatory terms and technical qualifications against the official published NIT document.
+                </div>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="estimator-empty-state max-w-5xl mx-auto border-t border-slate-200 dark:border-slate-700 py-8 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5" />
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Standard Empty Workspace Prompt */}
+            <div className="estimator-empty-state border-t border-slate-200 dark:border-slate-700 py-6 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-400 flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">Analysis Workspace</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Enter a tender reference or portal ID above to begin. The AI will extract raw materials, evaluate financial turnover fit, and identify GCC risk clauses.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Analysis workspace</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Enter a tender reference above to begin. Analysis results will appear here when available.
-              </p>
+
+            {/* Current System Scope & Limitations Section */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-700 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    Current Platform Scope &amp; AI Limitations
+                  </h3>
+                </div>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 w-fit">
+                  Important Contractor Advisory
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Limitation Card 1 */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    1. Scanned Document Verification
+                  </h4>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    AI models ingest published portal metadata and digital notices. Bespoke special conditions or handwritten notes inside attached non-OCR/scanned PDFs should always be physically verified in the source NIT.
+                  </p>
+                </div>
+
+                {/* Limitation Card 2 */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                    <Boxes className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    2. Normative BOQ Rate Estimates
+                  </h4>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Extracted material schedules, cement/steel quantities, and estimated rates reflect standard CPWD/PWD Schedule of Rates (SOR). Actual local supplier rates, GST, and logistics freight must be factored in prior to bidding.
+                  </p>
+                </div>
+
+                {/* Limitation Card 3 */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center">
+                    <Scale className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    3. Benchmark Eligibility Checks
+                  </h4>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Turnover and solvency checks apply general procurement ratios (120% 3-yr turnover, 40% bank solvency). Departmental relaxations, MSME exemptions, or Joint Venture (JV) allowances must be confirmed per individual gazette.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
