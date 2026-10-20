@@ -4,6 +4,7 @@ import {
   getTenderStats, // Imported the newly created stats controller
   getTenderById,
   downloadTenderZip,
+  streamTenderDocument,
   triggerAiAnalysis
 } from '../controllers/tender.controller.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.middleware.js';
@@ -26,6 +27,9 @@ router.get('/', optionalAuth, getTenders);
  * "stats" as a document ID and pass it to getTenderById, causing a database error.
  */
 router.get('/stats', getTenderStats);
+
+// Public tender documents are streamed from the private R2 bucket by the API.
+router.get('/:id/documents/:kind/:index', streamTenderDocument);
 
 /**
  * @route GET /api/tenders/:id/zip

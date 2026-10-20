@@ -510,3 +510,19 @@ export const getPresignedDownloadUrl = async (key, expiresInSeconds = 60) => {
     return null;
   }
 };
+
+/** Resolve a stored public R2 URL back to its private bucket object key. */
+export const getTenderR2Object = async (fileUrl) => {
+  const bucketName = process.env.R2_BUCKET_NAME;
+  if (!bucketName || !fileUrl) throw new Error('R2 bucket or document URL is missing');
+
+  const parsed = new URL(fileUrl);
+  const configuredHost = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL).host : null;
+  if (!(parsed.hostname.endsWith('.r2.dev') || parsed.host === configuredHost)) {
+    throw new Error('Document URL is not a recognized R2 asset');
+  }
+
+  const key = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+  if (!key.startsWith('tenders/')) throw new Error('Invalid tender document key');
+  return r2.send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
+};

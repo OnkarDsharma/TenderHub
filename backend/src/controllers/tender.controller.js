@@ -9,6 +9,7 @@ import Tender from '../models/Tender.js';
 import User from '../models/User.js';
 import Subscription from '../modules/billing/models/Subscription.js';
 import { aiQueue } from '../workers/queue.js';
+import { getTenderR2Object } from '../utils/r2Storage.js';
 
 /**
  * Helper to get current date formatted as YYYY-MM-DD in Asia/Kolkata (IST)
@@ -676,22 +677,52 @@ export const downloadTenderZip = async (req, res, next) => {
       return res.status(404).json({ message: 'No ZIP archive found for this tender' });
     }
 
-    const response = await fetch(zipUrl);
-    if (!response.ok) {
-      return res.status(502).json({ message: 'Failed to retrieve archive from storage' });
-    }
-
     const fileName = tender.zipFileName || `Tender_Packet_${tender.sourceTenderId || id}.zip`;
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/[\r\n"\\]/g, '_')}"`);
+    const object = await getTenderR2Object(zipUrl);
+    if (object.ContentLength) res.setHeader('Content-Length', object.ContentLength);
+    return Readable.from(object.Body).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    // Stream directly via Readable to prevent Memory Exhaustion (OOM)
-    if (response.body) {
-      return Readable.fromWeb(response.body).pipe(res);
-    } else {
-      const arrayBuffer = await response.arrayBuffer();
-      return res.send(Buffer.from(arrayBuffer));
+/** Stream a tender notice or work document through private R2 credentials. */
+export const streamTenderDocument = async (req, res, next) => {
+  try {
+    const { id, kind, index } = req.params;
+    const itemIndex = Number(index);
+    if (!mongoose.isValidObjectId(id) || !Number.isInteger(itemIndex) || itemIndex < 0) {
+      return res.status(400).json({ message: 'Invalid tender document request' });
     }
+
+    const tender = await Tender.findById(id).select('nitDocuments pdfUrls workItemDocuments boqFileUrl').lean();
+    if (!tender) return res.status(404).json({ message: 'Tender not found' });
+
+    let document;
+    if (kind === 'notice') {
+      document = tender.nitDocuments?.[itemIndex];
+      const fileUrl = document?.fileUrl || tender.pdfUrls?.[itemIndex];
+      if (!fileUrl) return res.status(404).json({ message: 'Notice PDF not found' });
+      document = { ...document, fileUrl };
+    } else if (kind === 'work') {
+      document = tender.workItemDocuments?.[itemIndex];
+      if (!document?.fileUrl) return res.status(404).json({ message: 'Tender document not found' });
+    } else if (kind === 'legacy' && itemIndex === 0) {
+      const legacyUrl = tender.boqFileUrl && !tender.boqFileUrl.toLowerCase().endsWith('.zip') ? tender.boqFileUrl : null;
+      if (!legacyUrl) return res.status(404).json({ message: 'Tender document not found' });
+      document = { fileUrl: legacyUrl, documentName: 'BOQ_Schedule.xls' };
+    } else {
+      return res.status(400).json({ message: 'Unsupported tender document type' });
+    }
+
+    const object = await getTenderR2Object(document.fileUrl);
+    const fileName = (document.documentName || `tender-document-${itemIndex + 1}`).replace(/[\r\n"\\]/g, '_');
+    res.setHeader('Content-Type', object.ContentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${req.query.download === '1' ? 'attachment' : 'inline'}; filename="${fileName}"`);
+    if (object.ContentLength) res.setHeader('Content-Length', object.ContentLength);
+    return Readable.from(object.Body).pipe(res);
   } catch (error) {
     next(error);
   }

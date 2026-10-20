@@ -103,30 +103,14 @@ export default function TenderDetails() {
   const [extractedFiles, setExtractedFiles] = useState(null);
   const [unzipError, setUnzipError] = useState(null);
 
-  const handleUnzip = async (zipUrl) => {
+  const handleUnzip = async () => {
     if (extractedFiles) return;
     setIsUnzipping(true);
     setUnzipError(null);
     try {
-      // First try fetching via backend proxy to bypass R2 CORS restrictions
-      let response = null;
       const tenderId = tender?._id || id;
-      if (tenderId) {
-        try {
-          const proxyUrl = `${api.defaults.baseURL}/tenders/${tenderId}/zip`;
-          const res = await fetch(proxyUrl);
-          if (res.ok) response = res;
-        } catch {
-          // Fallback to direct fetch
-        }
-      }
-
-      if (!response && zipUrl) {
-        response = await fetch(zipUrl);
-      }
-
-      if (!response || !response.ok) throw new Error('Failed to fetch ZIP archive from storage');
-      const blob = await response.blob();
+      const response = await api.get(`/tenders/${tenderId}/zip`, { responseType: 'blob' });
+      const blob = response.data;
       const zip = await JSZip.loadAsync(blob);
       const files = [];
 
@@ -159,6 +143,22 @@ export default function TenderDetails() {
       setUnzipError(err.message || 'Failed to extract zip archive.');
     } finally {
       setIsUnzipping(false);
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    try {
+      const response = await api.get(`/tenders/${tender?._id || id}/zip`, { responseType: 'blob' });
+      const objectUrl = URL.createObjectURL(response.data);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = tender.zipFileName || 'Work_Documents_and_BOQ.zip';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (downloadError) {
+      setUnzipError(downloadError.response?.data?.message || 'Could not download the tender ZIP. Please try again.');
     }
   };
 
@@ -343,13 +343,15 @@ export default function TenderDetails() {
 
   // Consolidate all work item documents extracted from Zip archives (legacy support)
   const workDocs = [...(tender.workItemDocuments || [])];
-  if (tender.boqFileUrl && !tender.boqZipUrl && !tender.boqFileUrl.toLowerCase().endsWith('.zip') && !workDocs.some(d => d.fileUrl === tender.boqFileUrl)) {
+  const hasLegacyBoqDocument = tender.boqFileUrl && !tender.boqZipUrl && !tender.boqFileUrl.toLowerCase().endsWith('.zip') && !workDocs.some(d => d.fileUrl === tender.boqFileUrl);
+  if (hasLegacyBoqDocument) {
     workDocs.unshift({
       documentType: 'BOQ',
       documentName: 'BOQ_Schedule.xls',
       description: 'BOQ Work Schedule (Extracted from Zip Archive)',
       documentSizeKb: null,
       fileUrl: tender.boqFileUrl,
+      isLegacyDocument: true,
     });
   }
 
@@ -1008,7 +1010,7 @@ export default function TenderDetails() {
 
                             <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                               <a 
-                                href={doc.fileUrl} 
+                                href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/notice/${index}`}
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-dalBlue hover:bg-dalBlue/90 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-xs transition-all cursor-pointer"
@@ -1017,8 +1019,7 @@ export default function TenderDetails() {
                                 <span>View Notice</span>
                               </a>
                               <a 
-                                href={doc.fileUrl} 
-                                download={docName}
+                                href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/notice/${index}?download=1`}
                                 className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                                 title="Download Notice"
                               >
@@ -1072,21 +1073,19 @@ export default function TenderDetails() {
 
                         {/* Action Buttons: Direct ZIP Download + Unzip in Browser */}
                         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
-                          <a
-                            href={zipUrl}
-                            download={tender.zipFileName || 'Work_Documents_and_BOQ.zip'}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={handleDownloadZip}
                             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition-all cursor-pointer"
                             title="Directly download the complete .zip file"
                           >
                             <Download className="w-3.5 h-3.5" />
                             <span>Download ZIP</span>
-                          </a>
+                          </button>
 
                           <button
                             type="button"
-                            onClick={() => handleUnzip(zipUrl)}
+                            onClick={handleUnzip}
                             disabled={isUnzipping}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                               extractedFiles
@@ -1141,7 +1140,7 @@ export default function TenderDetails() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => { setExtractedFiles(null); handleUnzip(zipUrl); }}
+                            onClick={() => { setExtractedFiles(null); handleUnzip(); }}
                             className="underline font-bold text-xs hover:text-red-800 cursor-pointer"
                           >
                             Retry
@@ -1315,7 +1314,7 @@ export default function TenderDetails() {
                               {isPdf ? (
                                 <>
                                   <a 
-                                    href={doc.fileUrl} 
+                                    href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`}
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-all cursor-pointer"
@@ -1324,7 +1323,7 @@ export default function TenderDetails() {
                                     <span>View Document</span>
                                   </a>
                                   <a 
-                                    href={doc.fileUrl} 
+                                    href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?download=1`}
                                     download={docName}
                                     className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                                     title="Download File"
@@ -1334,7 +1333,7 @@ export default function TenderDetails() {
                                 </>
                               ) : isXls ? (
                                 <a 
-                                  href={doc.fileUrl} 
+                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`}
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   download={docName}
@@ -1345,7 +1344,7 @@ export default function TenderDetails() {
                                 </a>
                               ) : (
                                 <a 
-                                  href={doc.fileUrl} 
+                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?download=1`}
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   download={docName}
