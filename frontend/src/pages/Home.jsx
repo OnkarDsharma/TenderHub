@@ -34,7 +34,6 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-import { PreferenceModal } from '@/components/shared/PreferenceModal';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTenderStats } from '@/hooks/useTenders';
@@ -200,7 +199,6 @@ export default function Home() {
 
   return (
     <div className="home-page min-h-screen bg-white dark:bg-[#121316] text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
-      <PreferenceModal />
       <AuthPromptModal 
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
