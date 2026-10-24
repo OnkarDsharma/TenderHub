@@ -102,7 +102,7 @@ export function Navbar() {
           <div className="flex items-center shrink-0">
             <Link to="/" className="flex flex-col items-start" aria-label="tndrr home">
               <img
-                src="/tndrr-wordmark.png"
+                src="/tndrr-logo.png"
                 alt="tndrr"
                 className={`w-[112px] sm:w-[132px] h-auto ${isDark ? 'brightness-0 invert' : ''}`}
               />

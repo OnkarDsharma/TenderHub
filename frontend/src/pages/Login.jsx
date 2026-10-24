@@ -262,7 +262,7 @@ export default function Login({ defaultMode }) {
         {/* Brand Card Header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2.5 mx-auto">
-            <img src="/tndrr-wordmark.png" alt="tndrr — Every tender. One search." className="w-[142px] h-auto dark:brightness-0 dark:invert" />
+            <img src="/tndrr-logo.png" alt="tndrr — Every tender. One search." className="w-[142px] h-auto dark:brightness-0 dark:invert" />
             <span className="text-[10px] font-semibold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
               J&amp;K
             </span>

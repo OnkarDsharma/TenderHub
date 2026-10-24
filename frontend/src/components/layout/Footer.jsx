@@ -15,7 +15,7 @@ export function Footer() {
           {/* Brand & Description */}
           <div className="space-y-3">
             <Link to="/" className="inline-flex flex-col items-start" aria-label="tndrr home">
-              <img src="/tndrr-wordmark.png" alt="tndrr" className="w-[148px] h-auto brightness-0 invert" />
+              <img src="/tndrr-logo.png" alt="tndrr" className="w-[148px] h-auto brightness-0 invert" />
               <span className="mt-1 text-[8px] font-semibold uppercase tracking-[0.17em] text-slate-400">Every tender. One search.</span>
             </Link>
             <p className="text-xs text-slate-400 leading-relaxed font-normal">
