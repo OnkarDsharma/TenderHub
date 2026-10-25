@@ -2051,8 +2051,10 @@ export class JKTenderAdapter extends TenderSourceAdapter {
           ]);
           await page.waitForTimeout(1500);
 
-          const stillVisible = await captchaImg.isVisible({ timeout: 3000 }).catch(() => false);
-          if (!stillVisible) {
+          const hasTable = await page.locator("table.list_table tbody tr, table.list_table").isVisible({ timeout: 3000 }).catch(() => false);
+          const hasErrorMessage = await page.locator(".error, .errorMessage, font[color='red']").isVisible({ timeout: 1000 }).catch(() => false);
+          const stillVisible = await captchaImg.isVisible({ timeout: 2000 }).catch(() => false);
+          if (hasTable || (!stillVisible && !hasErrorMessage)) {
             logger.info(`✅ Captcha on "${formName}" solved on attempt ${attempt}!`);
             return true;
           }

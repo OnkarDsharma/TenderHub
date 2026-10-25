@@ -469,7 +469,7 @@ export default function GeMTenders() {
                     </div>
 
                     {/* Key Technical & Financial Parameters */}
-                    <div className="gem-bid-financials grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                    <div className="gem-bid-financials grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
                       <div className="p-2">
                         <span className="text-slate-400 block font-medium">EMD Amount</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
@@ -477,9 +477,15 @@ export default function GeMTenders() {
                         </span>
                       </div>
                       <div className="p-2">
+                        <span className="text-slate-400 block font-medium">Published</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                          {formatDateDisplay(item.publishedDateStr || item.publishedDate || item.publishedDateOnly)}
+                        </span>
+                      </div>
+                      <div className="p-2">
                         <span className="text-slate-400 block font-medium">Bid Closing</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {formatDateDisplay(item.closingDate)}
+                          {formatDateDisplay(item.closingDateStr || item.closingDate)}
                         </span>
                       </div>
                     </div>

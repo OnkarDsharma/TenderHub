@@ -66,7 +66,13 @@ export class CaptchaService {
         // Preprocess to eliminate noise dots before sending to Gemini
         const rawBuf = Buffer.from(base64Image, 'base64');
         const cleanBuf = await this.preprocessCaptchaImage(rawBuf);
-        const solution = await this.solveWithGemini(cleanBuf.toString('base64'));
+        let solution = await this.solveWithGemini(cleanBuf.toString('base64'));
+        if (!solution || solution.length !== 6) {
+          const rawSolution = await this.solveWithGemini(base64Image);
+          if (rawSolution && (rawSolution.length === 6 || !solution)) {
+            solution = rawSolution;
+          }
+        }
         const durationMs = Date.now() - startTime;
 
         if (solution && solution.length >= 4) {
@@ -187,11 +193,10 @@ export class CaptchaService {
   async solveWithGemini(base64Body) {
     const candidateModels = [
       process.env.GEMINI_MODEL,
-      'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
       'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
+      'gemini-3.8-flash'
     ].filter(Boolean);
     const uniqueModels = Array.from(new Set(candidateModels));
 

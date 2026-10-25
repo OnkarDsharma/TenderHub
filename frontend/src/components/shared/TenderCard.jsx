@@ -167,8 +167,8 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
           </div>
         </div>
 
-        {/* Financials & Closing */}
-        <div className="gem-bid-financials grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+        {/* Financials & Dates */}
+        <div className="gem-bid-financials grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
           <div className="p-2">
             <span className="text-slate-400 block font-medium">
               {tender.estimatedValue ? 'Estimated Value' : 'EMD Amount'}
@@ -177,6 +177,12 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
               {tender.estimatedValue 
                 ? formatCurrencyINR(tender.estimatedValue) 
                 : (tender.emdAmount > 0 ? formatCurrencyINR(tender.emdAmount) : 'Exempted / Zero')}
+            </span>
+          </div>
+          <div className="p-2">
+            <span className="text-slate-400 block font-medium">Published</span>
+            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+              {formatDateDisplay(tender.publishedDateStr || tender.publishedDate || tender.publishedDateOnly)}
             </span>
           </div>
           <div className="p-2">
