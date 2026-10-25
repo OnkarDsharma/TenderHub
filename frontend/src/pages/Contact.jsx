@@ -42,8 +42,8 @@ export default function Contact() {
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 text-techCoral shrink-0 mt-0.5" />
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Campus Location</span>
-                <span className="font-semibold text-white">NIT Campus, Hazratbal, Srinagar, J&amp;K 190006</span>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Office Location</span>
+                <span className="font-semibold text-white">Kh No. 621 Silver Oak Farms, Zero Number Rd, Ghitorni, New Delhi, Delhi 110030</span>
               </div>
             </div>
 

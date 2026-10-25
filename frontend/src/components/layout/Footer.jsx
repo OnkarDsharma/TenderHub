@@ -120,14 +120,14 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Regional Operations Desk */}
+          {/* Operations Desk */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-display font-bold uppercase tracking-wider text-slate-300 mb-3">
-              Regional Desk
+              Operations Desk
             </h4>
             <div className="flex items-start gap-2 text-xs text-slate-400 leading-relaxed">
               <MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-              <span>NIT Campus, Hazratbal, Srinagar, J&amp;K 190006</span>
+              <span>Kh No. 621 Silver Oak Farms, Zero Number Rd, Ghitorni, New Delhi, Delhi 110030</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <Mail className="w-4 h-4 text-slate-500 shrink-0" />
