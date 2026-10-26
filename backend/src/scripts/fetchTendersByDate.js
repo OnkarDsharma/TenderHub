@@ -73,12 +73,41 @@ async function main() {
     }
   }
 
+  let stateArg = 'Jammu & Kashmir';
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if ((a === '--state' || a === '--portal') && args[i + 1]) {
+      stateArg = args[i + 1];
+    }
+  }
+
+  // Map state to Portal Configuration
+  let portalName = 'JK_TENDERS';
+  let baseUrl = 'https://jktenders.gov.in';
+  let stateName = 'Jammu & Kashmir';
+
+  const cleanState = stateArg.toLowerCase();
+  if (cleanState.includes('hp') || cleanState.includes('himachal')) {
+    portalName = 'HP_TENDERS';
+    baseUrl = 'https://hptenders.gov.in';
+    stateName = 'Himachal Pradesh';
+  } else if (cleanState.includes('pb') || cleanState.includes('punjab')) {
+    portalName = 'PB_TENDERS';
+    baseUrl = 'https://eproc.punjab.gov.in';
+    stateName = 'Punjab';
+  } else if (cleanState.includes('ladakh')) {
+    portalName = 'LADAKH_TENDERS';
+    baseUrl = 'https://tenders.ladakh.gov.in';
+    stateName = 'Ladakh';
+  }
+
   const dateConfig = normalizeTargetDate(dateArg);
   const startTime = Date.now();
 
   console.log(`\n======================================================================`);
-  console.log(`📅 JKTENDERS DATE-TARGETED INGESTION RUNNER`);
+  console.log(`📅 [${portalName}] ${stateName.toUpperCase()} DATE-TARGETED INGESTION RUNNER`);
   console.log(`======================================================================`);
+  console.log(`📍 State / Portal:        ${stateName} (${baseUrl})`);
   console.log(`🎯 Target Published Date: ${dateConfig.displayString} ("${dateConfig.targetDatePrefix}")`);
   console.log(`🏛️ Organisation Filter:   ${orgFilter || 'ALL ORGANISATIONS'}`);
   if (excludeOrg) console.log(`🚫 Excluded Organisation: ${excludeOrg}`);
@@ -93,12 +122,12 @@ async function main() {
   // Send Telegram crawl started update (if configured)
   try {
     await telegramService.sendCrawlStarted?.({
-      mode: `TARGETED DATE (${dateConfig.displayString})${shard ? ` [Shard ${shard}]` : ''}`,
+      mode: `TARGETED DATE (${dateConfig.displayString}) [${stateName}]${shard ? ` [Shard ${shard}]` : ''}`,
       targetLimit: orgFilter ? `Org: ${orgFilter}` : (shard ? `Shard ${shard}` : 'All Organisations')
     });
   } catch {}
 
-  const adapter = new JKTenderDateAdapter();
+  const adapter = new JKTenderDateAdapter(portalName, baseUrl, stateName);
 
   // Handle graceful interrupts
   const handleInterrupt = async (signal) => {

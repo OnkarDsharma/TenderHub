@@ -4,7 +4,7 @@
  * Fixed text congestion by using single-line no-wrap labels, generous gaps,
  * streamlined top utility bar, and comfortable spacing between links and profile.
  */
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Landmark,
@@ -15,7 +15,9 @@ import {
   Moon, 
   LogOut, 
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  User,
+  MessageSquare
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -27,10 +29,40 @@ export function Navbar() {
   const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
 
   // Subscribe to global stores
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   const { user, isAuthenticated, logout } = useAuthStore();
+
+  // Close dropdown on click outside or escape key
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setProfileDropdownOpen(false);
+      }
+    }
+
+    if (profileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileDropdownOpen]);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setProfileDropdownOpen(false);
+  }, [location.pathname, location.search]);
 
   const navLinks = [
     { label: 'Home', path: '/' },
@@ -78,7 +110,7 @@ export function Navbar() {
 
             {/* Saved Tenders Bookmark */}
             <Link
-              to="/profile"
+              to="/profile?tab=saved"
               className="relative text-blue-100/75 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
               title="Saved Tenders"
               aria-label="Saved Tenders"
@@ -148,29 +180,104 @@ export function Navbar() {
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
 
-            {/* Auth Buttons / Profile */}
+            {/* Auth Buttons / Profile Dropdown */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-                <Link
-                  to="/profile"
-                  className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden hover:border-techCoral transition-colors"
-                  title={user?.name || user?.email}
+              <div className="relative pl-2 border-l border-slate-200 dark:border-slate-800" ref={profileDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                  className={`w-9 h-9 rounded-full border flex items-center justify-center overflow-hidden transition-all cursor-pointer focus:outline-hidden ${
+                    profileDropdownOpen
+                      ? 'border-techCoral ring-2 ring-techCoral/30 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-techCoral'
+                  }`}
+                  title={user?.name || user?.email || 'User Profile'}
+                  aria-expanded={profileDropdownOpen}
+                  aria-haspopup="true"
                 >
                   {user?.picture ? (
-                    <img src={user.picture} alt="User" className="w-full h-full object-cover" />
+                    <img src={user.picture} alt={user?.name || 'User'} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-xs font-bold text-techCoral">
                       {(user?.name || user?.email || 'U')[0].toUpperCase()}
                     </span>
                   )}
-                </Link>
-                <button
-                  onClick={logout}
-                  title="Sign Out"
-                  className="text-slate-400 hover:text-techCoral p-1 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
                 </button>
+
+                {/* Profile Dropdown Menu */}
+                <AnimatePresence>
+                  {profileDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className="absolute right-0 mt-2 w-56 sm:w-60 rounded-xl bg-white dark:bg-[#18191E] border border-slate-200 dark:border-[#262832] shadow-xl z-50 overflow-hidden py-1"
+                    >
+                      {/* User Info Header */}
+                      <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {user?.name || 'Contractor'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {user?.email || ''}
+                        </p>
+                      </div>
+
+                      {/* Dropdown Options */}
+                      <div className="p-1 space-y-0.5">
+                        <Link
+                          to="/profile?tab=company"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-techCoral dark:hover:text-techCoral hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors"
+                        >
+                          <User className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>Profile</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=saved"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-techCoral dark:hover:text-techCoral hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Heart className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span>Saved Tenders</span>
+                          </div>
+                          {savedTenders.length > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-techCoral-50 dark:bg-techCoral/15 text-techCoral border border-techCoral/30">
+                              {savedTenders.length}
+                            </span>
+                          )}
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=whatsapp"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-techCoral dark:hover:text-techCoral hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors"
+                        >
+                          <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>WhatsApp Alerts</span>
+                        </Link>
+                      </div>
+
+                      {/* Logout Option */}
+                      <div className="pt-1 mt-1 border-t border-slate-100 dark:border-slate-800/80 p-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 shrink-0" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">

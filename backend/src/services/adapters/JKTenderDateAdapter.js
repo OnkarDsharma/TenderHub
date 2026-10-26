@@ -247,8 +247,18 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
         console.log(`🏛️ [${o + 1}/${organisations.length}]${shardTotal ? ` [Shard ${shardPart}/${shardTotal}]` : ''} Organisation: "${org.orgName}" (${org.tenderCount} active tenders on portal)`);
         console.log(`----------------------------------------------------------------------`);
 
+        // Ensure page is on organisation directory before clicking
+        const isDirectoryVisible = await page.locator("table#table tr[id^='informal']").count().catch(() => 0);
+        if (isDirectoryVisible === 0) {
+          await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+          await page.waitForSelector("table#table tr[id^='informal']", { timeout: 35000 }).catch(() => {});
+        }
+
         // Click organisation link
-        const orgRow = page.locator("table#table tr[id^='informal']").filter({ hasText: org.orgName }).first();
+        let orgRow = page.locator("table#table tr[id^='informal']").filter({ hasText: org.orgName }).first();
+        if ((await orgRow.count().catch(() => 0)) === 0) {
+          orgRow = page.locator("table#table tr[id^='informal']").nth(org.index);
+        }
         const countLink = orgRow.locator("td:nth-child(3) a, a.link2, a").first();
 
         await Promise.all([
@@ -1452,15 +1462,17 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       baseTenderId: item.baseTenderId || null,
       relatedTenderIds: Array.isArray(item.relatedTenderIds) ? item.relatedTenderIds : [],
       r2StorageKey: folderKey,
-      state: 'Jammu & Kashmir',
+      state: this.state || item.state || 'Jammu & Kashmir',
       status: 'ACTIVE',
       updatedAt: new Date()
     };
 
+    const targetPortal = this.portalName || item.sourcePortal || 'JK_TENDERS';
+
     // 1. Upsert in MongoDB Atlas with resilient network retry
     const saved = await withDbRetry(() =>
       Tender.findOneAndUpdate(
-        { sourcePortal: 'JK_TENDERS', sourceTenderId: item.sourceTenderId },
+        { sourcePortal: targetPortal, sourceTenderId: item.sourceTenderId },
         { $set: docToSave },
         { upsert: true, returnDocument: 'after' }
       ).lean()
@@ -1476,7 +1488,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       await withDbRetry(() =>
         Tender.updateMany(
           {
-            sourcePortal: 'JK_TENDERS',
+            sourcePortal: targetPortal,
             $or: [
               { baseTenderId: saved.baseTenderId },
               { tenderReferenceNumber: saved.tenderReferenceNumber }

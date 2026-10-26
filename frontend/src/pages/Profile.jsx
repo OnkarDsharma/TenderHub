@@ -19,7 +19,7 @@ import {
   Database,
   MessageSquare
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { WhatsAppAlertsTab } from '@/components/profile/WhatsAppAlertsTab';
 
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -70,7 +70,25 @@ const getInitials = (name) => {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('saved');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const getValidTab = (tab) => {
+    if (tab === 'company' || tab === 'profile') return 'company';
+    if (tab === 'whatsapp') return 'whatsapp';
+    if (tab === 'alerts' || tab === 'preferences') return 'alerts';
+    if (tab === 'saved') return 'saved';
+    return 'saved';
+  };
+
+  const [activeTab, setActiveTab] = useState(() => (tabParam ? getValidTab(tabParam) : 'saved'));
+
+  useEffect(() => {
+    if (tabParam) {
+      setActiveTab(getValidTab(tabParam));
+    }
+  }, [tabParam]);
+
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   
   // Persistent stores
@@ -296,7 +314,10 @@ export default function Profile() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchParams({ tab: tab.id }, { replace: true });
+                }}
                 className={`pb-3 px-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'border-dalBlue dark:border-blue-400 text-dalBlue dark:text-blue-400 font-bold'

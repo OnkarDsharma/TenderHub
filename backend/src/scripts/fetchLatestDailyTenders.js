@@ -20,31 +20,35 @@ async function run() {
 
   await connectDB();
 
+  const isLadakh = args.some(a => a.toLowerCase().includes('ladakh'));
+  const targetState = isLadakh ? 'Ladakh' : 'Jammu & Kashmir';
+  const targetPortal = isLadakh ? 'LADAKH_TENDERS' : 'JK_TENDERS';
+
   // Find the last successful scraping time from SyncJob or the latest publishedDate in DB
   const lastSyncJob = await SyncJob.findOne({
-    sourcePortal: 'JK_TENDERS',
+    sourcePortal: targetPortal,
     status: 'completed'
   }).sort({ createdAt: -1 }).lean();
 
   const latestTender = await Tender.findOne({
-    sourcePortal: 'JK_TENDERS',
+    sourcePortal: targetPortal,
     publishedDate: { $ne: null }
   }).sort({ publishedDate: -1 }).select('publishedDate sourceTenderId').lean();
 
   const lastScrapedTime = lastSyncJob?.createdAt || latestTender?.publishedDate || null;
 
   console.log(`\n======================================================================`);
-  console.log(`🚀 [COMMAND 2] DAILY INCREMENTAL CRAWL: LATEST TENDERS`);
+  console.log(`🚀 [COMMAND 2] DAILY INCREMENTAL CRAWL: LATEST TENDERS (${targetState.toUpperCase()})`);
   console.log(`======================================================================`);
+  console.log(`📌 State: ${targetState} (${targetPortal})`);
   console.log(`📌 Source Mode: ${syncMode === 'LATEST' ? 'Latest Active Tenders (FrontEndLatestActiveTenders - Fast & Chronological)' : 'Department-by-Department (FrontEndTendersByOrganisation)'}`);
   console.log(`📌 Previous Scraping Time: ${lastScrapedTime ? lastScrapedTime.toISOString() : 'None (First Run)'}`);
   console.log(`📌 Most Recent Tender in DB: ${latestTender ? latestTender.sourceTenderId : 'None'}`);
   console.log(`📌 Target Limit: ${limit} new tenders`);
-  console.log(`📌 Catch-Up Rule: If 5 consecutive tenders are already scraped -> Stop crawl (Tenders are latest)`);
   console.log(`📌 Deduplication: Atomic MongoDB upsert + R2 key idempotency`);
   console.log(`======================================================================\n`);
 
-  const adapter = new JKTenderAdapter();
+  const adapter = new JKTenderAdapter(targetPortal, 'https://jktenders.gov.in', targetState);
 
   let syncJob = null;
   let savedCount = 0;
@@ -61,11 +65,14 @@ async function run() {
       itemsProcessed: 0
     });
 
-    const result = await adapter.fetchList(1, {
-      syncMode,
-      limit,
-      stopAfterConsecutiveSkips: 5,
-      countSkippedTowardsLimit: false,
+  const isDeep = args.some(a => a === '--deep' || a === '--all' || a === '--no-catchup');
+  const stopAfterSkips = isDeep ? null : 15;
+
+  const result = await adapter.fetchList(1, {
+    syncMode,
+    limit,
+    stopAfterConsecutiveSkips: stopAfterSkips,
+    countSkippedTowardsLimit: false,
       shouldSkipTender: async (sourceTenderId, publishedDateStr) => {
         try {
           const existing = await Tender.findOne({

@@ -418,19 +418,19 @@ export class JKTenderAdapter extends TenderSourceAdapter {
    * Crawls tenders by Department hierarchy (All Active Tenders of Each Organisation)
    */
   async crawlByDepartment(page, context, maxTenders, onPageScraped, onBatchUpdate, filters = {}) {
-    logger.info(`[Homepage] Navigating to ${this.portalName} homepage: ${this.baseUrl}/nicgep/app`);
-    await page.goto(`${this.baseUrl}/nicgep/app`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await this.humanDelay(page, 600, 900);
-
-    logger.info(`[Homepage] Clicking "Tenders by Organisation" link...`);
-    const orgLinkLocator = page.locator("a:has-text('Tenders by Organisation'), a[title*='Tenders by Organisation'], a#PageLink_0").first();
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
-      orgLinkLocator.click().catch(async () => {
-        await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
-      })
-    ]);
-    await this.humanDelay(page, 600, 900);
+    logger.info(`[Department Crawl] Navigating directly to Tenders by Organisation: ${this.departmentRootUrl}`);
+    try {
+      await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    } catch (e) {
+      logger.info(`[Homepage] Retrying via homepage click: ${this.baseUrl}/nicgep/app`);
+      await page.goto(`${this.baseUrl}/nicgep/app`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      const orgLink = page.locator("a:has-text('Tenders by Organisation'), a#PageLink_0, a#DirectLink_0").first();
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+        orgLink.click({ force: true }).catch(() => {})
+      ]);
+    }
+    await this.humanDelay(page, 600, 1000);
 
     let currentCount = 0;
     let pdfCountTotal = 0;
@@ -438,7 +438,7 @@ export class JKTenderAdapter extends TenderSourceAdapter {
 
     // Loop through organisations on the Tenders by Organisation page
     while (currentCount < maxTenders) {
-      await page.waitForSelector("table#table tr[id^='informal']", { timeout: 15000 }).catch(() => {});
+      await page.waitForSelector("table#table tr[id^='informal'], table.list_table tr[id^='informal']", { timeout: 25000 }).catch(() => {});
 
       const orgRows = await page.evaluate(() => {
         const table = document.querySelector('table#table') || document.querySelector('table.list_table');
