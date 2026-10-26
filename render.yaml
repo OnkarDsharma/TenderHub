@@ -12,7 +12,7 @@ services:
     runtime: node
     rootDir: backend
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && npx playwright install chromium
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true

@@ -39,15 +39,15 @@ export class SchedulerService {
     // 1. Ensure global cron configuration document exists in MongoDB
     await this.ensureCronConfig();
 
-    // 2. Schedule Office-Hours Real-Time Polling (Every 30 mins: 09:05 AM to 06:35 PM IST, Mon-Sat)
-    // Triggers at minute :05 and :35 of every hour between 9 AM and 6 PM IST
-    this.scheduleSyncSlot('5,35 9-18 * * 1-6', '30-Min Real-Time Ingestion (Office Hours)');
+    // 2. Schedule 6 Human-Like Crawl Slots (08:00 AM to 08:00 PM IST)
+    this.scheduleSyncSlot('0 8 * * *', 'Slot 1: Morning Opening Sweep (08:00 AM IST)');
+    this.scheduleSyncSlot('0 10 * * *', 'Slot 2: Mid-Morning Sweep (10:00 AM IST)');
+    this.scheduleSyncSlot('30 12 * * *', 'Slot 3: Midday Sweep (12:30 PM IST)');
+    this.scheduleSyncSlot('0 15 * * *', 'Slot 4: Afternoon Sweep (03:00 PM IST)');
+    this.scheduleSyncSlot('30 17 * * *', 'Slot 5: Late Office Hours Sweep (05:30 PM IST)');
+    this.scheduleSyncSlot('0 20 * * *', 'Slot 6: Final Evening Wrap-up Sweep (08:00 PM IST)');
 
-    // 3. Evening Wrap-Up Catch-Up Run (19:15 / 07:15 PM IST, Mon-Sat)
-    // Ensures all tenders from 9:00 AM to 7:10 PM are captured before offices shut
-    this.scheduleSyncSlot('15 19 * * 1-6', 'Master Evening Sweep (07:15 PM)');
-
-    // 4. Automated Daily Document Recovery Sweep (20:00 / 08:00 PM IST, Mon-Sat)
+    // 3. Automated Daily Document Recovery Sweep (20:00 / 08:00 PM IST, Mon-Sat)
     // Sweeps tenders whose document download window opened during today's office hours
     cron.schedule('0 20 * * 1-6', async () => {
       logger.info('[Scheduler] ⏰ Running daily 08:00 PM Document Recovery Sweep...');
@@ -322,22 +322,31 @@ export class SchedulerService {
    * Ensures default global cron settings are initialized
    */
   async ensureCronConfig() {
+    const defaultSlots = [
+      '08:00 AM (Slot 1: Morning Opening)',
+      '10:00 AM (Slot 2: Mid-Morning)',
+      '12:30 PM (Slot 3: Midday)',
+      '03:00 PM (Slot 4: Afternoon)',
+      '05:30 PM (Slot 5: Late Office Hours)',
+      '08:00 PM (Slot 6: Final Evening Wrap-up)'
+    ];
+
     const existing = await CronConfig.findOne({ configKey: 'GLOBAL_CRON_SETTINGS' });
     if (!existing) {
       await CronConfig.create({
         configKey: 'GLOBAL_CRON_SETTINGS',
         isAutomatedSyncEnabled: true,
-        scheduleMode: 'POLLING_30_MIN',
-        scheduledSlots: ['Every 30m (09:05-19:05 IST Mon-Sat)', '19:15 Evening Catchup', '20:00 Doc Recovery'],
+        scheduleMode: '6_DAILY_SLOTS',
+        scheduledSlots: defaultSlots,
         isArchivePurgeEnabled: true,
         archiveRetentionDays: 30,
       });
-      logger.info('[Scheduler] Created default CronConfig settings document.');
-    } else if (!existing.scheduleMode || (Array.isArray(existing.scheduledSlots) && existing.scheduledSlots.includes('09:00'))) {
-      existing.scheduleMode = 'POLLING_30_MIN';
-      existing.scheduledSlots = ['Every 30m (09:05-19:05 IST Mon-Sat)', '19:15 Evening Catchup', '20:00 Doc Recovery'];
+      logger.info('[Scheduler] Created default CronConfig settings document with 6 daily slots.');
+    } else if (!existing.scheduleMode || existing.scheduleMode === 'POLLING_30_MIN') {
+      existing.scheduleMode = '6_DAILY_SLOTS';
+      existing.scheduledSlots = defaultSlots;
       await existing.save();
-      logger.info('[Scheduler] Updated existing CronConfig settings document to 30-min office-hours configuration.');
+      logger.info('[Scheduler] Updated existing CronConfig settings document to 6 daily slots configuration.');
     }
   }
 
@@ -401,23 +410,32 @@ export class SchedulerService {
   }
 
   /**
-   * Automated Daily GeM (Government e-Marketplace) Jammu & Kashmir Sweep
+   * Automated Daily GeM (Government e-Marketplace) Multi-State Sweep
    */
-  async triggerGeMSync(maxPages = 10, limit = 100) {
+  async triggerGeMSync(maxPages = 3, limit = 50) {
     try {
-      logger.info(`[Scheduler] ⏰ Starting automated daily GeM Jammu & Kashmir sweep (MaxPages: ${maxPages}, Limit: ${limit})...`);
+      logger.info(`[Scheduler] ⏰ Starting automated daily GeM multi-state sweep (JK, Ladakh, HP, Punjab)...`);
       const { gemAdapter } = await import('./adapters/GeMAdapter.js');
-      const result = await gemAdapter.fetchList(1, {
-        limit,
-        maxPages,
-        delay: 1200,
-        headless: true
-      });
-      logger.info(`[Scheduler] Automated daily GeM sweep completed successfully: ${result.totalSaved} bids processed/saved.`);
+      let totalSaved = 0;
+      for (const st of ['JAMMU & KASHMIR', 'LADAKH', 'HIMACHAL PRADESH', 'PUNJAB']) {
+        try {
+          const res = await gemAdapter.fetchList(1, {
+            limit,
+            maxPages,
+            delay: 1200,
+            headless: true,
+            state: st
+          });
+          totalSaved += (res?.totalSaved || 0);
+        } catch (stErr) {
+          logger.warn(`[Scheduler] GeM sweep notice for ${st}: ${stErr.message}`);
+        }
+      }
+      logger.info(`[Scheduler] Automated daily GeM sweep completed successfully: ${totalSaved} bids processed/saved.`);
       await SystemLog.create({
         level: 'INFO',
         source: 'CRON',
-        message: `Automated daily GeM sweep completed: ${result.totalSaved} bids processed.`,
+        message: `Automated daily GeM sweep completed: ${totalSaved} bids processed across 4 northern states.`,
       }).catch(() => {});
     } catch (err) {
       logger.error(`[Scheduler] Automated daily GeM sweep notice: ${err.message}`);
