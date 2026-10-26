@@ -467,7 +467,8 @@ export default function GeMTenders() {
               const cleanDepartment = cleanDisplayText(item.departmentName || item.organisationChain);
               const fullOrganisation = cleanDisplayText(item.organisationChain, cleanDepartment);
               const bookmarked = isBookmarked(item._id || item.sourceTenderId);
-              const docUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
+              const rawDocUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
+              const docUrl = gemApi.getPdfDownloadUrl(item.sourceTenderId || item._id, rawDocUrl);
 
               return (
                 <div
@@ -574,10 +575,9 @@ export default function GeMTenders() {
                     </button>
                     <a
                       href={docUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
-                      title="Open official GeM Bid PDF"
+                      download
+                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                      title="Download official GeM Bid PDF"
                     >
                       <Download className="w-3 h-3" />
                       <span>PDF</span>
@@ -954,13 +954,16 @@ export default function GeMTenders() {
                   <span>Analyze with AI</span>
                 </button>
                 <a
-                  href={selectedBid.pdfUrls?.[0] || selectedBid.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(selectedBid.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={gemApi.getPdfDownloadUrl(
+                    selectedBid.sourceTenderId || selectedBid._id,
+                    selectedBid.pdfUrls?.[0] || selectedBid.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(selectedBid.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`
+                  )}
+                  download
                   className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  title="Download official GeM Bid PDF to your device"
                 >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Official GeM PDF ↗</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download GeM PDF</span>
                 </a>
               </div>
             </div>

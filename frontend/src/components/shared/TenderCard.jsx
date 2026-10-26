@@ -17,6 +17,7 @@ import {
 import { formatCurrencyINR, formatDateDisplay, extractFamousLocation } from '@/utils/formatters';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { gemApi } from '@/services/gemApi';
 
 const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
@@ -59,7 +60,11 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const daysLeft = calculateDaysLeft(tender.bidSubmissionEndDate?.$date || tender.closingDateStr || tender.closingDate);
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 2;
 
-  const docUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl;
+  const isGeM = tender.sourcePortal === 'GEM' || tender.departmentCode === 'GEM' || String(tender.sourceTenderId || '').startsWith('GEM/');
+  const rawDocUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl;
+  const docUrl = isGeM
+    ? gemApi.getPdfDownloadUrl(tender.sourceTenderId || tenderId, rawDocUrl)
+    : rawDocUrl;
 
   const handlePdfClick = (e) => {
     e.stopPropagation();
@@ -214,7 +219,8 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
         </button>
         <a
           href={docUrl || `/tenders/${tenderId}`}
-          target={docUrl ? "_blank" : undefined}
+          target={isGeM ? undefined : (docUrl ? "_blank" : undefined)}
+          download={isGeM ? true : undefined}
           rel="noopener noreferrer"
           onClick={handlePdfClick}
           className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"

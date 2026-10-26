@@ -24,7 +24,7 @@ if (!rawUrl.endsWith('/api/v1')) {
   rawUrl = `${rawUrl}/api/v1`;
 }
 
-const API_BASE_URL = rawUrl;
+export const API_BASE_URL = rawUrl;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

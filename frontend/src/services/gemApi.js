@@ -3,7 +3,7 @@
  * @description Frontend API service for interacting with GeM (Government e-Marketplace) endpoints.
  */
 
-import { api } from './api';
+import { api, API_BASE_URL } from './api';
 
 export const gemApi = {
   /**
@@ -39,5 +39,23 @@ export const gemApi = {
   async triggerSync(options = {}) {
     const response = await api.post('/gem/sync', options);
     return response.data;
+  },
+
+  /**
+   * Get direct PDF download URL proxied via backend with official session tokens
+   * @param {string} idOrBidNumber Tender ID or sourceTenderId
+   * @param {string} docUrl Optional direct document URL from GeM
+   */
+  getPdfDownloadUrl(idOrBidNumber, docUrl) {
+    const base = API_BASE_URL;
+    const cleanId = encodeURIComponent(idOrBidNumber || '');
+    if (cleanId) {
+      const query = docUrl ? `?url=${encodeURIComponent(docUrl)}` : '';
+      return `${base}/gem/tenders/${cleanId}/pdf${query}`;
+    }
+    if (docUrl) {
+      return `${base}/gem/pdf?url=${encodeURIComponent(docUrl)}`;
+    }
+    return '#';
   }
 };

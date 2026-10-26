@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import axios from 'axios';
 import Tender from '../models/Tender.js';
 import { gemAdapter } from '../services/adapters/GeMAdapter.js';
 
@@ -188,6 +189,171 @@ router.get('/tenders/:id', async (req, res, next) => {
       success: true,
       data: tender
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Cache GeM portal session cookies in memory to avoid repetitive handshakes
+let cachedCookies = null;
+let cookiesFetchedAt = 0;
+
+async function getGeMSessionCookies() {
+  const now = Date.now();
+  if (cachedCookies && (now - cookiesFetchedAt < 10 * 60 * 1000)) {
+    return cachedCookies;
+  }
+  try {
+    const res = await axios.get('https://bidplus.gem.gov.in/all-bids', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      timeout: 15000
+    });
+    const setCookies = res.headers['set-cookie'] || [];
+    const cookieStr = setCookies.map((c) => c.split(';')[0]).join('; ');
+    if (cookieStr) {
+      cachedCookies = cookieStr;
+      cookiesFetchedAt = now;
+    }
+    return cookieStr;
+  } catch (err) {
+    console.warn('[GeM PDF Proxy] Session cookie refresh warning:', err.message);
+    return cachedCookies || '';
+  }
+}
+
+async function fetchGeMPdfBuffer(targetUrl) {
+  let cookies = await getGeMSessionCookies();
+  let response = await axios.get(targetUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Referer': 'https://bidplus.gem.gov.in/all-bids',
+      'Cookie': cookies,
+      'Accept': 'application/pdf,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    },
+    maxRedirects: 0,
+    validateStatus: null,
+    responseType: 'arraybuffer',
+    timeout: 30000
+  });
+
+  // If 302 or HTML returned, session may have expired; refresh cookies once and retry
+  if (response.status === 302 || response.headers['content-type']?.includes('text/html')) {
+    cachedCookies = null;
+    cookies = await getGeMSessionCookies();
+    response = await axios.get(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://bidplus.gem.gov.in/all-bids',
+        'Cookie': cookies,
+        'Accept': 'application/pdf,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      maxRedirects: 0,
+      validateStatus: null,
+      responseType: 'arraybuffer',
+      timeout: 30000
+    });
+  }
+
+  if (response.status === 200 && response.data && response.data.length > 0) {
+    return {
+      buffer: Buffer.from(response.data),
+      contentType: response.headers['content-type'] || 'application/pdf',
+      length: response.data.length
+    };
+  }
+
+  throw new Error(`GeM server returned status ${response.status}`);
+}
+
+/**
+ * @route GET /api/v1/gem/tenders/:id/pdf
+ * @desc Stream/download official GeM PDF directly to user's device
+ */
+router.get('/tenders/:id/pdf', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const explicitUrl = req.query.url;
+
+    let tender = null;
+    if (id) {
+      tender = await Tender.findOne({
+        sourcePortal: 'GEM',
+        $or: [
+          { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
+          { sourceTenderId: id },
+          { tenderReferenceNumber: id }
+        ].filter(Boolean)
+      }).lean();
+    }
+
+    let targetUrl = explicitUrl || tender?.pdfUrls?.[0] || tender?.detailsUrl;
+    if (!targetUrl && id) {
+      const cleanNum = id.replace(/^GEM\/\d+\/[A-Z]\//i, '').replace(/[^0-9]/g, '');
+      if (cleanNum) {
+        targetUrl = `https://bidplus.gem.gov.in/showbidDocument/${cleanNum}`;
+      }
+    }
+
+    if (!targetUrl) {
+      return res.status(404).json({ success: false, error: 'GeM PDF document URL not found' });
+    }
+
+    const bidIdForName = (tender?.sourceTenderId || id || 'GeM_Bid')
+      .replace(/[\/\\?%*:|"<>]/g, '_');
+    const safeFilename = `${bidIdForName}_Bid_Document.pdf`;
+
+    try {
+      const pdf = await fetchGeMPdfBuffer(targetUrl);
+      const isInline = req.query.inline === '1' || req.query.view === '1';
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `${isInline ? 'inline' : 'attachment'}; filename="${safeFilename}"`
+      );
+      res.setHeader('Content-Length', pdf.length);
+      return res.send(pdf.buffer);
+    } catch (fetchErr) {
+      console.warn(`[GeM PDF Proxy] Direct stream failed for ${targetUrl}:`, fetchErr.message);
+      return res.redirect(targetUrl);
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @route GET /api/v1/gem/pdf
+ * @desc Generic GeM PDF proxy by URL parameter
+ */
+router.get('/pdf', async (req, res, next) => {
+  try {
+    const { url, bidNumber } = req.query;
+    if (!url || typeof url !== 'string' || !url.startsWith('https://bidplus.gem.gov.in/')) {
+      return res.status(400).json({ success: false, error: 'Invalid or missing GeM document URL' });
+    }
+
+    const cleanBid = (bidNumber || 'GeM_Bid').replace(/[\/\\?%*:|"<>]/g, '_');
+    const safeFilename = `${cleanBid}_Bid_Document.pdf`;
+
+    try {
+      const pdf = await fetchGeMPdfBuffer(url);
+      const isInline = req.query.inline === '1' || req.query.view === '1';
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `${isInline ? 'inline' : 'attachment'}; filename="${safeFilename}"`
+      );
+      res.setHeader('Content-Length', pdf.length);
+      return res.send(pdf.buffer);
+    } catch (fetchErr) {
+      console.warn(`[GeM PDF Proxy] Direct stream failed for ${url}:`, fetchErr.message);
+      return res.redirect(url);
+    }
   } catch (err) {
     next(err);
   }
