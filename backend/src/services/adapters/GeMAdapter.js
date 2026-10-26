@@ -68,11 +68,13 @@ export class GeMAdapter extends TenderSourceAdapter {
       pdfUrl,
       pdfData = {}
     } = rawBid;
+    const rawStartDate = startDate || rawBid.startDateStr;
+    const rawEndDate = endDate || rawBid.endDateStr;
 
     // Use PDF data if available, fallback to card metadata
     const title = pdfData.itemCategory || items || `GeM Bid ${bidNumber}`;
-    const closingDate = safeDate(pdfData.bidEndDate, safeDate(endDate, new Date(Date.now() + 14 * 86400000)));
-    const publishedDate = safeDate(pdfData.dated, safeDate(startDate, new Date()));
+    const closingDate = safeDate(pdfData.bidEndDate, safeDate(rawEndDate, new Date(Date.now() + 14 * 86400000)));
+    const publishedDate = safeDate(pdfData.dated, safeDate(rawStartDate, new Date()));
     const bidOpeningDate = pdfData.bidOpeningDate ? safeDate(pdfData.bidOpeningDate, null) : null;
     
     // Construct descriptive organization chain
@@ -113,7 +115,9 @@ export class GeMAdapter extends TenderSourceAdapter {
       feePayableAt: pdfData.beneficiary || bidState,
       location: location,
       publishedDate: publishedDate,
+      publishedDateStr: rawBid.startDateStr || (publishedDate ? publishedDate.toISOString() : null),
       closingDate: closingDate,
+      closingDateStr: rawBid.endDateStr || (closingDate ? closingDate.toISOString() : null),
       bidOpeningDate: bidOpeningDate,
       status: 'ACTIVE',
       detailsUrl: pdfUrl,
@@ -145,9 +149,9 @@ export class GeMAdapter extends TenderSourceAdapter {
       'JK': { label: 'JAMMU & KASHMIR', canonical: 'Jammu & Kashmir' },
       'HIMACHAL PRADESH': { label: 'HIMACHAL PRADESH', canonical: 'Himachal Pradesh' },
       'HIMACHAL': { label: 'HIMACHAL PRADESH', canonical: 'Himachal Pradesh' },
-      'HP': { label: 'HIMACHAL PRADESH', canonical: 'Himachal Pradesh' },
       'PUNJAB': { label: 'PUNJAB', canonical: 'Punjab' },
-      'PB': { label: 'PUNJAB', canonical: 'Punjab' }
+      'PB': { label: 'PUNJAB', canonical: 'Punjab' },
+      'LADAKH': { label: 'LADAKH', canonical: 'Ladakh' }
     };
     const rawState = (filters.state || 'JAMMU & KASHMIR').toUpperCase().trim();
     const stateConfig = STATE_MAP[rawState] || { label: rawState, canonical: filters.state || 'Jammu & Kashmir' };

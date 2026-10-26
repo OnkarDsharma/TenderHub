@@ -385,8 +385,9 @@ export default function Services() {
       if (dossierData) {
         handleAnalyze(dossierData.tenderId);
       }
-    } catch {
-      setError('Failed to update contractor memory profile.');
+    } catch (err) {
+      const responseError = err.response?.data?.message || err.response?.data?.error;
+      setError(responseError || err.message || 'Failed to update contractor memory profile.');
     }
   };
 

@@ -505,10 +505,11 @@ async function run() {
 
     const stateArgUpper = targetStateArg.toUpperCase().trim();
     if (stateArgUpper === 'ALL') {
-      logger.info('[GeM] Starting full multi-state scan: Jammu & Kashmir -> Himachal Pradesh -> Punjab');
+      logger.info('[GeM] Starting full multi-state scan: Jammu & Kashmir -> Himachal Pradesh -> Punjab -> Ladakh');
       await scrapeSingleState('JAMMU & KASHMIR');
       await scrapeSingleState('HIMACHAL PRADESH');
       await scrapeSingleState('PUNJAB');
+      await scrapeSingleState('LADAKH');
     } else {
       await scrapeSingleState(targetStateArg);
     }

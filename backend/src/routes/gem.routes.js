@@ -98,6 +98,9 @@ router.get('/tenders', async (req, res, next) => {
       sortOptions = { emdAmount: -1 };
     } else if (sortBy === 'valueDesc') {
       sortOptions = { estimatedValue: -1 };
+    } else {
+      // Default / 'arrival' / 'recently published'
+      sortOptions = { publishedDate: -1, createdAt: -1, _id: -1 };
     }
 
     const [tenders, totalCount] = await Promise.all([
