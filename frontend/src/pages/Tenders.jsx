@@ -240,7 +240,7 @@ export default function Tenders() {
 
   return (
     <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="gem-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
         {/* 1. Header Banner Card matching GeM Layout */}
         <div className="bg-white dark:bg-slate-900 rounded-lg p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
@@ -522,7 +522,7 @@ export default function Tenders() {
 
           {/* Tenders Bid List matching GeM Feed */}
           {!isLoading && !isError && tenders.length > 0 && (
-            <div className="gem-bid-list space-y-4">
+            <div className="gem-bid-list">
               {tenders.map((tender) => (
                 <TenderCard 
                   key={tender._id || tender.sourceTenderId}
