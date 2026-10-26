@@ -392,21 +392,39 @@ export default function Services() {
   };
 
   const downloadBoqCsv = () => {
-    if (!dossierData?.preBidAnalysis?.boqMaterialBreakdown) return;
-    const materials = dossierData.preBidAnalysis.boqMaterialBreakdown.materials || [];
-    let csv = 'Material Name,Category,Estimated Quantity,Unit,Specification,Approx Rate,Estimated Total\n';
-    materials.forEach((m) => {
-      csv += `"${m.name}","${m.category}","${m.estimatedQuantity}","${m.unit}","${m.specCode}","${m.approxRateInr}","${m.totalEstCost}"\n`;
-    });
+    const breakdown = dossierData?.preBidAnalysis?.boqMaterialBreakdown;
+    const materials = breakdown?.materials || [];
+    const lineItems = breakdown?.boqLineItems || [];
+    if (!materials.length && !lineItems.length) {
+      setError('There are no BOQ items available to export.');
+      return;
+    }
 
+    const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['Type', 'Item No', 'Name / Description', 'Category', 'Quantity', 'Unit', 'Specification', 'Estimated Rate (₹)', 'Estimated Amount (₹)'],
+      ...materials.map((item) => [
+        'Material', '', item.name, item.category, item.estimatedQuantity, item.unit,
+        item.specCode, item.approxRateInr, item.totalEstCost,
+      ]),
+      ...lineItems.map((item) => [
+        'BOQ Line Item', item.itemNo, item.description, '', item.quantity, item.unit,
+        '', item.estimatedRate, item.estimatedAmount,
+      ]),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `tndrr_BOQ_Materials_${inputTenderId || 'Schedule'}.csv`);
+    const safeTenderId = (inputTenderId || 'Schedule').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+    link.download = `tndrr_BOQ_${safeTenderId || 'Schedule'}.csv`;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setError('');
   };
 
   return (

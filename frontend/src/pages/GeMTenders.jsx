@@ -22,7 +22,14 @@ import {
   Download,
   X,
   Landmark,
-  Heart
+  Heart,
+  Calendar,
+  ShieldCheck,
+  Package,
+  Copy,
+  Check,
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
@@ -108,6 +115,41 @@ const ALL_LOCATION_OPTIONS = [
 const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
 
+const parseGeMDescription = (raw) => {
+  if (!raw) return null;
+  const str = String(raw).trim();
+  
+  const categoryMatch = str.match(/Category:\s*([^]+?)(?=\nTotal Quantity:|\nConsignee:|\nDelivery Stations:|$)/i);
+  const qtyMatch = str.match(/Total Quantity:\s*([^]+?)(?=\nConsignee:|\nDelivery Stations:|$)/i);
+  const consigneeMatch = str.match(/Consignee:\s*([^]+?)(?=\nDelivery Stations:|$)/i);
+  const stationsMatch = str.match(/Delivery Stations:\s*([^]+?)$/i);
+
+  if (categoryMatch || qtyMatch || consigneeMatch || stationsMatch) {
+    const rawCategories = categoryMatch ? categoryMatch[1].trim().replace(/,\s*$/, '') : '';
+    const categories = rawCategories
+      ? rawCategories.split(',').map((c) => c.trim()).filter(Boolean)
+      : [];
+
+    return {
+      isStructured: true,
+      categories,
+      quantity: qtyMatch ? qtyMatch[1].trim() : '',
+      consignee: consigneeMatch ? consigneeMatch[1].trim() : '',
+      deliveryStations: stationsMatch ? stationsMatch[1].trim() : '',
+      raw: str.replace(/^\[GeM Procurement\]\s*/i, '').trim(),
+    };
+  }
+
+  return {
+    isStructured: false,
+    categories: [],
+    quantity: '',
+    consignee: '',
+    deliveryStations: '',
+    raw: str.replace(/^\[GeM Procurement\]\s*/i, '').trim(),
+  };
+};
+
 export default function GeMTenders() {
   const navigate = useNavigate();
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
@@ -128,6 +170,29 @@ export default function GeMTenders() {
 
   // Modal State for Viewing Detailed Parsed PDF Specs
   const [selectedBid, setSelectedBid] = useState(null);
+  const [copiedId, setCopiedId] = useState(false);
+
+  // Lock body scroll and listen for Escape key when modal is open
+  useEffect(() => {
+    if (!selectedBid) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedBid(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBid]);
+
+  const handleCopyId = (id) => {
+    if (!id) return;
+    navigator.clipboard?.writeText?.(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   // Determine active location options based on state
   const activeLocationOptions = selectedState && DISTRICTS_BY_STATE[selectedState]
@@ -219,7 +284,7 @@ export default function GeMTenders() {
 
   return (
     <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="gem-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
         {/* 1. Refined Regional Header & Verified Metric Counters */}
         <div className="bg-white dark:bg-slate-900 rounded-lg p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
@@ -573,123 +638,331 @@ export default function GeMTenders() {
 
       {/* 5. Interactive Specifications Modal */}
       {selectedBid && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 md:p-6 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
+          onClick={() => setSelectedBid(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gem-modal-title"
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 my-auto text-slate-800 dark:text-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-widest block">
-                  Government e-Marketplace (GeM)
-                </span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 flex items-start justify-between gap-4">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider">
+                    <Landmark className="w-3.5 h-3.5" />
+                    Government e-Marketplace (GeM)
+                  </span>
+                  {selectedBid.state && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[11px] font-bold">
+                      <MapPin className="w-3 h-3" />
+                      {selectedBid.state}
+                    </span>
+                  )}
+                  {selectedBid._isClosingSoon && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[11px] font-bold">
+                      <Clock className="w-3 h-3" />
+                      Closing Soon
+                    </span>
+                  )}
+                </div>
+
+                <h2 id="gem-modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug tracking-tight">
                   {cleanDisplayText(selectedBid.title, 'Untitled GeM bid')}
-                </h3>
-                <span className="text-xs font-mono font-bold text-dalBlue dark:text-blue-400">
-                  {selectedBid.sourceTenderId}
-                </span>
+                </h2>
+
+                <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
+                  <span className="text-slate-400 font-medium">Bid Number:</span>
+                  <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span className="font-mono font-bold text-dalBlue dark:text-blue-400 text-xs">
+                      {selectedBid.sourceTenderId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyId(selectedBid.sourceTenderId)}
+                      className="p-1 text-slate-400 hover:text-dalBlue dark:hover:text-blue-300 transition-colors cursor-pointer"
+                      title="Copy Bid Number"
+                      aria-label="Copy Bid Number"
+                    >
+                      {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {copiedId && (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+                      Copied!
+                    </span>
+                  )}
+                </div>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedBid(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body: Specifications Table */}
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-100 dark:border-slate-750">
-                <div>
-                  <span className="text-slate-400 block font-medium">Department</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanDisplayText(selectedBid.departmentName)}</span>
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+              {/* Department & Organisation */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
+                  <span>Issuing Department & Organisation</span>
                 </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Organisation</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{cleanDisplayText(selectedBid.organisationChain)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">EMD Deposit</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedBid.emdAmount > 0 ? formatCurrencyINR(selectedBid.emdAmount) : 'Exempted / Zero'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Fee Payable At</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedBid.feePayableAt || 'J&K'}</span>
+                <div className="space-y-1">
+                  <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                    {cleanDisplayText(selectedBid.departmentName, 'Department of Defence')}
+                  </div>
+                  {selectedBid.organisationChain && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                      {selectedBid.organisationChain.split('>').map((part, idx, arr) => (
+                        <span key={idx} className="inline-flex items-center gap-1.5">
+                          {idx > 0 && <span className="text-slate-400">›</span>}
+                          <span className={idx === arr.length - 1 ? 'font-semibold text-slate-800 dark:text-slate-200' : ''}>
+                            {part.trim()}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Delivery Stations in J&K */}
-              <div className="space-y-1.5">
-                <span className="font-bold text-slate-700 dark:text-slate-300 block">
-                  Consignee locations
+              {/* Financial & Bid Parameters Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    EMD Deposit
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {selectedBid.emdAmount > 0 ? (
+                      <span className="text-base font-mono font-bold text-slate-900 dark:text-white">
+                        {formatCurrencyINR(selectedBid.emdAmount)}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Exempted / Zero
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Fee Payable At
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 block truncate" title={selectedBid.feePayableAt || selectedBid.state || 'J&K'}>
+                    {selectedBid.feePayableAt || selectedBid.state || 'Jammu & Kashmir'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Contract / Validity
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 block truncate" title={selectedBid.formOfContract || 'Standard GeM Contract'}>
+                    {selectedBid.formOfContract || 'Standard GeM Contract'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Delivery Stations & Consignee Location */}
+              <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-dalBlue dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-techCoral" />
+                    Consignee & Delivery Locations
+                  </span>
+                  {selectedBid.state && (
+                    <span className="text-[11px] font-semibold text-dalBlue/80 dark:text-blue-400">
+                      {selectedBid.state}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(selectedBid.location || 'Location not specified')
+                    .split(',')
+                    .map((loc) => loc.trim())
+                    .filter(Boolean)
+                    .map((loc, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs border border-blue-200/60 dark:border-blue-900/50 shadow-xs"
+                      >
+                        <MapPin className="w-3 h-3 text-dalBlue dark:text-blue-400" />
+                        {loc}
+                      </span>
+                    ))}
+                </div>
+              </div>
+
+              {/* Critical Dates & Timelines */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Important Dates & Schedule
                 </span>
-                <p className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-dalBlue dark:text-blue-300 font-medium">
-                  {cleanDisplayText(selectedBid.location, 'Location not specified')}
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Published</span>
+                    </div>
+                    <span className="font-mono font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200 block">
+                      {formatDateDisplay(selectedBid.publishedDate)}
+                    </span>
+                  </div>
+
+                  <div className="border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Bid Closing Deadline</span>
+                    </div>
+                    <span className="font-mono font-bold text-xs sm:text-sm text-red-600 dark:text-red-400 block">
+                      {formatDateDisplay(selectedBid.closingDate)}
+                    </span>
+                  </div>
+
+                  <div className="border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Bid Opening Date</span>
+                    </div>
+                    <span className="font-mono font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200 block">
+                      {selectedBid.bidOpeningDate ? formatDateDisplay(selectedBid.bidOpeningDate) : 'Standard GeM Cycle'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Critical Dates */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                <div className="border border-slate-200 dark:border-slate-750 p-2.5 rounded-xl">
-                  <span className="text-slate-400 block">Published</span>
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
-                    {formatDateDisplay(selectedBid.publishedDate)}
-                  </span>
-                </div>
-                <div className="border border-slate-200 dark:border-slate-750 p-2.5 rounded-xl">
-                  <span className="text-slate-400 block">Bid Closing</span>
-                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
-                    {formatDateDisplay(selectedBid.closingDate)}
-                  </span>
-                </div>
-                <div className="border border-slate-200 dark:border-slate-750 p-2.5 rounded-xl col-span-2 sm:col-span-1">
-                  <span className="text-slate-400 block">Bid Opening</span>
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
-                    {selectedBid.bidOpeningDate ? formatDateDisplay(selectedBid.bidOpeningDate) : 'Standard GeM Cycle'}
-                  </span>
-                </div>
-              </div>
+              {/* Procurement Summary & Item Specifications */}
+              {(() => {
+                const parsed = parseGeMDescription(selectedBid.workDescription);
+                if (parsed?.isStructured) {
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Package className="w-4 h-4 text-dalBlue dark:text-blue-400" />
+                          Parsed Items & Specifications
+                        </span>
+                        {parsed.quantity && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs border border-slate-200 dark:border-slate-700">
+                            <Layers className="w-3 h-3 text-dalBlue dark:text-blue-400" />
+                            Total Qty: {parsed.quantity}
+                          </span>
+                        )}
+                      </div>
 
-              {/* Work Scope & Extracted Details */}
-              <div className="space-y-1">
-                <span className="font-bold text-slate-700 dark:text-slate-300 block">
-                  Procurement Summary
-                </span>
-                <pre className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-pre-wrap border border-slate-100 dark:border-slate-750">
-                  {selectedBid.workDescription}
-                </pre>
-              </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+                        {parsed.categories.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                              Item Categories
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {parsed.categories.map((cat, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold shadow-xs"
+                                >
+                                  <Package className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                  <span>{cat}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/70 dark:border-slate-800">
+                          {parsed.consignee && (
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                                Consignee Address / Region
+                              </span>
+                              <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                                {parsed.consignee}
+                              </span>
+                            </div>
+                          )}
+                          {parsed.deliveryStations && (
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                                Delivery Stations
+                              </span>
+                              <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                                {parsed.deliveryStations}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (selectedBid.workDescription) {
+                  return (
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                        Procurement Summary
+                      </span>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-200 dark:border-slate-800">
+                        {selectedBid.workDescription.replace(/^\[GeM Procurement\]\s*/i, '')}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <button
-                onClick={() => setSelectedBid(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 cursor-pointer"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  const id = selectedBid.sourceTenderId;
-                  setSelectedBid(null);
-                  navigate(`/services?tenderId=${encodeURIComponent(id)}`);
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Analyze with AI ✨</span>
-              </button>
-              <a
-                href={selectedBid.pdfUrls?.[0] || selectedBid.detailsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold rounded-lg shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Open Full GeM PDF Document ↗</span>
-              </a>
+            <div className="px-5 sm:px-6 py-4 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-900/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Verified GeM Portal Listing</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBid(null)}
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = selectedBid.sourceTenderId;
+                    setSelectedBid(null);
+                    navigate(`/services?tenderId=${encodeURIComponent(id)}`);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Analyze with AI</span>
+                </button>
+                <a
+                  href={selectedBid.pdfUrls?.[0] || selectedBid.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(selectedBid.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Official GeM PDF ↗</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

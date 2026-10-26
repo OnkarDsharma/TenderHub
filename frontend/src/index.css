@@ -347,7 +347,7 @@
   -webkit-line-clamp: unset;
 }
 
-.gem-page > div {
+.gem-page > .gem-container {
   max-width: 1360px;
 }
 
@@ -948,19 +948,19 @@ html:not(.dark) [role="dialog"] > div {
 .tenders-page .tender-result-actions button { min-height: 36px; border-radius: 8px; }
 .tenders-region-tabs { flex: 0 0 auto; }
 
-.gem-page > div {
+.gem-page > .gem-container {
   display: grid;
   grid-template-columns: minmax(245px, 285px) minmax(0, 1fr);
   align-items: start;
   gap: 1rem 1.25rem;
 }
 
-.gem-page > div > :first-child { grid-column: 1 / -1; }
+.gem-page > .gem-container > :first-child { grid-column: 1 / -1; }
 
 .gem-search-sticky {
   position: sticky;
   top: 7rem;
-  z-index: 55;
+  z-index: 20;
   grid-column: 1 / -1;
   grid-row: 2;
 }
@@ -1053,7 +1053,7 @@ html:not(.dark) [role="dialog"] > div {
 .gem-results-column .gem-bid-actions > button,
 .gem-results-column .gem-bid-actions > a { min-height: 36px; border-radius: 8px; }
 
-.gem-page > div > .gem-filter-panel + .gem-results-column > div:not(.gem-bid-list) {
+.gem-page > .gem-container > .gem-filter-panel + .gem-results-column > div:not(.gem-bid-list) {
   border-radius: 14px;
 }
 
@@ -1156,11 +1156,11 @@ html:not(.dark) [role="dialog"] > div {
 .dark .home-latest > div:first-child p { color: #b8c7dc; }
 
 @media (max-width: 900px) {
-  .gem-page > div { display: flex; flex-direction: column; }
-  .gem-page > div > :first-child,
-  .gem-page > div > .gem-search-sticky,
-  .gem-page > div > .gem-filter-panel,
-  .gem-page > div > .gem-results-column { width: 100%; }
+  .gem-page > .gem-container { display: flex; flex-direction: column; }
+  .gem-page > .gem-container > :first-child,
+  .gem-page > .gem-container > .gem-search-sticky,
+  .gem-page > .gem-container > .gem-filter-panel,
+  .gem-page > .gem-container > .gem-results-column { width: 100%; }
   .gem-filter-panel { position: static; }
   .gem-filter-panel > div:first-child { flex-wrap: nowrap; overflow-x: auto; }
   .gem-filter-panel > div:first-child > span { width: auto; }
