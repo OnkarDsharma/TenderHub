@@ -67,6 +67,51 @@ const DataRow = ({ label, value }) => (
   </div>
 );
 
+const OFFICIAL_TENDER_PORTALS = {
+  'Jammu & Kashmir': {
+    name: 'JK eProcurement',
+    host: 'jktenders.gov.in',
+    government: 'Government of Jammu and Kashmir',
+  },
+  Punjab: {
+    name: 'Punjab eProcurement',
+    host: 'eproc.punjab.gov.in',
+    government: 'Government of Punjab',
+  },
+  'Himachal Pradesh': {
+    name: 'Himachal Pradesh eProcurement',
+    host: 'hptenders.gov.in',
+    government: 'Government of Himachal Pradesh',
+  },
+  Ladakh: {
+    name: 'Ladakh eProcurement',
+    host: 'tenders.ladakh.gov.in',
+    government: 'Administration of Ladakh',
+  },
+};
+
+const PORTAL_STATE_BY_SOURCE = {
+  JK_TENDERS: 'Jammu & Kashmir',
+  PB_TENDERS: 'Punjab',
+  HP_TENDERS: 'Himachal Pradesh',
+  LADAKH_TENDERS: 'Ladakh',
+};
+
+const getOfficialPortal = (tender) => {
+  const normalizedState = String(tender?.state || '').trim().toLowerCase();
+  const stateEntry = Object.entries(OFFICIAL_TENDER_PORTALS)
+    .find(([state]) => state.toLowerCase() === normalizedState);
+  const portalState = stateEntry?.[0] || PORTAL_STATE_BY_SOURCE[tender?.sourcePortal];
+  const portal = OFFICIAL_TENDER_PORTALS[portalState] || OFFICIAL_TENDER_PORTALS['Jammu & Kashmir'];
+  const baseUrl = `https://${portal.host}`;
+
+  return {
+    ...portal,
+    searchUrl: `${baseUrl}/nicgep/app?page=FrontEndAdvancedSearch&service=page`,
+    homeUrl: baseUrl,
+  };
+};
+
 export default function TenderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -75,6 +120,7 @@ export default function TenderDetails() {
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const officialPortal = getOfficialPortal(tender);
 
   // Sync latest viewsInfo with global auth store immediately upon viewing tender
   useEffect(() => {
@@ -1287,10 +1333,10 @@ export default function TenderDetails() {
               <ExternalLink className="w-3.5 h-3.5" /> Official Government Portal
             </div>
             <DialogTitle className="text-base sm:text-lg font-bold text-white">
-              Access Notice on JK eProcurement
+              Access Notice on {officialPortal.name}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs mt-0.5">
-              jktenders.gov.in (Government of Jammu and Kashmir)
+              {officialPortal.host} ({officialPortal.government})
             </DialogDescription>
           </div>
 
@@ -1348,7 +1394,7 @@ export default function TenderDetails() {
             {/* Actions */}
             <div className="space-y-2 pt-1">
               <a
-                href="https://jktenders.gov.in/nicgep/app?page=FrontEndAdvancedSearch&service=page"
+                href={officialPortal.searchUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
@@ -1360,12 +1406,12 @@ export default function TenderDetails() {
 
               <div className="text-center">
                 <a
-                  href="https://jktenders.gov.in"
+                  href={officialPortal.homeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-slate-500 hover:text-dalBlue text-xs underline"
                 >
-                  Visit JK Tenders Homepage
+                  Visit {officialPortal.name} Homepage
                 </a>
               </div>
             </div>
