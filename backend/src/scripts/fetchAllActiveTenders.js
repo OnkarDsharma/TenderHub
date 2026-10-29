@@ -7,12 +7,16 @@ import { telegramService } from '../services/telegram.service.js';
 import fs from 'fs';
 import path from 'path';
 
-const CHECKPOINT_FILE = path.join(process.cwd(), '.crawl_checkpoint.json');
+let currentCheckpointFile = path.join(process.cwd(), '.crawl_checkpoint.json');
+
+function setCheckpointPortal(portalName) {
+  currentCheckpointFile = path.join(process.cwd(), `.crawl_checkpoint_${portalName.toLowerCase()}.json`);
+}
 
 function loadCheckpoint() {
   try {
-    if (fs.existsSync(CHECKPOINT_FILE)) {
-      const data = JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf-8'));
+    if (fs.existsSync(currentCheckpointFile)) {
+      const data = JSON.parse(fs.readFileSync(currentCheckpointFile, 'utf-8'));
       if (data && data.status === 'IN_PROGRESS') {
         return data;
       }
@@ -25,7 +29,7 @@ function loadCheckpoint() {
 
 function saveCheckpoint(data) {
   try {
-    fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(currentCheckpointFile, JSON.stringify(data, null, 2), 'utf-8');
   } catch (e) {
     console.error('⚠️ Could not save checkpoint to disk:', e.message);
   }
@@ -33,8 +37,8 @@ function saveCheckpoint(data) {
 
 function clearCheckpoint() {
   try {
-    if (fs.existsSync(CHECKPOINT_FILE)) {
-      fs.unlinkSync(CHECKPOINT_FILE);
+    if (fs.existsSync(currentCheckpointFile)) {
+      fs.unlinkSync(currentCheckpointFile);
     }
   } catch (e) {}
 }
@@ -48,17 +52,41 @@ async function run() {
 
   let orgFilter = null;
   let excludeOrgFilter = null;
+  let stateArg = 'Jammu & Kashmir';
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--org' && args[i + 1]) {
       orgFilter = args[i + 1];
     } else if (args[i] === '--exclude-org' && args[i + 1]) {
       excludeOrgFilter = args[i + 1];
+    } else if ((args[i] === '--state' || args[i] === '--portal') && args[i + 1]) {
+      stateArg = args[i + 1];
     }
   }
 
+  let portalName = 'JK_TENDERS';
+  let baseUrl = 'https://jktenders.gov.in';
+  let stateName = 'Jammu & Kashmir';
+
+  const cleanState = stateArg.toLowerCase();
+  if (cleanState.includes('ladakh')) {
+    portalName = 'LADAKH_TENDERS';
+    baseUrl = 'https://tenders.ladakh.gov.in';
+    stateName = 'Ladakh';
+  } else if (cleanState.includes('pb') || cleanState.includes('punjab')) {
+    portalName = 'PB_TENDERS';
+    baseUrl = 'https://eproc.punjab.gov.in';
+    stateName = 'Punjab';
+  } else if (cleanState.includes('hp') || cleanState.includes('himachal')) {
+    portalName = 'HP_TENDERS';
+    baseUrl = 'https://hptenders.gov.in';
+    stateName = 'Himachal Pradesh';
+  }
+
+  setCheckpointPortal(portalName);
+
   if (isReset) {
     clearCheckpoint();
-    console.log(`\n🔄 [RESET] Cleared previous checkpoint. Starting fresh from Organisation #1.`);
+    console.log(`\n🔄 [RESET] Cleared previous checkpoint for ${portalName}. Starting fresh from Organisation #1.`);
   }
 
   if (orgFilter) {
@@ -72,8 +100,9 @@ async function run() {
   let resumeFrom = null;
 
   console.log(`\n======================================================================`);
-  console.log(`🚀 [COMMAND 1] FULL INITIAL CRAWL: ALL ACTIVE TENDERS`);
+  console.log(`🚀 [${portalName}] FULL INITIAL CRAWL: ALL ACTIVE TENDERS`);
   console.log(`======================================================================`);
+  console.log(`📌 State / Portal: ${stateName} (${baseUrl})`);
   console.log(`📌 Source: Tenders by Organisation (FrontEndTendersByOrganisation)`);
   console.log(`📌 Target Limit: ${limit === 50000 ? 'UNLIMITED (All Active Tenders)' : limit}`);
   console.log(`📌 Deduplication: ENABLED (Skips completed tenders)`);
@@ -106,7 +135,7 @@ async function run() {
   });
 
   await connectDB();
-  const adapter = new JKTenderAdapter();
+  const adapter = new JKTenderAdapter(portalName, baseUrl, stateName);
 
   let syncJob = null;
   let savedCount = 0;
@@ -121,8 +150,8 @@ async function run() {
 
   // Handle Ctrl+C gracefully
   const handleInterrupt = async (signal) => {
-    console.log(`\n⚠️ [${signal}] Process explicitly interrupted by user. Checkpoint is saved at .crawl_checkpoint.json`);
-    console.log(`👉 You can resume anytime simply by running: npm run scrape:all\n`);
+    console.log(`\n⚠️ [${signal}] Process explicitly interrupted by user. Checkpoint is saved at ${currentCheckpointFile}`);
+    console.log(`👉 You can resume anytime simply by running: node src/scripts/fetchAllActiveTenders.js --state ${stateArg}\n`);
     await telegramService.sendCrawlError({
       mode: 'FULL',
       error: `Interrupted by ${signal}`,
@@ -144,7 +173,7 @@ async function run() {
   process.once('SIGTERM', () => handleInterrupt('SIGTERM'));
 
   while (!isCrawlComplete && consecutiveErrors < MAX_RETRY_ATTEMPTS) {
-    let adapter = new JKTenderAdapter();
+    let adapter = new JKTenderAdapter(portalName, baseUrl, stateName);
 
     try {
       // Reload the latest checkpoint state from disk
@@ -160,7 +189,7 @@ async function run() {
       }
 
       syncJob = await SyncJob.create({
-        sourcePortal: 'JK_TENDERS',
+        sourcePortal: portalName,
         status: 'running',
         triggeredBy: 'ADMIN_MANUAL',
         itemsProcessed: (checkpoint?.totalProcessed || 0) + savedCount + skippedCount
