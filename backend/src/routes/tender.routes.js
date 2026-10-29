@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getTenders,
+  getTenderOrganisations,
   getTenderStats, // Imported the newly created stats controller
   getTenderById,
   downloadTenderZip,
@@ -27,6 +28,7 @@ router.get('/', optionalAuth, getTenders);
  * "stats" as a document ID and pass it to getTenderById, causing a database error.
  */
 router.get('/stats', getTenderStats);
+router.get('/organizations', getTenderOrganisations);
 
 // Public tender documents are streamed from the private R2 bucket by the API.
 router.get('/:id/documents/:kind/:index', streamTenderDocument);

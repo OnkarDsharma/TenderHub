@@ -20,6 +20,7 @@ import notificationRoutes from './modules/notifications/notification.routes.js';
 import servicesRoutes from './routes/services.routes.js';
 import gemRoutes from './routes/gem.routes.js';
 import waitlistRoutes from './routes/waitlist.routes.js';
+import { keepAliveService } from './services/keepAlive.service.js';
 import { globalErrorHandler } from './middleware/errorHandler.middleware.js';
 
 import { apiLimiter } from './middleware/rateLimiter.middleware.js';
@@ -113,7 +114,11 @@ app.use(apiLimiter);
 
 // 2. Base Routes & Honeypot Traps
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    keepAlive: keepAliveService.getStatus()
+  });
 });
 
 // Honeypot traps: Bots that follow hidden links get banned in Redis for 24 hours

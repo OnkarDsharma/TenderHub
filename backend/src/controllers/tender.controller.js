@@ -332,6 +332,31 @@ export const getTenders = async (req, res, next) => {
   }
 };
 
+/** Return organisation names present in stored tenders for the selected region. */
+export const getTenderOrganisations = async (req, res, next) => {
+  try {
+    const { state } = req.query;
+    const filter = { sourcePortal: { $ne: 'GEM' } };
+    if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
+      const escapedState = state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.state = { $regex: `^${escapedState}$`, $options: 'i' };
+    }
+
+    const [organisationChains, departmentNames] = await Promise.all([
+      Tender.distinct('organisationChain', { ...filter, organisationChain: { $exists: true, $nin: ['', null] } }),
+      Tender.distinct('departmentName', { ...filter, departmentName: { $exists: true, $nin: ['', null] } })
+    ]);
+    const organisations = [...new Set([...organisationChains, ...departmentNames]
+      .map((name) => String(name).trim())
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+
+    res.status(200).json({ data: organisations });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Fetch a single tender document by its unique database ID.
  * 

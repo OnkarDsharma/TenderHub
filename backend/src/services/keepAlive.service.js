@@ -12,6 +12,10 @@ export class KeepAliveService {
   constructor() {
     this.intervalId = null;
     this.pingIntervalMs = 10 * 60 * 1000; // 10 minutes (Render sleeps at 15m)
+    this.lastPingAt = null;
+    this.lastPingStatus = null;
+    this.pingCount = 0;
+    this.lastError = null;
   }
 
   /**
@@ -30,6 +34,21 @@ export class KeepAliveService {
 
     // 3. Fallback to local port
     return `http://127.0.0.1:${env.PORT || 5000}/health`;
+  }
+
+  /**
+   * Returns current keep-alive diagnostic status
+   */
+  getStatus() {
+    return {
+      active: !!this.intervalId,
+      targetUrl: this.getPingUrl(),
+      pingIntervalMinutes: this.pingIntervalMs / (60 * 1000),
+      pingCount: this.pingCount,
+      lastPingAt: this.lastPingAt,
+      lastPingStatus: this.lastPingStatus,
+      lastError: this.lastError,
+    };
   }
 
   /**
@@ -57,6 +76,7 @@ export class KeepAliveService {
    */
   async ping() {
     const targetUrl = this.getPingUrl();
+    this.lastPingAt = new Date().toISOString();
     try {
       const response = await fetch(targetUrl, {
         method: 'GET',
@@ -65,12 +85,18 @@ export class KeepAliveService {
         },
       });
 
+      this.lastPingStatus = response.status;
+      this.pingCount++;
+      this.lastError = null;
+
       if (response.ok) {
-        logger.info(`[KeepAlive] 💓 Heartbeat ping to ${targetUrl} succeeded (Status: ${response.status}). Inactivity timer reset.`);
+        logger.info(`[KeepAlive] 💓 Heartbeat ping #${this.pingCount} to ${targetUrl} succeeded (Status: ${response.status}). Inactivity timer reset.`);
       } else {
         logger.warn(`[KeepAlive] ⚠️ Heartbeat ping returned status ${response.status} from ${targetUrl}`);
       }
     } catch (err) {
+      this.lastPingStatus = 'FAILED';
+      this.lastError = err.message;
       logger.warn(`[KeepAlive] ⚠️ Heartbeat ping failed to ${targetUrl}: ${err.message}`);
     }
   }

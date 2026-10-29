@@ -53,3 +53,16 @@ export const useTenderStats = (params = {}) => {
     staleTime: 1000 * 60 * 5,
   });
 };
+
+export const useTenderOrganizations = (state = '') => {
+  return useQuery({
+    queryKey: ['tenderOrganizations', state],
+    queryFn: async () => {
+      const response = await api.get('/tenders/organizations', {
+        params: state ? { state } : {}
+      });
+      return response.data?.data || [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};

@@ -22,7 +22,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-import { useTenders } from '@/hooks/useTenders';
+import { useTenders, useTenderOrganizations } from '@/hooks/useTenders';
 import { useDebounce } from '@/hooks/useDebounce';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
@@ -161,6 +161,7 @@ export default function Tenders() {
 
   const [state, setState] = useState(initialState);
   const [category, setCategory] = useState(initialCategory);
+  const [organization, setOrganization] = useState(searchParams.get('organization') || '');
   const [location, setLocation] = useState(searchParams.get('location') || '');
   const [closingDays, setClosingDays] = useState(searchParams.get('closingDays') || '');
   const [status, setStatus] = useState('active');
@@ -174,12 +175,14 @@ export default function Tenders() {
 
   // Standard query pagination limit for directory listings
   const queryLimit = 12;
+  const { data: organizations = [] } = useTenderOrganizations(state);
 
   // Construct API Query
   const queryFilters = {
     search: debouncedSearch,
     state: state || undefined,
     category: category,
+    organisation: organization,
     location: location,
     closingDays: closingDays,
     status: status,
@@ -208,6 +211,7 @@ export default function Tenders() {
   const handleStateChange = (stateVal) => {
     setState(stateVal);
     setLocation('');
+    setOrganization('');
     setCurrentPage(1);
   };
 
@@ -216,6 +220,7 @@ export default function Tenders() {
     setAppliedSearch('');
     setState('');
     setCategory('');
+    setOrganization('');
     setLocation('');
     setClosingDays('');
     setStatus('active');
@@ -317,7 +322,7 @@ export default function Tenders() {
           </div>
 
           {/* Secondary Filter Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             {/* Consignee / District Location */}
             <div>
               <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
@@ -335,6 +340,26 @@ export default function Tenders() {
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Issuing Organization */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                Organization
+              </label>
+              <select
+                value={organization}
+                onChange={(e) => {
+                  setOrganization(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              >
+                <option value="">All Organizations</option>
+                {organizations.map((name) => (
+                  <option key={name} value={name}>{name}</option>
                 ))}
               </select>
             </div>
