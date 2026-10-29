@@ -32,6 +32,7 @@
     "scrape:all": "node src/scripts/fetchAllActiveTenders.js",
     "scrape:latest": "node src/scripts/fetchLatestDailyTenders.js",
     "scrape:date": "node src/scripts/fetchTendersByDate.js",
+    "audit:org-coverage": "node src/scripts/auditOrganisationCoverage.js",
     "fetch:pending-docs": "node src/scripts/fetchPendingDocTenders.js",
     "scrape:complete": "node src/scripts/completeAllTenders.js",
     "manual:pdf": "node src/scripts/generateDisasterRecoveryPdf.js",
