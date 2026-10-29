@@ -221,6 +221,162 @@
   box-shadow: 0 10px 24px rgba(16, 34, 54, .09);
 }
 
+/* Contractor workspace: measured surfaces and a compact account hierarchy. */
+.profile-page {
+  background: #f5f8fc;
+  color: #172033;
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+.profile-shell {
+  max-width: 1200px;
+  --tw-space-y-reverse: 0;
+}
+
+.profile-identity,
+.profile-panel {
+  border-color: #dfe6f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(23, 32, 51, .035);
+}
+
+.profile-identity {
+  padding: 1.25rem 1.5rem;
+}
+
+.profile-identity > div:first-child > div:first-child {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.profile-identity h1 {
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  letter-spacing: -.035em;
+  line-height: 1.25;
+}
+
+.profile-identity > div:first-child > div:nth-child(2) > div:first-child > span {
+  border-radius: 5px;
+}
+
+.profile-sync {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.profile-id {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+}
+
+.profile-tabs {
+  gap: 1rem;
+  border-color: #dfe6f0;
+}
+
+.profile-tabs button {
+  min-height: 46px;
+  gap: .55rem;
+  padding: 0 .65rem .7rem;
+  font-weight: 550;
+}
+
+.profile-tabs button:hover {
+  background: rgba(40, 100, 240, .045);
+  border-radius: 6px 6px 0 0;
+}
+
+.profile-tabs button:focus-visible {
+  outline: 2px solid #2864f0;
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+
+.profile-panel {
+  width: min(100%, 820px);
+  margin-inline: auto;
+  padding: 1.5rem;
+}
+
+.profile-panel > div:first-child {
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-color: #edf1f6;
+}
+
+.profile-panel h3 {
+  font-size: 1.05rem;
+  letter-spacing: -.025em;
+}
+
+.profile-fields {
+  column-gap: 2rem;
+  row-gap: 0;
+}
+
+.profile-field {
+  min-width: 0;
+  padding: .9rem 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.profile-field label {
+  margin-bottom: .35rem;
+  color: #64748b;
+  letter-spacing: .055em;
+}
+
+.profile-field-value {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  font-weight: 550;
+}
+
+.dark .profile-page {
+  background: #0f172a;
+}
+
+.dark .profile-identity,
+.dark .profile-panel {
+  border-color: #334155;
+}
+
+.dark .profile-field {
+  border-color: #293548;
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 1.25rem .875rem 3rem;
+  }
+
+  .profile-identity,
+  .profile-panel {
+    padding: 1rem;
+  }
+
+  .profile-identity > div:last-child {
+    border-color: #edf1f6;
+  }
+
+  .profile-tabs {
+    margin-inline: -.875rem;
+    padding-inline: .875rem;
+    gap: .35rem;
+  }
+
+  .profile-tabs button {
+    min-height: 48px;
+    padding-inline: .55rem;
+  }
+}
+
 @media (max-width: 640px) {
   .home-hero {
     min-height: 690px;

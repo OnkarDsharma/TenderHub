@@ -19,7 +19,7 @@ import {
   Database,
   MessageSquare
 } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { WhatsAppAlertsTab } from '@/components/profile/WhatsAppAlertsTab';
 
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -69,7 +69,6 @@ const getInitials = (name) => {
 };
 
 export default function Profile() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
 
@@ -81,13 +80,7 @@ export default function Profile() {
     return 'saved';
   };
 
-  const [activeTab, setActiveTab] = useState(() => (tabParam ? getValidTab(tabParam) : 'saved'));
-
-  useEffect(() => {
-    if (tabParam) {
-      setActiveTab(getValidTab(tabParam));
-    }
-  }, [tabParam]);
+  const activeTab = getValidTab(tabParam);
 
   const savedTenders = useBookmarkStore((state) => state.savedTenders);
   
@@ -239,11 +232,11 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
+    <main className="profile-page min-h-screen bg-paper dark:bg-slate-900 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+      <div className="profile-shell max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
         {/* Contractor Profile Header Card - Dynamically linked to profile store */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 sm:gap-6 transition-all">
+        <section className="profile-identity bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 sm:gap-6 transition-all" aria-label="Contractor account overview">
           <div className="flex flex-col xs:flex-row items-start xs:items-center gap-3 sm:gap-4 w-full lg:w-auto">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-dalBlue text-white flex items-center justify-center font-display font-bold text-lg sm:text-xl shadow-xs shrink-0 tracking-wider">
               {getInitials(profile.name)}
@@ -256,12 +249,12 @@ export default function Profile() {
                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                   <Shield className="w-3 h-3 fill-current" /> Verified Contractor
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-dalBlue dark:text-blue-300 px-2 py-0.5 rounded border border-dalBlue/20">
-                  <Database className="w-3 h-3" /> MongoDB Synced
+                <span className={`profile-sync inline-flex items-center gap-1 text-[11px] font-medium ${dbSyncStatus === 'synced' ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-300'}`}>
+                  <Database className="w-3 h-3" /> {dbSyncStatus === 'synced' ? 'MongoDB synced' : 'Using local profile data'}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <span className="font-mono bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+        <span className="profile-id font-mono">
                   ID: {profile.contractorId || 'NIT-S-2026'}
                 </span>
                 <span className="flex items-center gap-1">
@@ -290,7 +283,7 @@ export default function Profile() {
               </span>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Global Save Feedback Toasts */}
         {profileSaveSuccess && (
@@ -308,14 +301,14 @@ export default function Profile() {
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-700 gap-2 sm:gap-4 text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-hide touch-momentum pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
+        <nav aria-label="Profile sections" className="profile-tabs flex border-b border-slate-200 dark:border-slate-700 gap-2 sm:gap-4 text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-hide touch-momentum pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                  aria-current={isActive ? 'page' : undefined}
                 onClick={() => {
-                  setActiveTab(tab.id);
                   setSearchParams({ tab: tab.id }, { replace: true });
                 }}
                 className={`pb-3 px-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
@@ -329,7 +322,7 @@ export default function Profile() {
               </button>
             );
           })}
-        </div>
+        </nav>
 
         {/* Tab 1: Saved Tenders */}
         {activeTab === 'saved' && (
@@ -361,7 +354,7 @@ export default function Profile() {
 
         {/* Tab 2: Contractor Credentials (Editable) */}
         {activeTab === 'company' && (
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 max-w-3xl shadow-xs transition-all">
+          <section className="profile-panel bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 max-w-3xl shadow-xs transition-all">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
@@ -397,6 +390,7 @@ export default function Profile() {
                     variant="default" 
                     size="sm" 
                     onClick={handleSaveProfile}
+                    disabled={isSaving}
                     className="text-xs gap-1.5 bg-dalBlue hover:bg-dalBlue-700 text-white font-bold cursor-pointer"
                   >
                     <Save className="w-3.5 h-3.5" /> Save Changes
@@ -407,7 +401,7 @@ export default function Profile() {
 
             {/* Read-Only Mode */}
             {!isEditingProfile ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+              <div className="profile-fields grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
                 {[
                   { label: 'Name / Contractor Entity', val: profile.name },
                   { label: 'Primary Jurisdiction', val: profile.jurisdiction },
@@ -418,11 +412,11 @@ export default function Profile() {
                   { label: 'Contractor ID Number', val: profile.contractorId },
                   { label: 'Public Works Badge', val: profile.divisionBadge },
                 ].map((field, i) => (
-                  <div key={i}>
+                  <div key={i} className="profile-field">
                     <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       {field.label}
                     </label>
-                    <div className="w-full bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-medium text-slate-800 dark:text-slate-200 text-xs">
+                    <div className="profile-field-value font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
                       {field.val || 'Not specified'}
                     </div>
                   </div>
@@ -562,6 +556,7 @@ export default function Profile() {
                     type="submit" 
                     variant="default" 
                     size="sm" 
+                    disabled={isSaving}
                     className="text-xs gap-1.5 bg-dalBlue hover:bg-dalBlue-700 text-white font-bold"
                   >
                     <Check className="w-3.5 h-3.5" /> Save Changes
@@ -569,7 +564,7 @@ export default function Profile() {
                 </div>
               </form>
             )}
-          </div>
+          </section>
         )}
 
         {/* Tab 3: Filter Preferences (Editable) */}
@@ -828,6 +823,6 @@ export default function Profile() {
         )}
 
       </div>
-    </div>
+    </main>
   );
 }
