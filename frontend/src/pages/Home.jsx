@@ -227,7 +227,7 @@ export default function Home() {
 
             {/* Primary Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.04] font-display">
-              Government tenders across J&amp;K, Punjab &amp; Himachal
+              Government tenders across J&amp;K, Ladakh, Punjab &amp; Himachal
             </h1>
 
             {/* Subtitle */}
