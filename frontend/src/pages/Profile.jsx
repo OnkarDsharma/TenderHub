@@ -354,7 +354,8 @@ export default function Profile() {
 
         {/* Tab 2: Contractor Credentials (Editable) */}
         {activeTab === 'company' && (
-          <section className="profile-panel bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 max-w-3xl shadow-xs transition-all">
+          <div className="profile-content-grid">
+          <section className="profile-panel bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 shadow-xs transition-all">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
@@ -565,6 +566,30 @@ export default function Profile() {
               </form>
             )}
           </section>
+          <aside className="profile-preferences-panel" aria-labelledby="profile-preferences-heading">
+            <div className="profile-aside-kicker">Tender discovery</div>
+            <h3 id="profile-preferences-heading">Your preferences</h3>
+            <p className="profile-aside-intro">A quick view of the criteria shaping your tender feed.</p>
+
+            <div className="profile-preference-item">
+              <span>Work categories</span>
+              <strong>{preferences.targetSectors?.length ? `${preferences.targetSectors.length} selected` : 'All categories'}</strong>
+              {preferences.targetSectors?.length > 0 && <small>{preferences.targetSectors.slice(0, 2).join(' · ')}{preferences.targetSectors.length > 2 ? ` +${preferences.targetSectors.length - 2} more` : ''}</small>}
+            </div>
+            <div className="profile-preference-item">
+              <span>Preferred location</span>
+              <strong>{preferences.preferredLocations?.length ? preferences.preferredLocations.join(', ') : 'All 20 districts'}</strong>
+            </div>
+            <div className="profile-preference-item">
+              <span>Minimum tender value</span>
+              <strong>₹{preferences.minTenderValue ? Number(preferences.minTenderValue).toLocaleString('en-IN') : '0'}</strong>
+            </div>
+
+            <button type="button" className="profile-preferences-link" onClick={() => setSearchParams({ tab: 'alerts' }, { replace: true })}>
+              Manage preferences <ArrowRight className="w-4 h-4" />
+            </button>
+          </aside>
+          </div>
         )}
 
         {/* Tab 3: Filter Preferences (Editable) */}
