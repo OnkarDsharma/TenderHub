@@ -167,8 +167,8 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
       for (const st of ['JAMMU & KASHMIR', 'LADAKH', 'HIMACHAL PRADESH', 'PUNJAB']) {
         try {
           const gemRes = await gemAdapter.fetchList(1, {
-            limit: 25,
-            maxPages: 2,
+            limit: 50,
+            maxPages: 5,
             delay: 1200,
             headless: true,
             state: st
