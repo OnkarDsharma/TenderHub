@@ -338,15 +338,14 @@ export const getTenderOrganisations = async (req, res, next) => {
     const { state } = req.query;
     const filter = { sourcePortal: { $ne: 'GEM' } };
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
-      const escapedState = state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.state = { $regex: `^${escapedState}$`, $options: 'i' };
+      filter.state = state.trim().slice(0, 50);
     }
 
-    const [organisationChains, departmentNames] = await Promise.all([
-      Tender.distinct('organisationChain', { ...filter, organisationChain: { $exists: true, $nin: ['', null] } }),
-      Tender.distinct('departmentName', { ...filter, departmentName: { $exists: true, $nin: ['', null] } })
-    ]);
-    const organisations = [...new Set([...organisationChains, ...departmentNames]
+    const departmentNames = await Tender.distinct('departmentName', {
+      ...filter,
+      departmentName: { $exists: true, $nin: ['', null] }
+    });
+    const organisations = [...new Set(departmentNames
       .map((name) => String(name).trim())
       .filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
