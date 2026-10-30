@@ -1225,7 +1225,7 @@ html:not(.dark) [role="dialog"] > div {
 
 .gem-page > .gem-container {
   display: grid;
-  grid-template-columns: minmax(245px, 285px) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 350px) minmax(0, 1fr);
   align-items: start;
   gap: 1rem 1.25rem;
 }
@@ -1261,6 +1261,16 @@ html:not(.dark) [role="dialog"] > div {
 
 .gem-filter-panel > div:first-child > span { width: 100%; }
 .gem-filter-panel > div:first-child > button { flex: 1 1 100%; text-align: left; }
+.gem-filter-panel > div:nth-child(2) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  overflow: visible;
+  gap: .5rem;
+  padding-bottom: .5rem;
+}
+.gem-filter-panel > div:nth-child(2) > span { flex: 0 0 100%; }
+.gem-filter-panel > div:nth-child(2) > button { flex: 0 0 auto; }
 .gem-filter-panel form { flex-direction: column; }
 .gem-filter-panel form button { min-height: 40px; border-radius: 8px; }
 .gem-filter-panel > div:last-child {
