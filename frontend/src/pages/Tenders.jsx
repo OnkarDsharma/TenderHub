@@ -1,10 +1,12 @@
 /**
  * @file src/pages/Tenders.jsx
  * @description Official public procurement directory for Northern Region (J&K, HP, Punjab, Ladakh).
- * Redesigned to match the GeM tenders UI layout with Left Filter Sidebar,
- * verified metric counters, and unified View bid, AI analysis, and Download PDF actions.
+ * Redesigned with a Left Filter Sidebar matching the procurement portal interface,
+ * comprehensive filters (Keywords, Published Dates, Portal, State, City, Procurement Type,
+ * Tender Amount, Category, Organisation, Fee Preferences, Advanced Filters), verified metric counters,
+ * and unified View bid, AI analysis, and Download PDF actions.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -14,12 +16,13 @@ import {
   Clock, 
   Archive, 
   CalendarX,
-  MapPin,
   Layers,
-  Sparkles,
-  Lock,
   Landmark,
-  AlertCircle
+  AlertCircle,
+  Filter,
+  X,
+  SlidersHorizontal,
+  ArrowUpDown
 } from 'lucide-react';
 
 import { useTenders, useTenderOrganizations } from '@/hooks/useTenders';
@@ -27,110 +30,15 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Button } from '@/components/ui/Button';
-
-// Northern Region State Options matching GeM portal
-const STATE_OPTIONS = [
-  { label: 'All Northern States', value: '' },
-  { label: 'Jammu & Kashmir', value: 'Jammu & Kashmir' },
-  { label: 'Himachal Pradesh', value: 'Himachal Pradesh' },
-  { label: 'Punjab', value: 'Punjab' },
-  { label: 'Ladakh', value: 'Ladakh' },
-];
-
-// District Options by State
-const DISTRICTS_BY_STATE = {
-  'Jammu & Kashmir': [
-    { label: 'All J&K Locations', value: '' },
-    { label: 'Jammu', value: 'Jammu' },
-    { label: 'Srinagar', value: 'Srinagar' },
-    { label: 'Anantnag', value: 'Anantnag' },
-    { label: 'Baramulla', value: 'Baramulla' },
-    { label: 'Budgam', value: 'Budgam' },
-    { label: 'Pulwama', value: 'Pulwama' },
-    { label: 'Kupwara', value: 'Kupwara' },
-    { label: 'Doda', value: 'Doda' },
-    { label: 'Rajouri', value: 'Rajouri' },
-    { label: 'Poonch', value: 'Poonch' },
-    { label: 'Kathua', value: 'Kathua' },
-    { label: 'Udhampur', value: 'Udhampur' },
-    { label: 'Samba', value: 'Samba' },
-    { label: 'Ramban', value: 'Ramban' },
-    { label: 'Reasi', value: 'Reasi' },
-    { label: 'Kishtwar', value: 'Kishtwar' },
-    { label: 'Ganderbal', value: 'Ganderbal' },
-    { label: 'Bandipora', value: 'Bandipora' },
-    { label: 'Kulgam', value: 'Kulgam' },
-    { label: 'Shopian', value: 'Shopian' },
-  ],
-  'Himachal Pradesh': [
-    { label: 'All Himachal Locations', value: '' },
-    { label: 'Shimla', value: 'Shimla' },
-    { label: 'Dharamshala', value: 'Dharamshala' },
-    { label: 'Kangra', value: 'Kangra' },
-    { label: 'Mandi', value: 'Mandi' },
-    { label: 'Kullu', value: 'Kullu' },
-    { label: 'Solan', value: 'Solan' },
-    { label: 'Sirmaur', value: 'Sirmaur' },
-    { label: 'Chamba', value: 'Chamba' },
-    { label: 'Hamirpur', value: 'Hamirpur' },
-    { label: 'Una', value: 'Una' },
-    { label: 'Bilaspur', value: 'Bilaspur' },
-  ],
-  'Punjab': [
-    { label: 'All Punjab Locations', value: '' },
-    { label: 'Ludhiana', value: 'Ludhiana' },
-    { label: 'Amritsar', value: 'Amritsar' },
-    { label: 'Jalandhar', value: 'Jalandhar' },
-    { label: 'Patiala', value: 'Patiala' },
-    { label: 'Bathinda', value: 'Bathinda' },
-    { label: 'Mohali', value: 'Mohali' },
-    { label: 'Hoshiarpur', value: 'Hoshiarpur' },
-    { label: 'Pathankot', value: 'Pathankot' },
-    { label: 'Firozpur', value: 'Firozpur' },
-    { label: 'Sangrur', value: 'Sangrur' },
-  ],
-  'Ladakh': [
-    { label: 'All Ladakh Locations', value: '' },
-    { label: 'Leh', value: 'Leh' },
-    { label: 'Kargil', value: 'Kargil' },
-  ],
-};
-
-const ALL_LOCATION_OPTIONS = [
-  { label: 'All Northern Delivery Locations', value: '' },
-  { label: 'Jammu', value: 'Jammu' },
-  { label: 'Srinagar', value: 'Srinagar' },
-  { label: 'Rajouri', value: 'Rajouri' },
-  { label: 'Poonch', value: 'Poonch' },
-  { label: 'Shimla', value: 'Shimla' },
-  { label: 'Dharamshala', value: 'Dharamshala' },
-  { label: 'Kangra', value: 'Kangra' },
-  { label: 'Ludhiana', value: 'Ludhiana' },
-  { label: 'Amritsar', value: 'Amritsar' },
-  { label: 'Mohali', value: 'Mohali' },
-  { label: 'Leh', value: 'Leh' },
-  { label: 'Kargil', value: 'Kargil' },
-];
-
-const CATEGORY_OPTIONS = [
-  { label: 'All Work Domains', value: '' },
-  { label: 'Civil Works (Buildings, Roads & General)', value: 'Civil Works' },
-  { label: 'Electrical Works', value: 'Electrical Works' },
-  { label: 'Drilling Works & Boring', value: 'Drilling Works' },
-  { label: 'Medical Equipments & Supplies', value: 'Medical Equipments' },
-  { label: 'Machineries & Mechanical Engg Items', value: 'Machineries' },
-  { label: 'Agricultural or Forestry Works', value: 'Agricultural or Forestry' },
-  { label: 'Repair & Maintenance Works', value: 'Repair and Maintenance Works' },
-  { label: 'Civil Works - Water Works & Distribution', value: 'Water Works' },
-  { label: 'Supply of Materials & Aggregate', value: 'Supply of Materials' },
-  { label: 'Consultancy & Technical Advisory', value: 'Consultancy' },
-];
+import { TenderFilterSidebar } from '@/components/tenders/TenderFilterSidebar';
 
 export default function Tenders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, user, isPro } = useAuthStore();
+
+  // Mobile Filter Drawer Toggle
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Auth Prompt Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -150,46 +58,111 @@ export default function Tenders() {
     navigate(`/tenders/${tenderId}`);
   };
 
-  // Initial State from URL params
-  const initialSearch = searchParams.get('search') || '';
-  const initialCategory = searchParams.get('category') || '';
-  const initialState = searchParams.get('state') || '';
-
-  const [search, setSearch] = useState(initialSearch);
-  const [appliedSearch, setAppliedSearch] = useState(initialSearch);
+  // --- Filter States (Initialized from URL parameters) ---
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [appliedSearch, setAppliedSearch] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebounce(appliedSearch, 300);
 
-  const [state, setState] = useState(initialState);
-  const [category, setCategory] = useState(initialCategory);
+  const [portal, setPortal] = useState(searchParams.get('portal') || 'ALL');
+  const [state, setState] = useState(searchParams.get('state') || '');
+  const [city, setCity] = useState(searchParams.get('city') || searchParams.get('location') || '');
+  const [procurementType, setProcurementType] = useState(searchParams.get('procurementType') || '');
+  const [tenderAmountRange, setTenderAmountRange] = useState(searchParams.get('tenderAmountRange') || 'any');
+  const [minAmount, setMinAmount] = useState(searchParams.get('minAmount') || '');
+  const [maxAmount, setMaxAmount] = useState(searchParams.get('maxAmount') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || '');
   const [organization, setOrganization] = useState(searchParams.get('organization') || '');
-  const [location, setLocation] = useState(searchParams.get('location') || '');
+  const [feePreference, setFeePreference] = useState(searchParams.get('feePreference') || 'any');
+  const [publishedRange, setPublishedRange] = useState(searchParams.get('publishedRange') || 'all');
+  const [publishedFrom, setPublishedFrom] = useState(searchParams.get('publishedFrom') || '');
+  const [publishedTo, setPublishedTo] = useState(searchParams.get('publishedTo') || '');
+  
+  const [keywords, setKeywords] = useState(
+    searchParams.get('keywords') ? searchParams.get('keywords').split(',').map(k => k.trim()).filter(Boolean) : []
+  );
+
+  const [advancedFilters, setAdvancedFilters] = useState({
+    hasPreBid: searchParams.get('hasPreBid') === 'true',
+    withdrawalAllowed: searchParams.get('withdrawalAllowed') === 'true',
+    twoStageBidding: searchParams.get('twoStageBidding') === 'true',
+    preferentialBidder: searchParams.get('preferentialBidder') === 'true',
+    tendererClass: searchParams.get('tendererClass') || '',
+  });
+
+  const [advancedSearch, setAdvancedSearch] = useState({
+    exactPhrase: searchParams.get('exactPhrase') || '',
+    anyWords: searchParams.get('anyWords') || '',
+    excludeWords: searchParams.get('excludeWords') || '',
+    referenceNumber: searchParams.get('referenceNumber') || '',
+  });
+
   const [closingDays, setClosingDays] = useState(searchParams.get('closingDays') || '');
   const [status, setStatus] = useState('active');
   const [sortBy, setSortBy] = useState('arrival');
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Dynamic District Options based on State
-  const activeLocationOptions = state && DISTRICTS_BY_STATE[state]
-    ? DISTRICTS_BY_STATE[state]
-    : ALL_LOCATION_OPTIONS;
 
   // Standard query pagination limit for directory listings
   const queryLimit = 12;
   const { data: organizations = [] } = useTenderOrganizations(state);
 
   // Construct API Query
-  const queryFilters = {
-    search: debouncedSearch,
-    state: state || undefined,
-    category: category,
-    organisation: organization,
-    location: location,
-    closingDays: closingDays,
-    status: status,
-    sortBy: sortBy,
-    page: currentPage,
-    limit: queryLimit,
-  };
+  const queryFilters = useMemo(() => {
+    return {
+      search: debouncedSearch || undefined,
+      portal: portal && portal !== 'ALL' ? portal : undefined,
+      state: state || undefined,
+      city: city || undefined,
+      location: city || undefined,
+      category: category || undefined,
+      procurementType: procurementType || undefined,
+      tenderAmountRange: tenderAmountRange && tenderAmountRange !== 'any' ? tenderAmountRange : undefined,
+      minAmount: minAmount || undefined,
+      maxAmount: maxAmount || undefined,
+      organisation: organization || undefined,
+      feePreference: feePreference && feePreference !== 'any' ? feePreference : undefined,
+      publishedRange: publishedRange && publishedRange !== 'all' ? publishedRange : undefined,
+      publishedFrom: publishedFrom || undefined,
+      publishedTo: publishedTo || undefined,
+      keywords: keywords.length > 0 ? keywords.join(',') : undefined,
+      hasPreBid: advancedFilters.hasPreBid ? 'true' : undefined,
+      withdrawalAllowed: advancedFilters.withdrawalAllowed ? 'true' : undefined,
+      twoStageBidding: advancedFilters.twoStageBidding ? 'true' : undefined,
+      preferentialBidder: advancedFilters.preferentialBidder ? 'true' : undefined,
+      tendererClass: advancedFilters.tendererClass || undefined,
+      exactPhrase: advancedSearch.exactPhrase || undefined,
+      anyWords: advancedSearch.anyWords || undefined,
+      excludeWords: advancedSearch.excludeWords || undefined,
+      referenceNumber: advancedSearch.referenceNumber || undefined,
+      closingDays: closingDays || undefined,
+      status: status,
+      sortBy: sortBy,
+      page: currentPage,
+      limit: queryLimit,
+    };
+  }, [
+    debouncedSearch,
+    portal,
+    state,
+    city,
+    category,
+    procurementType,
+    tenderAmountRange,
+    minAmount,
+    maxAmount,
+    organization,
+    feePreference,
+    publishedRange,
+    publishedFrom,
+    publishedTo,
+    keywords,
+    advancedFilters,
+    advancedSearch,
+    closingDays,
+    status,
+    sortBy,
+    currentPage,
+    queryLimit,
+  ]);
 
   const { data, isLoading, isError, error } = useTenders(queryFilters);
 
@@ -201,27 +174,44 @@ export default function Tenders() {
   const closingSoonCount = data?.meta?.closingSoonCount ?? 0;
   const totalPages = Math.ceil(totalCount / queryLimit) || 1;
 
-  // Handlers
+  // Search Handler
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
     setAppliedSearch(search);
   };
 
-  const handleStateChange = (stateVal) => {
-    setState(stateVal);
-    setLocation('');
-    setOrganization('');
-    setCurrentPage(1);
-  };
-
+  // Reset All Filters
   const handleReset = () => {
     setSearch('');
     setAppliedSearch('');
+    setPortal('ALL');
     setState('');
+    setCity('');
+    setProcurementType('');
+    setTenderAmountRange('any');
+    setMinAmount('');
+    setMaxAmount('');
     setCategory('');
     setOrganization('');
-    setLocation('');
+    setFeePreference('any');
+    setPublishedRange('all');
+    setPublishedFrom('');
+    setPublishedTo('');
+    setKeywords([]);
+    setAdvancedFilters({
+      hasPreBid: false,
+      withdrawalAllowed: false,
+      twoStageBidding: false,
+      preferentialBidder: false,
+      tendererClass: '',
+    });
+    setAdvancedSearch({
+      exactPhrase: '',
+      anyWords: '',
+      excludeWords: '',
+      referenceNumber: '',
+    });
     setClosingDays('');
     setStatus('active');
     setSortBy('arrival');
@@ -243,12 +233,47 @@ export default function Tenders() {
     handlePageChange(requestedPage);
   };
 
-  return (
-    <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
-      <div className="gem-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+  // Count active non-default filters for display
+  const activeFiltersList = useMemo(() => {
+    const list = [];
+    if (portal && portal !== 'ALL') list.push({ key: 'portal', label: `Portal: ${portal}`, onRemove: () => setPortal('ALL') });
+    if (state) list.push({ key: 'state', label: `State: ${state}`, onRemove: () => { setState(''); setCity(''); setOrganization(''); } });
+    if (city) list.push({ key: 'city', label: `City: ${city}`, onRemove: () => setCity('') });
+    if (procurementType) list.push({ key: 'procurementType', label: `Type: ${procurementType}`, onRemove: () => setProcurementType('') });
+    if (tenderAmountRange && tenderAmountRange !== 'any') {
+      const label = tenderAmountRange === 'custom' ? `₹${minAmount || 0} - ₹${maxAmount || '∞'}` : `Amount: ${tenderAmountRange}`;
+      list.push({ key: 'amount', label, onRemove: () => { setTenderAmountRange('any'); setMinAmount(''); setMaxAmount(''); } });
+    }
+    if (category) list.push({ key: 'category', label: `Category: ${category}`, onRemove: () => setCategory('') });
+    if (organization) list.push({ key: 'organization', label: `Org: ${organization}`, onRemove: () => setOrganization('') });
+    if (feePreference && feePreference !== 'any') list.push({ key: 'fee', label: `Fee: ${feePreference}`, onRemove: () => setFeePreference('any') });
+    if (publishedRange && publishedRange !== 'all') {
+      const label = publishedRange === 'custom' ? `Published: ${publishedFrom || 'Start'} to ${publishedTo || 'Now'}` : `Published: ${publishedRange}`;
+      list.push({ key: 'published', label, onRemove: () => { setPublishedRange('all'); setPublishedFrom(''); setPublishedTo(''); } });
+    }
+    keywords.forEach((kw) => {
+      list.push({ key: `kw-${kw}`, label: `Keyword: ${kw}`, onRemove: () => setKeywords(keywords.filter(k => k !== kw)) });
+    });
+    if (advancedFilters.hasPreBid) list.push({ key: 'adv-prebid', label: 'Pre-Bid Meeting', onRemove: () => setAdvancedFilters(p => ({ ...p, hasPreBid: false })) });
+    if (advancedFilters.withdrawalAllowed) list.push({ key: 'adv-withdraw', label: 'Withdrawal Allowed', onRemove: () => setAdvancedFilters(p => ({ ...p, withdrawalAllowed: false })) });
+    if (advancedFilters.twoStageBidding) list.push({ key: 'adv-twostage', label: 'Two-Stage Bidding', onRemove: () => setAdvancedFilters(p => ({ ...p, twoStageBidding: false })) });
+    if (advancedFilters.preferentialBidder) list.push({ key: 'adv-pref', label: 'Preferential Bidder', onRemove: () => setAdvancedFilters(p => ({ ...p, preferentialBidder: false })) });
+    if (advancedFilters.tendererClass) list.push({ key: 'adv-class', label: `Class: ${advancedFilters.tendererClass}`, onRemove: () => setAdvancedFilters(p => ({ ...p, tendererClass: '' })) });
+    if (advancedSearch.exactPhrase) list.push({ key: 'adv-exact', label: `Phrase: "${advancedSearch.exactPhrase}"`, onRemove: () => setAdvancedSearch(p => ({ ...p, exactPhrase: '' })) });
+    if (advancedSearch.referenceNumber) list.push({ key: 'adv-ref', label: `Ref: ${advancedSearch.referenceNumber}`, onRemove: () => setAdvancedSearch(p => ({ ...p, referenceNumber: '' })) });
+    return list;
+  }, [
+    portal, state, city, procurementType, tenderAmountRange, minAmount, maxAmount,
+    category, organization, feePreference, publishedRange, publishedFrom, publishedTo,
+    keywords, advancedFilters, advancedSearch
+  ]);
 
-        {/* 1. Header Banner Card matching GeM Layout */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+  return (
+    <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-5 sm:py-7 transition-colors duration-200">
+      <div className="gem-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+
+        {/* 1. Header Banner Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
@@ -261,13 +286,13 @@ export default function Tenders() {
               Public procurement &amp; tender notices
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs, with delivery locations across {state || 'Jammu & Kashmir, Himachal Pradesh, Punjab and Ladakh'}.
+              Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs across {state || 'Jammu & Kashmir, Himachal Pradesh, Punjab and Ladakh'}.
             </p>
           </div>
 
-          {/* Metric Counters matching GeM tenders */}
+          {/* Metric Counters */}
           <div className="gem-summary shrink-0">
-            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
               <span className="text-lg sm:text-xl font-mono font-bold text-slate-900 dark:text-white block">
                 {totalCount.toLocaleString('en-IN')}
               </span>
@@ -275,7 +300,7 @@ export default function Tenders() {
                 Matching bids
               </span>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-200 dark:border-slate-700/80 text-center min-w-[100px]">
               <span className="text-lg sm:text-xl font-mono font-bold text-amber-700 dark:text-amber-400 block">
                 {closingSoonCount || 0}
               </span>
@@ -287,322 +312,303 @@ export default function Tenders() {
           </div>
         </div>
 
-        {/* Search stays visible beneath the site navigation while browsing results. */}
-        <div className="gem-search-sticky bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-4 shadow-xs border border-slate-200 dark:border-slate-800">
-          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bid number, item, department…" className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-dalBlue" />
-            </div>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-dalBlue hover:bg-dalBlue/90 text-white rounded-lg text-xs sm:text-sm font-bold transition-colors cursor-pointer"><span>Search Bids</span></button>
+        {/* 2. Top Search Bar & Mobile Filter Trigger */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-3.5 shadow-xs border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 flex items-center">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type="text" 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              placeholder="Search by tender title, bid number, department, keyword…" 
+              className="w-full pl-10 pr-24 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-dalBlue" 
+            />
+            <button 
+              type="submit" 
+              className="absolute right-1 px-4 py-1.5 bg-dalBlue hover:bg-dalBlue/90 text-white rounded-md text-xs font-bold transition-colors cursor-pointer"
+            >
+              Search
+            </button>
           </form>
-        </div>
 
-        {/* 2. Left Filter Panel (Sticky Sidebar) */}
-        <div className="gem-filter-panel bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
-          {/* State Filter Navigation Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-dalBlue" /> Region:
-            </span>
-            {STATE_OPTIONS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => handleStateChange(tab.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  state === tab.value
-                    ? 'bg-dalBlue text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Secondary Filter Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-            {/* Consignee / District Location */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                {state ? `Consignee Location (${state})` : 'Consignee Location'}
-              </label>
-              <select
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
-              >
-                {activeLocationOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Issuing Organization */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Organization
-              </label>
-              <select
-                value={organization}
-                onChange={(e) => {
-                  setOrganization(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
-              >
-                <option value="">All Organizations</option>
-                {organizations.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Submission Deadline */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Submission Deadline
-              </label>
-              <select
-                value={closingDays}
-                onChange={(e) => {
-                  setClosingDays(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
-              >
-                <option value="">All Deadlines</option>
-                <option value="2">Closing in 48 Hours</option>
-                <option value="7">Closing in 7 Days</option>
-                <option value="15">Closing in 15 Days</option>
-                <option value="30">Closing in 30 Days</option>
-              </select>
-            </div>
-
-            {/* Sort Order */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Sort Order
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
-              >
-                <option value="arrival">Recently Published</option>
-                <option value="closingAsc">Closing Soonest</option>
-                <option value="closingDesc">Closing Latest</option>
-                <option value="valueDesc">Highest Estimated Value</option>
-                <option value="valueAsc">Lowest Estimated Value</option>
-              </select>
-            </div>
-
-            {/* Work Category / Domain */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Work Category / Domain
-              </label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
-              >
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filters */}
-            <div className="flex items-end col-span-full">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="w-full py-1.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 font-semibold transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Filters</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Results Column */}
-        <div className="gem-results-column space-y-4">
-          
-          {/* Status Tabs: Active, Archived, Expired */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs">
-            <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('active');
-                  setCurrentPage(1);
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-                  status === 'active'
-                    ? 'bg-white dark:bg-slate-900 text-dalBlue dark:text-white font-bold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5 shrink-0" />
-                <span>Active Notices</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-blue-50 dark:bg-blue-950/60 text-dalBlue dark:text-blue-300">
-                  {activeCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('archived');
-                  setCurrentPage(1);
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-                  status === 'archived'
-                    ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
-                }`}
-              >
-                <Archive className="w-3.5 h-3.5 shrink-0" />
-                <span>Archived</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
-                  {archivedCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('expired');
-                  setCurrentPage(1);
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-                  status === 'expired'
-                    ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
-                }`}
-              >
-                <CalendarX className="w-3.5 h-3.5 shrink-0" />
-                <span>Expired</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                  {expiredCount}
-                </span>
-              </button>
-            </div>
-
-            <div className="text-xs text-slate-500 dark:text-slate-400 px-1">
-              Showing <strong className="font-mono text-slate-900 dark:text-white">{totalCount.toLocaleString('en-IN')}</strong> bids
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-20 space-y-3">
-              <div className="w-8 h-8 border-3 border-dalBlue border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-slate-500 font-medium">Loading tender notices...</p>
-            </div>
-          )}
-
-          {/* Error State */}
-          {isError && (
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl p-6 text-center text-red-600 dark:text-red-400">
-              <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-              <p className="text-sm font-semibold">{error?.message || 'Unable to connect to tender directory. Please try again.'}</p>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && !isError && tenders.length === 0 && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-12 text-center space-y-3">
-              <Layers className="w-10 h-10 text-slate-400 mx-auto" />
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-                {status === 'archived' ? 'No Archived Notices Found' : status === 'expired' ? 'No Expired Notices Found' : 'No Matching Tender Notices'}
-              </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                No tender notices match your selected search criteria for {state || 'this region'}. Try clearing some filters or changing state.
-              </p>
-              <button
-                onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
-              >
-                Clear All Filters
-              </button>
-            </div>
-          )}
-
-          {/* Tenders Bid List matching GeM Feed */}
-          {!isLoading && !isError && tenders.length > 0 && (
-            <div className="gem-bid-list">
-              {tenders.map((tender) => (
-                <TenderCard 
-                  key={tender._id || tender.sourceTenderId}
-                  tender={tender} 
-                  isBlurred={false}
-                  onViewDetails={() => handleViewDetails(tender)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* 4. Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-800 text-xs">
-              <span className="text-slate-500">
-                Page <span className="font-bold text-slate-800 dark:text-slate-200">{currentPage}</span> of{' '}
-                <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalCount} total bids)
+          {/* Mobile Filter Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+            className="lg:hidden flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer hover:bg-slate-100"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-dalBlue" />
+            <span>Filters</span>
+            {activeFiltersList.length > 0 && (
+              <span className="w-5 h-5 rounded-full bg-dalBlue text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFiltersList.length}
               </span>
-              <div className="flex items-center gap-1.5">
+            )}
+          </button>
+        </div>
+
+        {/* 3. Main Workspace Layout: Filter Sidebar (Left) + Results List (Right) */}
+        <div className="flex flex-col lg:flex-row items-start gap-6">
+
+          {/* Left Filter Sidebar (Sticky on Desktop, Collapsible on Mobile) */}
+          <div className={`w-full lg:w-[320px] shrink-0 lg:sticky lg:top-20 z-10 ${mobileFilterOpen ? 'block' : 'hidden lg:block'}`}>
+            <TenderFilterSidebar
+              portal={portal}
+              setPortal={(v) => { setPortal(v); setCurrentPage(1); }}
+              state={state}
+              setState={(v) => { setState(v); setCity(''); setOrganization(''); setCurrentPage(1); }}
+              city={city}
+              setCity={(v) => { setCity(v); setCurrentPage(1); }}
+              procurementType={procurementType}
+              setProcurementType={(v) => { setProcurementType(v); setCurrentPage(1); }}
+              tenderAmountRange={tenderAmountRange}
+              setTenderAmountRange={(v) => { setTenderAmountRange(v); setCurrentPage(1); }}
+              minAmount={minAmount}
+              setMinAmount={(v) => { setMinAmount(v); setCurrentPage(1); }}
+              maxAmount={maxAmount}
+              setMaxAmount={(v) => { setMaxAmount(v); setCurrentPage(1); }}
+              category={category}
+              setCategory={(v) => { setCategory(v); setCurrentPage(1); }}
+              organization={organization}
+              setOrganization={(v) => { setOrganization(v); setCurrentPage(1); }}
+              organizationsList={organizations}
+              feePreference={feePreference}
+              setFeePreference={(v) => { setFeePreference(v); setCurrentPage(1); }}
+              publishedRange={publishedRange}
+              setPublishedRange={(v) => { setPublishedRange(v); setCurrentPage(1); }}
+              publishedFrom={publishedFrom}
+              setPublishedFrom={(v) => { setPublishedFrom(v); setCurrentPage(1); }}
+              publishedTo={publishedTo}
+              setPublishedTo={(v) => { setPublishedTo(v); setCurrentPage(1); }}
+              keywords={keywords}
+              setKeywords={(v) => { setKeywords(v); setCurrentPage(1); }}
+              advancedFilters={advancedFilters}
+              setAdvancedFilters={(v) => { setAdvancedFilters(v); setCurrentPage(1); }}
+              advancedSearch={advancedSearch}
+              setAdvancedSearch={(v) => { setAdvancedSearch(v); setCurrentPage(1); }}
+              onResetFilters={handleReset}
+              totalResultsCount={totalCount}
+            />
+          </div>
+
+          {/* Right Main Results Column */}
+          <main className="flex-1 w-full min-w-0 space-y-4">
+            
+            {/* Active Filters Summary Chips Bar */}
+            {activeFiltersList.length > 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mr-1 shrink-0">
+                    Active Filters:
+                  </span>
+                  {activeFiltersList.map((item) => (
+                    <span
+                      key={item.key}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                    >
+                      <span className="truncate max-w-[180px]">{item.label}</span>
+                      <button
+                        type="button"
+                        onClick={item.onRemove}
+                        className="hover:text-red-500 cursor-pointer ml-0.5"
+                        title="Remove filter"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
                 <button
-                  disabled={currentPage <= 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
-                  title="Previous page"
+                  type="button"
+                  onClick={handleReset}
+                  className="text-xs font-bold text-dalBlue hover:underline shrink-0 cursor-pointer"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <form onSubmit={handlePageJump} className="flex items-center gap-1.5" aria-label="Jump to tender page">
-                  <label htmlFor="tender-page-jump" className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Go to</label>
-                  <input
-                    key={currentPage}
-                    id="tender-page-jump"
-                    name="page"
-                    type="number"
-                    min="1"
-                    max={totalPages}
-                    step="1"
-                    defaultValue={currentPage}
-                    aria-label={`Page number, from 1 to ${totalPages}`}
-                    className="!min-h-0 h-8 w-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 text-center text-xs font-mono font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-1.5 focus:ring-dalBlue shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <button type="submit" className="!min-h-0 h-8 px-2.5 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0">Go</button>
-                </form>
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
+                  Clear all
                 </button>
               </div>
-            </div>
-          )}
+            )}
 
+            {/* Status Tabs (Active, Archived, Expired) & Sort Order Control */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus('active');
+                    setCurrentPage(1);
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                    status === 'active'
+                      ? 'bg-white dark:bg-slate-900 text-dalBlue dark:text-white font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>Active</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-blue-50 dark:bg-blue-950/60 text-dalBlue dark:text-blue-300">
+                    {activeCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus('archived');
+                    setCurrentPage(1);
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                    status === 'archived'
+                      ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <Archive className="w-3.5 h-3.5 shrink-0" />
+                  <span>Archived</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                    {archivedCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus('expired');
+                    setCurrentPage(1);
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                    status === 'expired'
+                      ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <CalendarX className="w-3.5 h-3.5 shrink-0" />
+                  <span>Expired</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {expiredCount}
+                  </span>
+                </button>
+              </div>
+
+              {/* Sort Order Selector */}
+              <div className="flex items-center justify-between sm:justify-end gap-2 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 text-xs hidden md:inline">
+                  Showing <strong className="font-mono text-slate-900 dark:text-white">{totalCount.toLocaleString('en-IN')}</strong> bids
+                </span>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
+                  >
+                    <option value="arrival">Recently Published</option>
+                    <option value="closingAsc">Closing Soonest</option>
+                    <option value="closingDesc">Closing Latest</option>
+                    <option value="valueDesc">Highest Tender Value</option>
+                    <option value="valueAsc">Lowest Tender Value</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-20 space-y-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div className="w-8 h-8 border-3 border-dalBlue border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-500 font-medium">Loading matching tender notices...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {isError && (
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-2xl p-6 text-center text-red-600 dark:text-red-400">
+                <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+                <p className="text-sm font-semibold">{error?.message || 'Unable to connect to tender directory. Please try again.'}</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !isError && tenders.length === 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center space-y-3 shadow-xs">
+                <Layers className="w-10 h-10 text-slate-400 mx-auto" />
+                <h2 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                  {status === 'archived' ? 'No Archived Notices Found' : status === 'expired' ? 'No Expired Notices Found' : 'No Matching Tender Notices'}
+                </h2>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  No tender notices match your selected filter criteria. Try clearing some filters or choosing a different state or portal.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-dalBlue text-white rounded-lg text-xs font-bold hover:bg-dalBlue/90 transition-colors shadow-xs cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset All Filters</span>
+                </button>
+              </div>
+            )}
+
+            {/* Tender Bid Cards List */}
+            {!isLoading && !isError && tenders.length > 0 && (
+              <div className="gem-bid-list space-y-3">
+                {tenders.map((tender) => (
+                  <TenderCard 
+                    key={tender._id || tender.sourceTenderId}
+                    tender={tender} 
+                    isBlurred={false}
+                    onViewDetails={() => handleViewDetails(tender)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
+                <span className="text-slate-500">
+                  Page <span className="font-bold text-slate-800 dark:text-slate-200">{currentPage}</span> of{' '}
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalCount.toLocaleString('en-IN')} total bids)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled={currentPage <= 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <form onSubmit={handlePageJump} className="flex items-center gap-1.5" aria-label="Jump to tender page">
+                    <label htmlFor="tender-page-jump" className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Go to</label>
+                    <input
+                      key={currentPage}
+                      id="tender-page-jump"
+                      name="page"
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      step="1"
+                      defaultValue={currentPage}
+                      aria-label={`Page number, from 1 to ${totalPages}`}
+                      className="!min-h-0 h-8 w-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 text-center text-xs font-mono font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-1.5 focus:ring-dalBlue shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button type="submit" className="!min-h-0 h-8 px-2.5 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0">Go</button>
+                  </form>
+                  <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer hover:border-dalBlue dark:hover:border-blue-400 transition-colors shrink-0"
+                    title="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </main>
         </div>
       </div>
 
