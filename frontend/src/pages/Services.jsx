@@ -14,7 +14,6 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle2,
-  Send,
   Zap,
   TrendingUp,
   Download,
@@ -27,6 +26,9 @@ import {
   Scale,
   AlertCircle,
   Info,
+  Mic,
+  ArrowUp,
+  BrainCircuit,
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
 import { api } from '../services/api';
@@ -1020,25 +1022,22 @@ export default function Services() {
 
               {/* TAB 4: INTERACTIVE CONTRACTOR COPILOT CHAT */}
               {activeTab === 'copilot' && (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col h-[560px] overflow-hidden">
-                  {/* Chat Header */}
-                  <div className="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-md bg-dalBlue text-white flex items-center justify-center">
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                          Personalized Tender Copilot
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          Grounded in tender specs &amp; {profile?.companyName || 'your contractor profile'} capacity
-                        </p>
-                      </div>
+                <div className="copilot-shell bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col min-h-[560px] h-[min(72vh,760px)] overflow-hidden">
+                  <div className="copilot-welcome shrink-0 px-5 pt-7 pb-5 sm:pt-10 sm:pb-7 text-center">
+                    <div className="copilot-orb mx-auto mb-4 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white dark:bg-slate-800" />
                     </div>
-                    <span className="text-xs text-slate-500 font-medium">
-                      Queries Remaining: {profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50}
-                    </span>
+                    <h3 className="text-2xl sm:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-400">
+                      Ready to assist you
+                    </h3>
+                    <p className="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400">
+                      Ask about this tender, your eligibility, or project requirements
+                    </p>
+                    <div className="mt-4 flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-blue-500" /> Personalized Tender Copilot</span>
+                      <span>Grounded in tender specs &amp; {profile?.companyName || 'your contractor profile'} capacity</span>
+                      <span>Queries remaining: {profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50}</span>
+                    </div>
                   </div>
 
                   {/* Messages Area */}
@@ -1049,7 +1048,7 @@ export default function Services() {
                       <Link to="/pricing" className="mt-1 inline-block font-semibold text-blue-700 hover:underline dark:text-blue-300">⚡ Unlimited access coming soon · View plans</Link>
                     </div>
                   )}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  <div className="flex-1 min-h-24 p-4 sm:px-6 overflow-y-auto space-y-3">
                     {chatMessages.map((msg, idx) => (
                       <div
                         key={idx}
@@ -1086,46 +1085,49 @@ export default function Services() {
                     )}
                   </div>
 
-                  {/* Suggested Question Chips */}
-                  <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 flex items-center gap-2 overflow-x-auto text-[11px]">
+                  {/* Tender specific prompt shortcuts */}
+                  <div className="px-4 sm:px-5 pb-3 flex items-center gap-2 overflow-x-auto text-[11px]">
                     {[
-                      'EMD amount & CDR submission rules?',
-                      'Check my turnover eligibility',
-                      'Cement and Steel total quantities',
-                      'What is the delay penalty rate?',
+                      { label: 'EMD & CDR rules', prompt: 'What are the EMD amount and CDR submission rules for this tender?' },
+                      { label: 'Eligibility', prompt: 'Check my eligibility and turnover compliance for this tender.' },
+                      { label: 'BOQ quantities', prompt: 'Summarize the cement and steel quantities in the BOQ.' },
+                      { label: 'Delay penalties', prompt: 'What are the delay penalty rules for this tender?' },
                     ].map((promptText, idx) => (
                       <button
                         key={idx}
                         onClick={() => {
-                          setChatInput(promptText);
+                          setChatInput(promptText.prompt);
                         }}
-                        className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-dalBlue shrink-0 cursor-pointer text-xs"
+                        className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300 shrink-0 cursor-pointer text-xs transition-colors"
                       >
-                        {promptText}
+                        {promptText.label}
                       </button>
                     ))}
                   </div>
 
                   {/* Input Form */}
-                  <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                    <Input
-                      type="text"
-                      placeholder="Ask questions about this tender (EMD, BOQ, penalty clauses)..."
+                  <form onSubmit={handleSendMessage} className="copilot-composer mx-4 sm:mx-5 mb-4 rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+                    <textarea
+                      rows={2}
+                      placeholder="Ask me anything about this tender..."
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
-                      className="text-xs"
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
+                      className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-sm text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       disabled={Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())}
                     />
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="sm"
-                      disabled={chatLoading || !chatInput.trim() || Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())}
-                      className="shrink-0"
-                    >
-                      <Send className="w-3.5 h-3.5 mr-1" />
-                      Send
-                    </Button>
+                    <div className="flex items-center justify-between gap-3 px-3 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-300"><Search className="w-3.5 h-3.5" /> Tender context</span>
+                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-300"><BrainCircuit className="w-3.5 h-3.5" /> Profile aware</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button type="button" aria-label="Voice input unavailable" title="Voice input is not available yet" className="p-2 text-slate-400"><Mic className="w-5 h-5" /></button>
+                        <button type="submit" aria-label="Send message" disabled={chatLoading || !chatInput.trim() || Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())} className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-700">
+                          <ArrowUp className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </form>
                 </div>
               )}
