@@ -1579,3 +1579,95 @@ body { background-color: #f7faff; }
 @media (max-width: 640px) {
   .home-hero { border-radius: 0 0 22px 22px; }
 }
+
+/* Procurement workspace refinement: shared hierarchy across discovery,
+   GeM records, and AI analysis while keeping the existing controls intact. */
+:root {
+  --th-canvas: #f4f7fc;
+  --th-border: #dce5f0;
+  --th-muted: #63748b;
+}
+
+.tenders-page,
+.gem-page,
+.estimator-page,
+.score-page,
+.gem-detail-page { background-color: #f4f7fc; }
+
+.tenders-page-header,
+.gem-page .gem-summary > div,
+.gem-search-sticky,
+.gem-filter-panel,
+.gem-results-column .gem-bid-row,
+.gem-detail-page section,
+.estimator-profile > div,
+.estimator-page [class*="rounded-2xl"][class*="bg-white"] {
+  border-color: #dce5f0;
+  box-shadow: 0 1px 2px rgba(18, 42, 74, .035);
+}
+
+.tenders-page-header { padding: 1.15rem 1.35rem; border-radius: 12px; }
+.tenders-page .tender-result-row { border-color: #dce5f0; border-radius: 12px; }
+.tenders-page .tender-result-identity h3 { font-size: 1rem; letter-spacing: -.018em; }
+.tenders-page .tender-result-metrics { border-radius: 7px; }
+.tenders-page aside { box-shadow: 0 1px 3px rgba(18, 42, 74, .04); }
+
+.gem-page > .gem-container { grid-template-columns: minmax(245px, 270px) minmax(0, 1fr); gap: 1rem; }
+.gem-page > .gem-container > :first-child {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--th-border);
+  border-radius: 12px;
+  background: #fff;
+}
+.gem-page .gem-bid-content > h2 { font-size: .98rem; line-height: 1.45; letter-spacing: -.018em; }
+.gem-page .gem-bid-row { border-radius: 11px; }
+.gem-page .gem-bid-actions { gap: .45rem; }
+.gem-page .gem-bid-actions > button, .gem-page .gem-bid-actions > a { border-radius: 7px; }
+
+.gem-detail-page > div { max-width: 1240px; }
+.gem-detail-page section { border-radius: 12px !important; }
+.gem-detail-page > div > section:first-of-type { padding: 1.5rem 1.65rem; }
+.gem-detail-page h1 { font-size: clamp(1.65rem, 2.3vw, 2rem); line-height: 1.2; }
+.gem-detail-page h2 { letter-spacing: -.02em; }
+.gem-detail-page section .rounded-xl { border-radius: 9px; }
+
+.estimator-page > section:first-child { padding-top: 1.5rem; padding-bottom: 1.65rem; }
+.estimator-page > section:first-child > div { max-width: 1240px; }
+.estimator-primary { gap: .65rem; }
+.estimator-page h1 { font-size: clamp(1.75rem, 2.5vw, 2.15rem); line-height: 1.15; }
+.estimator-page .estimator-primary > p { max-width: 44rem; font-size: .9rem; }
+.estimator-page .estimator-primary input { min-height: 44px; font-size: .9rem; }
+.estimator-page .estimator-primary > div > div:first-child { border-radius: 10px; background: #f7f9fc; }
+.estimator-page .estimator-primary > div > div:first-child > button { min-height: 40px; border-radius: 7px; }
+.estimator-page .estimator-profile > div { border-radius: 11px; }
+.estimator-page [class*="rounded-2xl"][class*="bg-white"] { border-radius: 12px; }
+.estimator-page [class*="rounded-xl"][class*="border"] { border-radius: 9px; }
+.estimator-page .grid.grid-cols-2.lg\:grid-cols-4 > button { min-height: 40px; border-radius: 8px; }
+.estimator-page [class*="h-[560px]"] { height: min(560px, 68vh); min-height: 440px; border-radius: 12px; }
+.estimator-page [class*="h-[560px]"] form { background: #fff; }
+.estimator-page [class*="h-[560px]"] form input { min-height: 42px; }
+
+.dark .tenders-page-header,
+.dark .gem-page > .gem-container > :first-child,
+.dark .gem-detail-page section,
+.dark .estimator-page .estimator-primary > div > div:first-child,
+.dark .estimator-page [class*="h-[560px]"] form { background-color: #111e33; border-color: #263b60; }
+.dark .gem-page .gem-bid-row { background-color: #111e33; border-color: #263b60; }
+
+@media (max-width: 1023px) {
+  .gem-page > .gem-container { grid-template-columns: minmax(0, 1fr); }
+  .gem-filter-panel, .gem-results-column { grid-column: 1; }
+  .gem-results-column { grid-row: 4; }
+  .gem-filter-panel { grid-row: 3; }
+  .gem-search-sticky { top: 6.5rem; }
+}
+
+@media (max-width: 640px) {
+  .tenders-page { padding-top: 1.25rem; }
+  .tenders-page-header { padding: 1rem; }
+  .tenders-page .tender-result-actions { align-items: stretch; flex-wrap: wrap; }
+  .tenders-page .tender-result-actions button { flex: 1 1 auto; }
+  .gem-detail-page > div > section:first-of-type { padding: 1.1rem; }
+  .estimator-page > section:first-child { padding-top: 1.2rem; padding-bottom: 1.2rem; }
+  .estimator-page [class*="h-[560px]"] { height: 68vh; min-height: 400px; }
+}

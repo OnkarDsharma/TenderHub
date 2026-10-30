@@ -109,7 +109,7 @@ export default function GeMBidDetails() {
   };
 
   return (
-    <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8">
+    <div className="gem-detail-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
         <Link to="/gem-tenders" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-dalBlue dark:hover:text-blue-400">
           <ArrowLeft className="w-4 h-4" /> Back to GeM Bids
