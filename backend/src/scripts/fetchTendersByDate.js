@@ -185,8 +185,10 @@ async function main() {
 
   } catch (err) {
     console.error(`\n❌ Error running date ingestion:`, err);
+    process.exit(1);
   } finally {
     await closeDB();
+    process.exit(0);
   }
 }
 
