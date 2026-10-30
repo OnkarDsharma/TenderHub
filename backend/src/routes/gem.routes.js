@@ -25,58 +25,87 @@ router.get('/tenders', async (req, res, next) => {
       department,
       closingDays,
       sortBy = 'arrival',
-      status = 'active'
+      status = 'active',
+      procurementType,
+      tenderCategory,
+      contractType,
+      tenderAmountRange,
+      minAmount,
+      maxAmount,
+      feePreference,
+      publishedRange,
+      publishedFrom,
+      publishedTo,
+      hasPreBid,
+      tendererClass,
+      withdrawalAllowed,
+      twoStageBidding,
+      preferentialBidder,
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    // Base filter: only GeM bids
-    const query = { sourcePortal: 'GEM' };
+    // Helper to safely escape regex special characters
+    const escapeRegex = (str) => {
+      if (typeof str !== 'string') return '';
+      return str.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    // Base conditions array (combined with $and to prevent $or collisions)
+    const conditions = [{ sourcePortal: 'GEM' }];
 
     // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
-      const cleanState = state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.state = { $regex: `^${cleanState}$`, $options: 'i' };
+      const cleanState = escapeRegex(state);
+      conditions.push({ state: { $regex: `^${cleanState}$`, $options: 'i' } });
     }
 
     // Status filter
     const now = new Date();
     if (status === 'active') {
-      query.status = 'ACTIVE';
-      query.closingDate = { $gte: now };
+      conditions.push({
+        status: 'ACTIVE',
+        closingDate: { $gte: now }
+      });
     } else if (status === 'archived' || status === 'expired') {
-      query.closingDate = { $lt: now };
+      conditions.push({
+        closingDate: { $lt: now }
+      });
     }
 
     // Search keyword
     if (search && typeof search === 'string' && search.trim()) {
-      const cleanSearch = search.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.$or = [
-        { title: { $regex: cleanSearch, $options: 'i' } },
-        { sourceTenderId: { $regex: cleanSearch, $options: 'i' } },
-        { tenderReferenceNumber: { $regex: cleanSearch, $options: 'i' } },
-        { departmentName: { $regex: cleanSearch, $options: 'i' } },
-        { organisationChain: { $regex: cleanSearch, $options: 'i' } },
-        { location: { $regex: cleanSearch, $options: 'i' } },
-        { workDescription: { $regex: cleanSearch, $options: 'i' } }
-      ];
+      const cleanSearch = escapeRegex(search);
+      conditions.push({
+        $or: [
+          { title: { $regex: cleanSearch, $options: 'i' } },
+          { sourceTenderId: { $regex: cleanSearch, $options: 'i' } },
+          { tenderReferenceNumber: { $regex: cleanSearch, $options: 'i' } },
+          { departmentName: { $regex: cleanSearch, $options: 'i' } },
+          { organisationChain: { $regex: cleanSearch, $options: 'i' } },
+          { location: { $regex: cleanSearch, $options: 'i' } },
+          { workDescription: { $regex: cleanSearch, $options: 'i' } }
+        ]
+      });
     }
 
     // Location / District filter
     if (location && typeof location === 'string' && location.trim()) {
-      const cleanLoc = location.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.location = { $regex: cleanLoc, $options: 'i' };
+      const cleanLoc = escapeRegex(location);
+      conditions.push({ location: { $regex: cleanLoc, $options: 'i' } });
     }
 
     // Department filter
     if (department && typeof department === 'string' && department.trim()) {
-      const cleanDept = department.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.$or = [
-        { departmentName: { $regex: cleanDept, $options: 'i' } },
-        { organisationChain: { $regex: cleanDept, $options: 'i' } }
-      ];
+      const cleanDept = escapeRegex(department);
+      conditions.push({
+        $or: [
+          { departmentName: { $regex: cleanDept, $options: 'i' } },
+          { organisationChain: { $regex: cleanDept, $options: 'i' } }
+        ]
+      });
     }
 
     // Closing days filter (e.g., closing in 2 days, 7 days)
@@ -85,9 +114,153 @@ router.get('/tenders', async (req, res, next) => {
       if (!Number.isNaN(days) && days >= 0 && days <= 365) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + days);
-        query.closingDate = { $gte: now, $lte: targetDate };
+        conditions.push({ closingDate: { $gte: now, $lte: targetDate } });
       }
     }
+
+    // Published Date Filter (Today, Last 7 Days, Last 1 Month, or Pick Date range)
+    if (publishedRange) {
+      const nowTime = new Date();
+      if (publishedRange === 'today') {
+        const startOfToday = new Date(nowTime);
+        startOfToday.setHours(0, 0, 0, 0);
+        conditions.push({ publishedDate: { $gte: startOfToday } });
+      } else if (publishedRange === '7days') {
+        const d = new Date(nowTime);
+        d.setDate(d.getDate() - 7);
+        d.setHours(0, 0, 0, 0);
+        conditions.push({ publishedDate: { $gte: d } });
+      } else if (publishedRange === '1month') {
+        const d = new Date(nowTime);
+        d.setDate(d.getDate() - 30);
+        d.setHours(0, 0, 0, 0);
+        conditions.push({ publishedDate: { $gte: d } });
+      }
+    }
+    if (publishedFrom || publishedTo) {
+      const dateCond = {};
+      if (publishedFrom) {
+        const fromDate = new Date(publishedFrom);
+        if (!isNaN(fromDate.getTime())) {
+          fromDate.setHours(0, 0, 0, 0);
+          dateCond.$gte = fromDate;
+        }
+      }
+      if (publishedTo) {
+        const toDate = new Date(publishedTo);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999);
+          dateCond.$lte = toDate;
+        }
+      }
+      if (Object.keys(dateCond).length > 0) {
+        conditions.push({ publishedDate: dateCond });
+      }
+    }
+
+    // Procurement Type
+    const activeProcurementType = procurementType || tenderCategory;
+    if (activeProcurementType && typeof activeProcurementType === 'string' && activeProcurementType.trim() && activeProcurementType.toUpperCase() !== 'ALL') {
+      const escType = escapeRegex(activeProcurementType);
+      conditions.push({
+        $or: [
+          { tenderCategory: { $regex: escType, $options: 'i' } },
+          { tenderType: { $regex: escType, $options: 'i' } },
+          { contractType: { $regex: escType, $options: 'i' } }
+        ]
+      });
+    }
+
+    // Tender Amount (Estimated Value Brackets or Custom Range)
+    if (tenderAmountRange && typeof tenderAmountRange === 'string' && tenderAmountRange !== 'any' && tenderAmountRange !== 'ANY') {
+      if (tenderAmountRange === 'under_5l') {
+        conditions.push({ estimatedValue: { $gt: 0, $lte: 500000 } });
+      } else if (tenderAmountRange === '5l_25l') {
+        conditions.push({ estimatedValue: { $gte: 500000, $lte: 2500000 } });
+      } else if (tenderAmountRange === '25l_1cr') {
+        conditions.push({ estimatedValue: { $gte: 2500000, $lte: 10000000 } });
+      } else if (tenderAmountRange === '1cr_5cr') {
+        conditions.push({ estimatedValue: { $gte: 10000000, $lte: 50000000 } });
+      } else if (tenderAmountRange === 'above_5cr') {
+        conditions.push({ estimatedValue: { $gte: 50000000 } });
+      }
+    }
+    if (minAmount || maxAmount) {
+      const amtCond = {};
+      const numMin = Number(minAmount);
+      const numMax = Number(maxAmount);
+      if (!isNaN(numMin) && numMin > 0) amtCond.$gte = numMin;
+      if (!isNaN(numMax) && numMax > 0) amtCond.$lte = numMax;
+      if (Object.keys(amtCond).length > 0) {
+        conditions.push({ estimatedValue: amtCond });
+      }
+    }
+
+    // Fee Preferences
+    if (feePreference && typeof feePreference === 'string' && feePreference !== 'any' && feePreference !== 'ANY') {
+      if (feePreference === 'freeFee') {
+        conditions.push({
+          $or: [
+            { tenderFee: 0 },
+            { tenderFee: null },
+            { tenderFee: { $exists: false } }
+          ]
+        });
+      } else if (feePreference === 'feeExempted') {
+        conditions.push({ tenderFeeExemptionAllowed: { $regex: /^yes/i } });
+      } else if (feePreference === 'freeEmd') {
+        conditions.push({
+          $or: [
+            { emdAmount: 0 },
+            { emdAmount: null },
+            { emdAmount: { $exists: false } }
+          ]
+        });
+      } else if (feePreference === 'emdExempted') {
+        conditions.push({ emdExemptionAllowed: { $regex: /^yes/i } });
+      } else if (feePreference === 'bothFree') {
+        conditions.push({
+          $or: [
+            { tenderFee: 0 },
+            { tenderFee: null },
+            { tenderFee: { $exists: false } },
+            { tenderFeeExemptionAllowed: { $regex: /^yes/i } }
+          ]
+        });
+        conditions.push({
+          $or: [
+            { emdAmount: 0 },
+            { emdAmount: null },
+            { emdAmount: { $exists: false } },
+            { emdExemptionAllowed: { $regex: /^yes/i } }
+          ]
+        });
+      }
+    }
+
+    // Advanced Filters
+    if (hasPreBid === 'true' || hasPreBid === true) {
+      conditions.push({
+        $or: [
+          { preBidMeetingDate: { $ne: null } },
+          { preBidMeetingPlace: { $exists: true, $nin: ['', null, 'NA', 'N/A', 'Nil', 'nil', '-'] } }
+        ]
+      });
+    }
+    if (withdrawalAllowed === 'true' || withdrawalAllowed === true) {
+      conditions.push({ withdrawalAllowed: { $regex: /^yes/i } });
+    }
+    if (twoStageBidding === 'true' || twoStageBidding === true) {
+      conditions.push({ allowTwoStageBidding: { $regex: /^yes/i } });
+    }
+    if (preferentialBidder === 'true' || preferentialBidder === true) {
+      conditions.push({ allowPreferentialBidder: { $regex: /^yes/i } });
+    }
+    if (tendererClass && typeof tendererClass === 'string' && tendererClass.trim() && tendererClass.toUpperCase() !== 'ANY') {
+      conditions.push({ tendererClass: { $regex: escapeRegex(tendererClass), $options: 'i' } });
+    }
+
+    const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
 
     // Sorting
     let sortOptions = { publishedDate: -1, createdAt: -1 };

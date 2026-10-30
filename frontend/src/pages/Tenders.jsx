@@ -19,7 +19,9 @@ import {
   Sparkles,
   Lock,
   Landmark,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  SlidersHorizontal
 } from 'lucide-react';
 
 import { useTenders, useTenderOrganizations } from '@/hooks/useTenders';
@@ -28,6 +30,7 @@ import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/Button';
+import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
 
 // Northern Region State Options matching GeM portal
 const STATE_OPTIONS = [
@@ -127,6 +130,35 @@ const CATEGORY_OPTIONS = [
   { label: 'Consultancy & Technical Advisory', value: 'Consultancy' },
 ];
 
+const PROCUREMENT_TYPE_OPTIONS = [
+  { label: 'All Procurement Types', value: '' },
+  { label: 'Works (Civil, Infrastructure)', value: 'Works' },
+  { label: 'Goods (Materials, Machinery)', value: 'Goods' },
+  { label: 'Services (Maintenance, Operations)', value: 'Services' },
+  { label: 'Open Tender (Competitive)', value: 'Open Tender' },
+  { label: 'Limited Tender', value: 'Limited Tender' },
+  { label: 'Single Tender', value: 'Single Tender' },
+];
+
+const TENDER_AMOUNT_OPTIONS = [
+  { label: 'Any Tender Amount', value: 'any' },
+  { label: 'Under ₹5 Lakhs', value: 'under_5l' },
+  { label: '₹5L - ₹25 Lakhs', value: '5l_25l' },
+  { label: '₹25L - ₹1 Crore', value: '25l_1cr' },
+  { label: '₹1 Cr - ₹5 Crores', value: '1cr_5cr' },
+  { label: 'Above ₹5 Crores', value: 'above_5cr' },
+  { label: 'Custom Range…', value: 'custom' },
+];
+
+const FEE_PREFERENCES_OPTIONS = [
+  { label: 'Any Fee Preference', value: 'any' },
+  { label: 'Free Tender Fee (₹0)', value: 'freeFee' },
+  { label: 'Fee Exemption Allowed (MSME)', value: 'feeExempted' },
+  { label: 'No EMD Required (₹0)', value: 'freeEmd' },
+  { label: 'EMD Exemption Allowed', value: 'emdExempted' },
+  { label: 'Zero Cost (Free Fee & EMD)', value: 'bothFree' },
+];
+
 export default function Tenders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -168,6 +200,34 @@ export default function Tenders() {
   const [sortBy, setSortBy] = useState('arrival');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // New Filter States
+  const [procurementType, setProcurementType] = useState(searchParams.get('procurementType') || '');
+  const [tenderAmountRange, setTenderAmountRange] = useState(searchParams.get('tenderAmountRange') || 'any');
+  const [minAmount, setMinAmount] = useState(searchParams.get('minAmount') || '');
+  const [maxAmount, setMaxAmount] = useState(searchParams.get('maxAmount') || '');
+  const [feePreference, setFeePreference] = useState(searchParams.get('feePreference') || 'any');
+  const [publishedRange, setPublishedRange] = useState(searchParams.get('publishedRange') || 'all');
+  const [publishedFrom, setPublishedFrom] = useState(searchParams.get('publishedFrom') || '');
+  const [publishedTo, setPublishedTo] = useState(searchParams.get('publishedTo') || '');
+  const [advancedFilters, setAdvancedFilters] = useState({
+    hasPreBid: searchParams.get('hasPreBid') === 'true',
+    withdrawalAllowed: searchParams.get('withdrawalAllowed') === 'true',
+    twoStageBidding: searchParams.get('twoStageBidding') === 'true',
+    preferentialBidder: searchParams.get('preferentialBidder') === 'true',
+    tendererClass: searchParams.get('tendererClass') || '',
+  });
+
+  const [advancedModalOpen, setAdvancedModalOpen] = useState(false);
+  const [amountModalOpen, setAmountModalOpen] = useState(false);
+
+  // Count active advanced filters
+  const activeAdvancedCount = 
+    (advancedFilters.hasPreBid ? 1 : 0) +
+    (advancedFilters.withdrawalAllowed ? 1 : 0) +
+    (advancedFilters.twoStageBidding ? 1 : 0) +
+    (advancedFilters.preferentialBidder ? 1 : 0) +
+    (advancedFilters.tendererClass ? 1 : 0);
+
   // Dynamic District Options based on State
   const activeLocationOptions = state && DISTRICTS_BY_STATE[state]
     ? DISTRICTS_BY_STATE[state]
@@ -184,6 +244,19 @@ export default function Tenders() {
     category: category,
     organisation: organization,
     location: location,
+    procurementType: procurementType || undefined,
+    tenderAmountRange: tenderAmountRange !== 'any' ? tenderAmountRange : undefined,
+    minAmount: tenderAmountRange === 'custom' && minAmount ? minAmount : undefined,
+    maxAmount: tenderAmountRange === 'custom' && maxAmount ? maxAmount : undefined,
+    feePreference: feePreference !== 'any' ? feePreference : undefined,
+    publishedRange: publishedRange !== 'all' ? publishedRange : undefined,
+    publishedFrom: publishedRange === 'custom' && publishedFrom ? publishedFrom : undefined,
+    publishedTo: publishedRange === 'custom' && publishedTo ? publishedTo : undefined,
+    hasPreBid: advancedFilters.hasPreBid ? 'true' : undefined,
+    withdrawalAllowed: advancedFilters.withdrawalAllowed ? 'true' : undefined,
+    twoStageBidding: advancedFilters.twoStageBidding ? 'true' : undefined,
+    preferentialBidder: advancedFilters.preferentialBidder ? 'true' : undefined,
+    tendererClass: advancedFilters.tendererClass || undefined,
     closingDays: closingDays,
     status: status,
     sortBy: sortBy,
@@ -215,6 +288,15 @@ export default function Tenders() {
     setCurrentPage(1);
   };
 
+  const handlePublishedSelect = (preset) => {
+    setPublishedRange(preset);
+    if (preset !== 'custom') {
+      setPublishedFrom('');
+      setPublishedTo('');
+    }
+    setCurrentPage(1);
+  };
+
   const handleReset = () => {
     setSearch('');
     setAppliedSearch('');
@@ -222,6 +304,21 @@ export default function Tenders() {
     setCategory('');
     setOrganization('');
     setLocation('');
+    setProcurementType('');
+    setTenderAmountRange('any');
+    setMinAmount('');
+    setMaxAmount('');
+    setFeePreference('any');
+    setPublishedRange('all');
+    setPublishedFrom('');
+    setPublishedTo('');
+    setAdvancedFilters({
+      hasPreBid: false,
+      withdrawalAllowed: false,
+      twoStageBidding: false,
+      preferentialBidder: false,
+      tendererClass: '',
+    });
     setClosingDays('');
     setStatus('active');
     setSortBy('arrival');
@@ -299,7 +396,7 @@ export default function Tenders() {
         </div>
 
         {/* 2. Left Filter Panel (Sticky Sidebar) */}
-        <div className="gem-filter-panel bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="gem-filter-panel bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-3.5">
           {/* State Filter Navigation Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
@@ -321,8 +418,115 @@ export default function Tenders() {
             ))}
           </div>
 
+          {/* Published Date Filter Navigation Pills (Pick Date / All) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-dalBlue" /> Published:
+            </span>
+            <button
+              type="button"
+              onClick={() => handlePublishedSelect('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                publishedRange === 'all' || (!publishedRange && !publishedFrom && !publishedTo)
+                  ? 'bg-dalBlue text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePublishedSelect('today')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                publishedRange === 'today'
+                  ? 'bg-dalBlue text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePublishedSelect('7days')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                publishedRange === '7days'
+                  ? 'bg-dalBlue text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Last 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePublishedSelect('1month')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                publishedRange === '1month'
+                  ? 'bg-dalBlue text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Last 1 Month
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePublishedSelect('custom')}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                publishedRange === 'custom'
+                  ? 'bg-dalBlue text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Pick Date</span>
+            </button>
+          </div>
+
+          {/* Custom Date Range Picker (when Pick Date is active) */}
+          {publishedRange === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Published Dates:</span>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] text-slate-500 font-semibold">From</label>
+                <input
+                  type="date"
+                  value={publishedFrom}
+                  onChange={(e) => {
+                    setPublishedFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="py-1 px-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] text-slate-500 font-semibold">To</label>
+                <input
+                  type="date"
+                  value={publishedTo}
+                  onChange={(e) => {
+                    setPublishedTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="py-1 px-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+                />
+              </div>
+              {(publishedFrom || publishedTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishedFrom('');
+                    setPublishedTo('');
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs text-red-500 hover:underline font-semibold ml-auto cursor-pointer"
+                >
+                  Clear dates
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Secondary Filter Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             {/* Consignee / District Location */}
             <div>
               <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
@@ -360,6 +564,99 @@ export default function Tenders() {
                 <option value="">All Organizations</option>
                 {organizations.map((name) => (
                   <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Work Category / Domain */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                Work Category / Domain
+              </label>
+              <select
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              >
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Procurement Type */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                Procurement Type
+              </label>
+              <select
+                value={procurementType}
+                onChange={(e) => {
+                  setProcurementType(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              >
+                {PROCUREMENT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tender Amount */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                Tender Amount
+              </label>
+              <select
+                value={tenderAmountRange}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTenderAmountRange(val);
+                  if (val === 'custom') {
+                    setAmountModalOpen(true);
+                  } else {
+                    setMinAmount('');
+                    setMaxAmount('');
+                  }
+                  setCurrentPage(1);
+                }}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              >
+                {TENDER_AMOUNT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.value === 'custom' && (minAmount || maxAmount)
+                      ? `Custom (${minAmount ? `>₹${Number(minAmount).toLocaleString('en-IN')}` : ''}${minAmount && maxAmount ? ' - ' : ''}${maxAmount ? `<₹${Number(maxAmount).toLocaleString('en-IN')}` : ''})`
+                      : opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Fee Preferences */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                Fee Preferences
+              </label>
+              <select
+                value={feePreference}
+                onChange={(e) => {
+                  setFeePreference(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              >
+                {FEE_PREFERENCES_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -406,29 +703,36 @@ export default function Tenders() {
               </select>
             </div>
 
-            {/* Work Category / Domain */}
+            {/* Advanced Filters */}
             <div>
               <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Work Category / Domain
+                Advanced Filters
               </label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-dalBlue"
+              <button
+                type="button"
+                onClick={() => setAdvancedModalOpen(true)}
+                className={`w-full py-1.5 px-2.5 rounded-lg border text-left flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeAdvancedCount > 0
+                    ? 'border-dalBlue bg-blue-50/60 dark:bg-blue-950/40 text-dalBlue dark:text-blue-300 font-semibold shadow-xs'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
+                }`}
               >
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                <span className="flex items-center gap-1.5 truncate">
+                  <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                  <span>
+                    {activeAdvancedCount > 0 ? `${activeAdvancedCount} active` : 'Select rules…'}
+                  </span>
+                </span>
+                {activeAdvancedCount > 0 && (
+                  <span className="h-4 min-w-[16px] px-1 rounded-full bg-dalBlue text-white text-[10px] flex items-center justify-center font-bold">
+                    {activeAdvancedCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Reset Filters */}
-            <div className="flex items-end col-span-full">
+            <div className="flex items-end">
               <button
                 type="button"
                 onClick={handleReset}
@@ -613,6 +917,37 @@ export default function Tenders() {
         title={authModalConfig.title}
         subtitle={authModalConfig.subtitle}
         redirectUrl={authModalConfig.redirectUrl}
+      />
+
+      {/* Advanced Filters Modal */}
+      <FilterSelectionModal
+        isOpen={advancedModalOpen}
+        onClose={() => setAdvancedModalOpen(false)}
+        modalType="advancedFilters"
+        title="Advanced Filters"
+        subtitle="Filter by meeting conditions, bidding models, and eligibility"
+        extraState={advancedFilters}
+        onApply={(newState) => {
+          setAdvancedFilters(newState);
+          setCurrentPage(1);
+        }}
+      />
+
+      {/* Tender Amount Modal (for Custom Range) */}
+      <FilterSelectionModal
+        isOpen={amountModalOpen}
+        onClose={() => setAmountModalOpen(false)}
+        modalType="amount"
+        title="Select Tender Amount"
+        subtitle="Filter tenders by estimated contract value"
+        currentValue={tenderAmountRange}
+        extraState={{ tenderAmountRange, minAmount, maxAmount }}
+        onApply={(data) => {
+          setTenderAmountRange(data.tenderAmountRange || 'any');
+          setMinAmount(data.minAmount || '');
+          setMaxAmount(data.maxAmount || '');
+          setCurrentPage(1);
+        }}
       />
     </div>
   );
