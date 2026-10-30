@@ -549,13 +549,31 @@
 }
 
 .navbar-glass-link[aria-current="page"] {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 2px 8px rgba(37, 99, 235, .12);
+  color: #173b7a;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(219, 234, 254, .96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .98),
+    inset 0 0 0 1px rgba(37, 99, 235, .22),
+    0 0 0 2px rgba(255, 255, 255, .96),
+    0 0 0 4px rgba(37, 99, 235, .24),
+    0 4px 12px rgba(23, 59, 122, .2);
 }
 
 .dark .navbar-glass-nav {
   border-color: rgba(147, 197, 253, .18);
   background: rgba(30, 58, 103, .42);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 5px 18px rgba(0, 0, 0, .2);
+}
+
+.dark .navbar-glass-link[aria-current="page"] {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .48), rgba(30, 64, 175, .7));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .22),
+    inset 0 0 0 1px rgba(147, 197, 253, .45),
+    0 0 0 2px rgba(24, 39, 65, .9),
+    0 0 0 4px rgba(96, 165, 250, .58),
+    0 4px 12px rgba(0, 0, 0, .28);
 }
 
 @media (prefers-reduced-motion: reduce) {
