@@ -527,6 +527,41 @@
   height: 4.5rem;
 }
 
+/* Soft glass navigation pill, using the existing blue brand palette. */
+.navbar-glass-nav {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 5px 6px;
+  border: 1px solid rgba(37, 99, 235, .12);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 5px 18px rgba(23, 59, 122, .09);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+}
+
+.navbar-glass-link {
+  position: relative;
+  min-height: 38px;
+  justify-content: center;
+}
+
+.navbar-glass-link[aria-current="page"] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 2px 8px rgba(37, 99, 235, .12);
+}
+
+.dark .navbar-glass-nav {
+  border-color: rgba(147, 197, 253, .18);
+  background: rgba(30, 58, 103, .42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 5px 18px rgba(0, 0, 0, .2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-glass-link { transition: none; }
+}
+
 .navbar-source-strip {
   min-height: 1.8rem;
 }

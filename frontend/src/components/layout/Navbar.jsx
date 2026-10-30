@@ -145,17 +145,17 @@ export function Navbar() {
           </div>
 
           {/* Desktop Nav Links (Clean, Spacious & No Wrapping) */}
-          <nav className="hidden lg:flex items-center justify-center gap-5 xl:gap-7 flex-1 px-4">
+          <nav aria-label="Main navigation" className="navbar-glass-nav hidden lg:flex items-center justify-center gap-1 flex-1 px-2">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`whitespace-nowrap text-[13px] font-semibold transition-all px-3 py-2 rounded-lg flex items-center gap-1.5 ${
+                  className={`navbar-glass-link whitespace-nowrap text-[13px] font-semibold transition-all px-3 py-2.5 rounded-full flex items-center gap-1.5 ${
                     isActive
                       ? 'text-techCoral font-bold bg-techCoral-50 dark:bg-techCoral/15'
-                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral hover:bg-slate-50 dark:hover:bg-slate-800/70'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral'
                   }`}
                 >
                   <span>{link.label}</span>
