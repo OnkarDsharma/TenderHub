@@ -1241,9 +1241,9 @@ html:not(.dark) [role="dialog"] > div {
 }
 
 .gem-filter-panel {
-  position: sticky;
-  /* Keep the sidebar below the sticky search bar (7rem top + bar + grid gap). */
-  top: 13rem;
+  /* Let the full filter card flow with the page instead of trapping its
+     lower controls in a nested, independently scrolling sidebar. */
+  position: static;
   grid-column: 1;
   grid-row: 3;
   padding: 1rem;
@@ -1473,8 +1473,8 @@ html:not(.dark) [role="dialog"] > div {
 
 @media (min-width: 1024px) {
   .tenders-filter-toggle { display: none; }
-  .tenders-layout > aside { display: flex !important; max-height: calc(100vh - 7.5rem); }
-  .tenders-layout > aside .filter-grid { min-height: 0; grid-template-columns: minmax(0, 1fr); overflow-y: auto; max-height: calc(100vh - 14rem); }
+  .tenders-layout > aside { display: flex !important; }
+  .tenders-layout > aside .filter-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
