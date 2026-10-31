@@ -300,8 +300,9 @@ export default function Profile() {
           </div>
         )}
 
+        <div className="profile-workspace-grid">
         {/* Navigation Tabs */}
-        <nav aria-label="Profile sections" className="profile-tabs flex border-b border-slate-200 dark:border-slate-700 gap-2 sm:gap-4 text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-hide touch-momentum pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
+        <nav aria-label="Profile sections" className="profile-tabs flex flex-col gap-1 text-xs sm:text-sm font-semibold">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -311,10 +312,10 @@ export default function Profile() {
                 onClick={() => {
                   setSearchParams({ tab: tab.id }, { replace: true });
                 }}
-                className={`pb-3 px-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+                className={`w-full rounded-lg px-3 py-3 flex items-center gap-2.5 border-l-2 transition-colors text-left whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'border-dalBlue dark:border-blue-400 text-dalBlue dark:text-blue-400 font-bold'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'border-dalBlue dark:border-blue-400 bg-blue-50 dark:bg-blue-950/30 text-dalBlue dark:text-blue-300 font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -324,6 +325,7 @@ export default function Profile() {
           })}
         </nav>
 
+        <div className="profile-tab-panel">
         {/* Tab 1: Saved Tenders */}
         {activeTab === 'saved' && (
           <div className="space-y-4">
@@ -846,6 +848,8 @@ export default function Profile() {
         {activeTab === 'whatsapp' && (
           <WhatsAppAlertsTab />
         )}
+        </div>
+        </div>
 
       </div>
     </main>

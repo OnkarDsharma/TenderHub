@@ -286,20 +286,18 @@
 }
 
 .profile-tabs {
-  gap: 1rem;
-  border-color: #dfe6f0;
+  gap: .25rem;
 }
 
 .profile-tabs button {
-  min-height: 46px;
-  gap: .55rem;
-  padding: 0 .65rem .7rem;
+  min-height: 44px;
+  gap: .65rem;
+  padding: .7rem .8rem;
   font-weight: 550;
 }
 
 .profile-tabs button:hover {
-  background: rgba(40, 100, 240, .045);
-  border-radius: 6px 6px 0 0;
+  border-radius: 8px;
 }
 
 .profile-tabs button:focus-visible {
@@ -311,6 +309,17 @@
 .profile-panel {
   width: 100%;
   padding: 1.5rem;
+}
+
+.profile-workspace-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.profile-tab-panel {
+  min-width: 0;
 }
 
 .profile-content-grid {
@@ -486,6 +495,32 @@
     gap: .9rem;
   }
 
+  .profile-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
+  }
+
+  .profile-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    margin-inline: -.875rem;
+    padding: 0 .875rem .25rem;
+    border-bottom: 1px solid #dfe6f0;
+  }
+
+  .profile-tabs button {
+    width: auto;
+    min-height: 44px;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    padding: .65rem .7rem;
+  }
+
+  .profile-tabs button[aria-current="page"] {
+    border-bottom-color: #2864f0;
+    background: transparent;
+  }
+
   .profile-preferences-panel {
     padding: 1.1rem;
   }
@@ -494,16 +529,6 @@
     border-color: #edf1f6;
   }
 
-  .profile-tabs {
-    margin-inline: -.875rem;
-    padding-inline: .875rem;
-    gap: .35rem;
-  }
-
-  .profile-tabs button {
-    min-height: 48px;
-    padding-inline: .55rem;
-  }
 }
 
 @media (max-width: 640px) {
