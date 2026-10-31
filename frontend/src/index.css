@@ -2939,7 +2939,7 @@ body { background-color: #f7faff; }
 .dark .ai-mascot-art circle { fill: #e2e8f0; }
 
 /* Home hero: trim the gap between the navbar and the headline */
-.home-hero > div.home-hero-main { padding-top: clamp(1.25rem, 3vw, 2.25rem); min-height: 0; }
+.home-hero > div.home-hero-main { padding-top: clamp(2.75rem, 5vw, 4rem); min-height: 0; }
 
 .ai-field--wide { grid-column: 1 / -1; }
 
@@ -3012,3 +3012,20 @@ body { background-color: #f7faff; }
 .profile-tabs .profile-tab[aria-current="page"] { background: transparent; color: #fff; box-shadow: none; }
 .dark .profile-tabs .profile-tab[aria-current="page"] { background: transparent; color: #0b1630; }
 .profile-tabs .profile-tab:hover { border-radius: 999px; }
+
+/* Home sections: calmer vertical rhythm (was up to 6.5rem top and bottom) */
+.home-pipeline, .home-domains, .home-integrity, .home-latest {
+  padding-top: clamp(3rem, 5vw, 4.5rem);
+  padding-bottom: clamp(3rem, 5vw, 4.5rem);
+}
+
+/* Copilot quick questions: chips above the input, outside it */
+.ai-quick-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; padding: .75rem 1.25rem 0; }
+.ai-quick-chip { padding: .4rem .85rem; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, .7); font-size: .78rem; font-weight: 500; color: #475569; transition: color .15s ease, border-color .15s ease, background-color .15s ease; }
+.ai-quick-chip:hover:not(:disabled) { color: #0b1630; border-color: #94a3b8; background: #fff; }
+.ai-quick-chip.is-picked { color: #fff; background: #0b1630; border-color: #0b1630; }
+.ai-quick-chip:disabled { opacity: .5; cursor: not-allowed; }
+.ai-quick-chip:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.dark .ai-quick-chip { background: rgba(255, 255, 255, .05); color: #cbd5e1; }
+.dark .ai-quick-chip:hover:not(:disabled) { color: #fff; border-color: #64748b; background: rgba(255, 255, 255, .1); }
+.dark .ai-quick-chip.is-picked { color: #0b1630; background: #e2e8f0; border-color: #e2e8f0; }

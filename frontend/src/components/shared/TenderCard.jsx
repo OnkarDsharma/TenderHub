@@ -190,9 +190,9 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
               {formatDateDisplay(tender.publishedDateStr || tender.publishedDate || tender.publishedDateOnly)}
             </span>
           </div>
-          <div className="p-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/25">
-            <span className="text-amber-700 dark:text-amber-300 block font-semibold">Bid Closing</span>
-            <span className="font-mono font-bold text-amber-900 dark:text-amber-100">
+          <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 ring-1 ring-inset ring-rose-100 dark:ring-rose-900/50">
+            <span className="text-rose-600 dark:text-rose-300 block font-semibold">Bid Closing</span>
+            <span className="font-mono font-bold text-rose-700 dark:text-rose-200">
               {formatDateDisplay(tender.closingDateStr || tender.bidSubmissionEndDateStr || tender.closingDate)}
             </span>
           </div>

@@ -886,6 +886,12 @@ export default function Services() {
               {activeTab === 'copilot' && (() => {
                 const locked = Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime());
                 const remaining = profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50;
+                const quickQuestions = [
+                  { label: 'EMD and CDR rules', prompt: 'What are the EMD amount and CDR submission rules for this tender?' },
+                  { label: 'Eligibility', prompt: 'Check my eligibility and turnover compliance for this tender.' },
+                  { label: 'BOQ quantities', prompt: 'Summarize the cement and steel quantities in the BOQ.' },
+                  { label: 'Delay penalties', prompt: 'What are the delay penalty rules for this tender?' },
+                ];
                 return (
                   <section className="ai-chat">
                     <div className="ai-chat-bar">
@@ -918,6 +924,20 @@ export default function Services() {
                         {' '}<Link to="/pricing">View plans</Link>
                       </div>
                     )}
+
+                    <div className="ai-quick-row" role="group" aria-label="Quick questions">
+                      {quickQuestions.map((q) => (
+                        <button
+                          key={q.label}
+                          type="button"
+                          className={`ai-quick-chip ${chatInput === q.prompt ? 'is-picked' : ''}`}
+                          onClick={() => setChatInput(q.prompt)}
+                          disabled={locked || chatLoading}
+                        >
+                          {q.label}
+                        </button>
+                      ))}
+                    </div>
 
                     <CopilotComposer
                       value={chatInput}
