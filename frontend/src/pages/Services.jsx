@@ -168,6 +168,7 @@ export default function Services() {
 
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showScopeAdvisory, setShowScopeAdvisory] = useState(false);
   const lastAutoAnalyzeRef = useRef('');
   const analysisInFlightRef = useRef(false);
   useEffect(() => {
@@ -433,30 +434,30 @@ export default function Services() {
     <div className="estimator-page min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
       
       {/* 1. HEADER & CONTRACTOR PROFILE STRIP */}
-      <section className="bg-white dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700/80 pt-8 pb-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <section className="estimator-hero pt-12 pb-14 sm:pt-16 sm:pb-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 items-center">
             
             {/* Left 7 Columns: Title, Scrutiny Description & Search */}
-            <div className="estimator-primary lg:col-span-8 space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <div className="estimator-primary w-full max-w-3xl mx-auto space-y-4 text-center">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-white/70 dark:bg-slate-900/50 text-blue-800 dark:text-blue-200 border border-white/80 dark:border-blue-300/20">
                 <Cpu className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
                 <span>AI Quantity Surveyor &amp; Copilot</span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-3xl sm:text-5xl font-display font-bold text-slate-950 dark:text-white tracking-tight">
                 AI Tender Analysis
               </h1>
 
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+              <p className="text-sm sm:text-base text-slate-700 dark:text-blue-100 leading-relaxed max-w-2xl mx-auto">
                 Analyze tender documents, compare turnover and solvency criteria, extract material schedules, and review contractual risks before you submit a bid. Confirm key requirements in the source documents.
               </p>
 
               {/* Tender Analysis Input Console */}
               <div className="pt-2">
-                <div className="p-1.5 sm:p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-2">
+                <div className="estimator-input-bar p-2 rounded-full bg-white dark:bg-slate-950 border border-white/80 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-2 shadow-2xl">
                   <div className="relative flex-1 w-full">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-blue-500" />
                     <Input
                       type="text"
                       placeholder="Enter a Tender ID or portal reference"
@@ -464,14 +465,14 @@ export default function Services() {
                       onChange={(e) => setInputTenderId(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                       aria-label="Tender ID or portal reference"
-                      className="pl-10 text-xs sm:text-sm border-0 bg-transparent focus-visible:ring-0 shadow-none"
+                      className="pl-12 text-sm sm:text-base border-0 bg-transparent focus-visible:ring-0 shadow-none"
                     />
                   </div>
                   <Button
                     variant="primary"
                     onClick={() => handleAnalyze()}
                     disabled={analyzing || !profileReady}
-                    className="w-full sm:w-auto text-xs font-semibold shrink-0"
+                    className="w-full sm:w-auto text-sm font-semibold shrink-0 rounded-full px-5"
                   >
                     {analyzing ? (
                       <>
@@ -517,28 +518,11 @@ export default function Services() {
                   </button>
                 )}
 
-                {/* Current Limitations Advisory Callout */}
-                <div className="mt-4 p-3 sm:p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 flex items-start gap-2.5 text-xs">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-amber-900 dark:text-amber-200 text-xs">
-                        Current System Limitations:
-                      </span>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-300">
-                        Advisory Analysis
-                      </span>
-                    </div>
-                    <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed text-[11px] sm:text-xs pt-0.5">
-                      Estimates and checklists are derived from indexed tender metadata, published gazettes, and standard CPWD/PWD SOR benchmarks. Bespoke special conditions in attached non-searchable/scanned PDFs and live vendor rates must always be verified in the official NIT document.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
             {/* Right 5 Columns: Contractor Baseline & Capacity Card */}
-            <div className="estimator-profile lg:col-span-4">
+            <div className="estimator-profile w-full max-w-3xl mx-auto">
               <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs space-y-3">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
@@ -1157,8 +1141,14 @@ export default function Services() {
               </div>
             </div>
 
+            <button type="button" aria-expanded={showScopeAdvisory} onClick={() => setShowScopeAdvisory((open) => !open)} className="mx-auto flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950">
+              <AlertCircle className="h-4 w-4" />
+              Important Contractor Advisory
+              <span aria-hidden="true" className="text-base">{showScopeAdvisory ? '−' : '+'}</span>
+            </button>
+
             {/* Current System Scope & Limitations Section */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-700 shadow-xs space-y-5">
+            {showScopeAdvisory && <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-700 shadow-xs space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -1211,7 +1201,7 @@ export default function Services() {
                   </p>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
         )}
 

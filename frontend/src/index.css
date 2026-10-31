@@ -1829,6 +1829,44 @@ body { background-color: #f7faff; }
 .dark .estimator-page [class*="h-[560px]"] form { background-color: #111e33; border-color: #263b60; }
 .dark .gem-page .gem-bid-row { background-color: #111e33; border-color: #263b60; }
 
+/* AI estimator landing screen: blue glow from the supplied chat input reference. */
+.estimator-page { background-color: #f1f6ff; }
+.estimator-page > .estimator-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0;
+  background: linear-gradient(180deg, #dcebff 0%, #b9d4fb 48%, #8fb8f7 100%);
+}
+.estimator-page > .estimator-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -52%;
+  width: 110%;
+  aspect-ratio: 1.6 / 1;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 50%, #1d5fe0 0%, #2f7bff 28%, #6fa8ff 52%, transparent 72%);
+  filter: blur(28px);
+  pointer-events: none;
+}
+.estimator-page .estimator-primary > div > div.estimator-input-bar {
+  max-width: 640px;
+  min-height: 64px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: #fff;
+  border-color: rgba(255,255,255,.8);
+  box-shadow: 0 12px 36px rgba(20,60,140,.28);
+}
+.estimator-page .estimator-primary > div > div.estimator-input-bar input { min-height: 44px; }
+.dark .estimator-page > .estimator-hero { background: linear-gradient(180deg, #0b1d3f 0%, #123068 48%, #1b4aa8 100%); }
+.dark .estimator-page .estimator-primary > div > div.estimator-input-bar { background: #0c1426; border-color: #263b60; }
+@media (prefers-reduced-motion: reduce) {
+  .estimator-page > .estimator-hero::before { animation: none; }
+}
+
 @media (max-width: 1023px) {
   .gem-page > .gem-container { grid-template-columns: minmax(0, 1fr); }
   .gem-filter-panel, .gem-results-column { grid-column: 1; }
