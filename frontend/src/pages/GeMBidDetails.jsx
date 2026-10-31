@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Heart,
   Landmark,
   MapPin,
   Package,
@@ -21,6 +22,7 @@ import { useTender } from '@/hooks/useTenders';
 import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
 
 const display = (value, fallback = 'Not specified') => {
   const cleaned = String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -71,6 +73,7 @@ export default function GeMBidDetails() {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const { data: bid, isLoading, isError } = useTender(id);
+  const { toggleBookmark, isBookmarked } = useBookmarkStore();
 
   if (isLoading) {
     return <div className="flex-1 min-h-[60vh] flex items-center justify-center text-sm text-slate-500">Loading GeM bid details…</div>;
@@ -97,6 +100,7 @@ export default function GeMBidDetails() {
     ...(bid.pdfUrls || []),
     bid.detailsUrl,
   ].filter(Boolean))];
+  const bookmarked = isBookmarked(bid._id || bid.sourceTenderId);
 
   const handleCopyBidId = async () => {
     try {
@@ -139,6 +143,9 @@ export default function GeMBidDetails() {
             </div>
 
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+              <button type="button" onClick={() => toggleBookmark(bid)} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${bookmarked ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300' : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'}`}>
+                <Heart className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />{bookmarked ? 'Saved Bid' : 'Save Bid'}
+              </button>
               <a href="https://bidplus.gem.gov.in/all-bids" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-dalBlue hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
                 <ExternalLink className="w-4 h-4" /> Open GeM Portal
               </a>
@@ -166,6 +173,8 @@ export default function GeMBidDetails() {
                 <InfoCard label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</InfoCard>
                 <InfoCard label="Product Category" icon={Package}>{display(bid.productCategory)}</InfoCard>
                 <InfoCard label="State / Consignee Region" icon={MapPin}>{display(bid.state || parsed.consignee)}</InfoCard>
+                <InfoCard label="Bid Status">{display(bid.status, 'Not specified')}</InfoCard>
+                <InfoCard label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</InfoCard>
               </div>
             </section>
 
@@ -193,7 +202,10 @@ export default function GeMBidDetails() {
               <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white"><Wallet className="w-5 h-5 text-dalBlue" /> Fee & EMD</h2>
               <InfoCard label="EMD Deposit">{bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero'}</InfoCard>
               <InfoCard label="Tender Fee">{bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero'}</InfoCard>
+              <InfoCard label="Fee Payable To">{display(bid.feePayableTo)}</InfoCard>
               <InfoCard label="Fee Payable At">{display(bid.feePayableAt)}</InfoCard>
+              <InfoCard label="EMD Payable To">{display(bid.emdPayableTo)}</InfoCard>
+              <InfoCard label="EMD Payable At">{display(bid.emdPayableAt)}</InfoCard>
             </section>
 
             <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">

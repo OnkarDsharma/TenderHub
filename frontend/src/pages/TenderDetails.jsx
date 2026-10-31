@@ -524,7 +524,7 @@ export default function TenderDetails() {
                   <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-0.5">District / City</span>
                   <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0" />
-                    {workLoc.famousLocation}, J&amp;K
+                    {workLoc.famousLocation}{tender.state ? `, ${tender.state}` : ''}
                   </span>
                 </div>
 
