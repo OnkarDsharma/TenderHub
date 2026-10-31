@@ -17,7 +17,10 @@ import {
   ArrowUpRight,
   Sparkles,
   User,
-  MessageSquare
+  MessageSquare,
+  Home,
+  Search,
+  IndianRupee
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -65,12 +68,12 @@ export function Navbar() {
   }, [location.pathname, location.search]);
 
   const navLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'Browse Tenders', path: '/tenders' },
-    { label: 'GeM Bids', path: '/gem-tenders' },
-    { label: 'AI Estimator', path: '/services', badge: 'AI' },
-    { label: 'Pricing', path: '/pricing' },
-    { label: 'Contact', path: '/contact' },
+    { label: 'Home', path: '/', icon: Home },
+    { label: 'Browse Tenders', path: '/tenders', icon: Search },
+    { label: 'GeM Bids', path: '/gem-tenders', icon: Landmark },
+    { label: 'AI Estimator', path: '/services', badge: 'AI', icon: Sparkles },
+    { label: 'Pricing', path: '/pricing', icon: IndianRupee },
+    { label: 'Contact', path: '/contact', icon: MessageSquare },
   ];
 
   return (
@@ -145,20 +148,27 @@ export function Navbar() {
           </div>
 
           {/* Desktop Nav Links (Clean, Spacious & No Wrapping) */}
-          <nav aria-label="Main navigation" className="navbar-glass-nav hidden lg:flex items-center justify-center gap-1 flex-1 px-2">
+          <nav aria-label="Main navigation" className="navbar-glass-nav hidden lg:flex items-center justify-center gap-0.5 flex-1">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
+              const Icon = link.icon;
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`navbar-glass-link whitespace-nowrap text-[13px] font-semibold transition-all px-3 py-2.5 rounded-full flex items-center gap-1.5 ${
-                    isActive
-                      ? 'text-techCoral font-bold bg-techCoral-50 dark:bg-techCoral/15'
-                      : 'text-slate-700 dark:text-slate-300 hover:text-techCoral dark:hover:text-techCoral'
-                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`navbar-glass-link whitespace-nowrap text-[13px] font-medium px-3.5 py-2 rounded-full flex items-center gap-2 ${isActive ? 'is-active' : ''}`}
                 >
-                  <span>{link.label}</span>
+                  {isActive && (
+                    <motion.span
+                      layoutId="navbar-glass-active"
+                      className="navbar-glass-active"
+                      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {Icon && <Icon className="navbar-glass-icon w-4 h-4" aria-hidden="true" />}
+                  <span className="relative">{link.label}</span>
                   {link.badge && (
                     <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-techCoral-50 dark:bg-techCoral/15 text-techCoral border border-techCoral/30">
                       {link.badge}
@@ -174,9 +184,9 @@ export function Navbar() {
             {/* Quick Explore Button */}
             <Link
               to="/tenders"
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-dalBlue hover:bg-dalBlue-700 text-white dark:bg-dalBlue-800 dark:hover:bg-dalBlue-700 text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+              className="navbar-glass-cta hidden sm:inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider"
             >
-              <span>Explore Tenders</span>
+              <span className="relative">Explore Tenders</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, BellRing, Check, CheckCircle2, HelpCircle, Lock, Shield } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, HelpCircle, Shield, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { WaitlistModal } from '@/components/modals/WaitlistModal';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -49,32 +49,65 @@ export default function Pricing() {
           {UNIFIED_PLANS.map((plan) => {
             const isCurrent = plan.id === 'free_starter' || (subscription?.hasActiveSubscription && subscription?.planId === plan.id);
             return (
-              <article key={plan.id} className={`relative flex flex-col justify-between rounded-2xl p-6 sm:p-7 bg-white dark:bg-slate-800 shadow-sm ${plan.isLocked ? 'border border-amber-300 dark:border-amber-700/70' : 'border border-emerald-300 dark:border-emerald-700/70'}`}>
+              <article
+                key={plan.id}
+                className={`wl-card relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 ${
+                  plan.isLocked ? 'wl-card--locked' : 'wl-card--free'
+                } ${plan.id === 'contractor_pro' ? 'wl-card--featured' : ''}`}
+              >
                 <div>
-                  <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${plan.id === 'contractor_pro' ? 'bg-dalBlue text-white' : 'bg-slate-700 text-white dark:bg-slate-600'}`}>{plan.badge}</span>
-                  <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 min-h-10 leading-relaxed">{plan.description}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`wl-badge ${plan.id === 'contractor_pro' ? 'wl-badge--accent' : ''}`}>{plan.badge}</span>
+                    {plan.isLocked && <span className="wl-soon">Launching soon</span>}
+                  </div>
+                  {plan.isLocked && <span className="sr-only">{plan.name}. Plan details are revealed at launch. Join the priority waitlist below.</span>}
+                  <div className={plan.isLocked ? 'wl-blur' : ''} aria-hidden={plan.isLocked ? 'true' : undefined}>
+                  <h2 className="mt-5 text-xl font-bold tracking-tight text-slate-900 dark:text-white">{plan.name}</h2>
+                  <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{plan.description}</p>
+
+                  </div>
+                  <div className="relative mt-6 flex items-baseline gap-2">
+                    <span className={`wl-price ${plan.isLocked ? 'wl-blur wl-blur--strong' : ''}`} aria-hidden={plan.isLocked ? 'true' : undefined}>{plan.price}</span>
+                    <span className={`text-sm text-slate-500 dark:text-slate-400 ${plan.isLocked ? 'wl-blur' : ''}`} aria-hidden={plan.isLocked ? 'true' : undefined}>{plan.billingCycle}</span>
+                    {plan.isLocked && <span className="wl-price-cover">Coming soon</span>}
+                  </div>
                   {plan.isLocked ? (
-                    <div className="relative mt-5 flex min-h-12 items-center">
-                      <div aria-hidden="true" className="flex items-baseline gap-2 select-none blur-sm opacity-50"><span className="text-4xl font-bold text-dalBlue dark:text-white">{plan.price}</span><span className="text-sm text-slate-500 dark:text-slate-400">{plan.billingCycle}</span></div>
-                      <span className="absolute left-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">Coming Soon</span>
-                    </div>
-                  ) : <div className="mt-5 flex items-baseline gap-2"><span className="text-4xl font-bold text-dalBlue dark:text-white">{plan.price}</span><span className="text-sm text-slate-500 dark:text-slate-400">{plan.billingCycle}</span></div>}
-                  {plan.isLocked ? (
-                    <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider"><Lock className="w-3.5 h-3.5" /><span>Paid plan · launching soon</span></div>
-                  ) : <div className="mt-5 inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 text-xs font-semibold"><CheckCircle2 className="w-4 h-4" />Available now</div>}
-                  <div className="relative mt-5 border-t border-slate-100 dark:border-slate-700 pt-5">
-                    <ul className={`space-y-3 ${plan.isLocked ? 'select-none blur-[3px] opacity-45' : ''}`} aria-label={plan.isLocked ? 'Paid features coming soon' : 'Included features'}>
-                      {plan.features.map((feature) => <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span className="leading-snug">{feature}</span></li>)}
+                    <p className="wl-blur mt-2 text-xs font-medium text-slate-500 dark:text-slate-400" aria-hidden="true">Introductory price. Waitlist members get 50% off at launch.</p>
+                  ) : (
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" />Available now</p>
+                  )}
+
+                  <div className={`mt-6 border-t border-slate-200/80 pt-5 dark:border-slate-700 ${plan.isLocked ? 'wl-blur' : ''}`} aria-hidden={plan.isLocked ? 'true' : undefined}>
+                    <p className="wl-list-label">{plan.isLocked ? 'Planned at launch' : 'Included'}</p>
+                    <ul className="mt-3 space-y-3" aria-label={plan.isLocked ? 'Planned features' : 'Included features'}>
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+                          <Check className={`mt-0.5 h-4 w-4 shrink-0 ${plan.isLocked ? 'text-slate-400 dark:text-slate-500' : 'text-emerald-500'}`} />
+                          <span className="leading-snug">{feature}</span>
+                        </li>
+                      ))}
                     </ul>
-                    {plan.isLocked && <div className="absolute inset-0 flex items-center justify-center"><span className="rounded-xl border border-amber-300 bg-white/95 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-md dark:border-amber-700 dark:bg-slate-900/95 dark:text-white">Paid features<br /><span className="text-amber-700 dark:text-amber-300">Coming Soon</span></span></div>}
                   </div>
                 </div>
-                <div className="mt-7 pt-5 border-t border-slate-100 dark:border-slate-700">
-                  {plan.isLocked ? <>
-                    <Button variant="default" className="w-full h-12 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-sm shadow-md hover:bg-amber-400 hover:shadow-lg gap-2" onClick={() => setWaitlistPlan(plan)}><BellRing className="w-5 h-5" />Join the Priority Waitlist</Button>
-                    <p className="mt-2 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Get launch updates and a 50% early-bird offer.</p>
-                  </> : <Button variant="outline" className="w-full cursor-default" disabled>{isCurrent ? 'Current Active Plan' : plan.ctaText}<ArrowRight className="w-4 h-4 ml-2" /></Button>}
+
+                <div className="mt-8">
+                  {plan.isLocked ? (
+                    <>
+                      <button type="button" className="wl-cta" onClick={() => setWaitlistPlan(plan)}>
+                        <span>Join the priority waitlist</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                      <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-500 dark:text-slate-400">
+                        <Sparkles className="h-3.5 w-3.5 text-dalBlue" />
+                        Launch updates and a 50% early-bird offer
+                      </p>
+                    </>
+                  ) : (
+                    <Button variant="outline" className="w-full cursor-default rounded-full" disabled>
+                      {isCurrent ? 'Current active plan' : plan.ctaText}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </article>
             );

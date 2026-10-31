@@ -3,25 +3,21 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Building2,
-  Calendar,
-  CheckCircle2,
   Check,
   Copy,
-  Clock,
   Download,
   ExternalLink,
   FileText,
   Heart,
   Landmark,
   MapPin,
-  Package,
   Sparkles,
-  Wallet,
 } from 'lucide-react';
 import { useTender } from '@/hooks/useTenders';
 import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
+import { Tile } from '@/components/shared/BentoTile';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 
 const display = (value, fallback = 'Not specified') => {
@@ -46,25 +42,17 @@ const parseGemDescription = (value) => {
   };
 };
 
-const InfoCard = ({ label, children, icon: Icon }) => (
-  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-2">
-    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-      {Icon && <Icon className="w-4 h-4 text-dalBlue dark:text-blue-400" />}
-      {label}
-    </div>
-    <div className="text-sm text-slate-800 dark:text-slate-200 break-words">{children}</div>
+const Field = ({ label, children, big = false, wide = false }) => (
+  <div className={`ai-field ${wide ? 'ai-field--wide' : ''}`}>
+    <dt>{label}</dt>
+    <dd className={big ? 'big' : undefined}>{children}</dd>
   </div>
 );
 
-const DateCard = ({ label, value, tone = 'normal', icon: Icon = Calendar }) => (
-  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 space-y-2">
-    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-      <Icon className={`w-4 h-4 ${tone === 'urgent' ? 'text-amber-500' : tone === 'complete' ? 'text-emerald-500' : ''}`} />
-      {label}
-    </div>
-    <div className={`font-mono text-sm font-bold ${tone === 'urgent' ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>
-      {formatDateDisplay(value) || 'Not specified'}
-    </div>
+const DateRow = ({ label, value, tone = '' }) => (
+  <div className={tone || undefined}>
+    <dt>{label}</dt>
+    <dd>{formatDateDisplay(value) || 'Not specified'}</dd>
   </div>
 );
 
@@ -162,66 +150,85 @@ export default function GeMBidDetails() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 space-y-5">
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 space-y-4">
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white"><FileText className="w-5 h-5 text-dalBlue" /> Bid Details</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <InfoCard label="Issuing Department" icon={Building2}>{display(bid.departmentName)}</InfoCard>
-                <InfoCard label="Organisation Chain" icon={Landmark}>{display(bid.organisationChain)}</InfoCard>
-                <InfoCard label="Bid Number">{display(bidId)}</InfoCard>
-                <InfoCard label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</InfoCard>
-                <InfoCard label="Product Category" icon={Package}>{display(bid.productCategory)}</InfoCard>
-                <InfoCard label="State / Consignee Region" icon={MapPin}>{display(bid.state || parsed.consignee)}</InfoCard>
-                <InfoCard label="Bid Status">{display(bid.status, 'Not specified')}</InfoCard>
-                <InfoCard label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</InfoCard>
-              </div>
-            </section>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+          <div className="lg:col-span-2 space-y-2">
+            <Tile tone="light" order={0}>
+              <p className="ai-tile-kicker">Bid details</p>
+              <dl className="ai-fields">
+                <Field label="Issuing Department">{display(bid.departmentName)}</Field>
+                <Field label="Organisation Chain">{display(bid.organisationChain)}</Field>
+                <Field label="Bid Number"><span className="font-mono">{display(bidId)}</span></Field>
+                <Field label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</Field>
+                <Field label="Product Category">{display(bid.productCategory)}</Field>
+                <Field label="State / Consignee Region">{display(bid.state || parsed.consignee)}</Field>
+                <Field label="Bid Status">{display(bid.status, 'Not specified')}</Field>
+                <Field label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</Field>
+              </dl>
+            </Tile>
 
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white"><Package className="w-5 h-5 text-dalBlue" /> Items & Specifications</h2>
-                {parsed.quantity && <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Total Qty: {parsed.quantity}</span>}
+            <Tile tone="blue" order={1}>
+              <div className="ai-tile-head">
+                <p className="ai-tile-kicker">Items & specifications</p>
+                {parsed.quantity && <span className="ai-tag"><span className="font-mono">Total Qty: {parsed.quantity}</span></span>}
               </div>
-              {itemCategories.length > 0 && <div className="flex flex-wrap gap-2">{itemCategories.map((item, index) => <span key={`${item}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{display(item)}</span>)}</div>}
-              {(parsed.consignee || parsed.stations || parsed.raw) && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                {parsed.consignee && <InfoCard label="Consignee Address">{parsed.consignee}</InfoCard>}
-                {parsed.stations && <InfoCard label="Delivery Stations">{parsed.stations}</InfoCard>}
-                {parsed.raw && <div className="sm:col-span-2 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700 dark:bg-slate-800/50 dark:text-slate-300 whitespace-pre-wrap">{parsed.raw}</div>}
-              </div>}
-            </section>
+              {itemCategories.length > 0 && (
+                <div className="ai-chip-list">
+                  {itemCategories.map((item, index) => <span key={`${item}-${index}`}>{display(item)}</span>)}
+                </div>
+              )}
+              {(parsed.consignee || parsed.stations) && (
+                <dl className="ai-fields">
+                  {parsed.consignee && <Field label="Consignee Address">{parsed.consignee}</Field>}
+                  {parsed.stations && <Field label="Delivery Stations">{parsed.stations}</Field>}
+                </dl>
+              )}
+              {parsed.raw && <div className="ai-tile-raw">{parsed.raw}</div>}
+            </Tile>
 
-            {documentLinks.length > 0 && <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 space-y-3">
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white"><FileText className="w-5 h-5 text-dalBlue" /> Bid Documents</h2>
-              {documentLinks.map((url, index) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm font-semibold text-dalBlue hover:bg-blue-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800"><span>Official GeM document {index + 1}</span><ExternalLink className="w-4 h-4 shrink-0" /></a>)}
-            </section>}
+            {documentLinks.length > 0 && (
+              <Tile tone="light" order={2}>
+                <h2 className="ai-tile-heading">Bid documents</h2>
+                <div className="ai-link-rows">
+                  {documentLinks.map((url, index) => (
+                    <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                      <span>Official GeM document {index + 1}</span>
+                      <ExternalLink className="w-4 h-4 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </Tile>
+            )}
           </div>
 
-          <aside className="space-y-5">
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
-              <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white"><Wallet className="w-5 h-5 text-dalBlue" /> Fee & EMD</h2>
-              <InfoCard label="EMD Deposit">{bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero'}</InfoCard>
-              <InfoCard label="Tender Fee">{bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero'}</InfoCard>
-              <InfoCard label="Fee Payable To">{display(bid.feePayableTo)}</InfoCard>
-              <InfoCard label="Fee Payable At">{display(bid.feePayableAt)}</InfoCard>
-              <InfoCard label="EMD Payable To">{display(bid.emdPayableTo)}</InfoCard>
-              <InfoCard label="EMD Payable At">{display(bid.emdPayableAt)}</InfoCard>
-            </section>
+          <aside className="space-y-2">
+            <Tile tone="dark" order={3}>
+              <p className="ai-tile-kicker">Fee & EMD</p>
+              <dl className="ai-fields">
+                <Field label="EMD Deposit" big wide>{bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero'}</Field>
+                <Field label="Tender Fee" big wide>{bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero'}</Field>
+                <Field label="Fee Payable To">{display(bid.feePayableTo)}</Field>
+                <Field label="Fee Payable At">{display(bid.feePayableAt)}</Field>
+                <Field label="EMD Payable To">{display(bid.emdPayableTo)}</Field>
+                <Field label="EMD Payable At">{display(bid.emdPayableAt)}</Field>
+              </dl>
+            </Tile>
 
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Important Dates</h2>
-              <DateCard label="Published" value={bid.publishedDateStr || bid.publishedDate || bid.publishedDateOnly} />
-              <DateCard label="Bid Closing" value={bid.closingDateStr || bid.closingDate} tone="urgent" icon={Clock} />
-              <DateCard label="Bid Opening" value={bid.bidOpeningDateStr || bid.bidOpeningDate} tone="complete" icon={CheckCircle2} />
-              {(bid.documentDownloadStartDate || bid.documentDownloadStartDateStr) && <DateCard label="Document Download Starts" value={bid.documentDownloadStartDateStr || bid.documentDownloadStartDate} />}
-              {(bid.documentDownloadEndDate || bid.documentDownloadEndDateStr) && <DateCard label="Document Download Ends" value={bid.documentDownloadEndDateStr || bid.documentDownloadEndDate} />}
-            </section>
+            <Tile tone="light" order={4}>
+              <p className="ai-tile-kicker">Important dates</p>
+              <dl className="ai-dates">
+                <DateRow label="Published" value={bid.publishedDateStr || bid.publishedDate || bid.publishedDateOnly} />
+                <DateRow label="Bid Closing" value={bid.closingDateStr || bid.closingDate} tone="is-end" />
+                <DateRow label="Bid Opening" value={bid.bidOpeningDateStr || bid.bidOpeningDate} tone="is-open" />
+                {(bid.documentDownloadStartDate || bid.documentDownloadStartDateStr) && <DateRow label="Document Download Starts" value={bid.documentDownloadStartDateStr || bid.documentDownloadStartDate} />}
+                {(bid.documentDownloadEndDate || bid.documentDownloadEndDateStr) && <DateRow label="Document Download Ends" value={bid.documentDownloadEndDateStr || bid.documentDownloadEndDate} />}
+              </dl>
+            </Tile>
 
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/20 p-5 space-y-3">
-              <h2 className="flex items-center gap-2 text-sm font-bold text-dalBlue dark:text-blue-300"><MapPin className="w-4 h-4" /> Delivery Location</h2>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{display(bid.location, 'Location not specified')}</p>
-              {bid.state && <p className="text-xs text-slate-500 dark:text-slate-400">Filtered state: {bid.state}</p>}
-            </section>
+            <Tile tone="blue" order={5}>
+              <p className="ai-tile-kicker">Delivery location</p>
+              <p className="ai-tile-big ai-tile-big--sm">{display(bid.location, 'Location not specified')}</p>
+              {bid.state && <p className="ai-tile-note"><span>Filtered state</span>{bid.state}</p>}
+            </Tile>
           </aside>
         </div>
       </div>

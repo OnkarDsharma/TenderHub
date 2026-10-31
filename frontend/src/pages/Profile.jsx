@@ -17,6 +17,8 @@ import {
   UserRound
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Reveal } from '@/components/shared/Reveal';
 import { WhatsAppAlertsTab } from '@/components/profile/WhatsAppAlertsTab';
 
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -228,6 +230,7 @@ export default function Profile() {
       <div className="profile-shell max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
         <header className="profile-settings-heading">
+          <p className="profile-kicker">Account</p>
           <h1>Settings</h1>
           <p>Manage your TenderHub account, tender preferences, and alerts.</p>
         </header>
@@ -255,18 +258,22 @@ export default function Profile() {
             return (
               <button
                 key={tab.id}
-                  aria-current={isActive ? 'page' : undefined}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => {
                   setSearchParams({ tab: tab.id }, { replace: true });
                 }}
-                className={`w-full rounded-lg px-3 py-3 flex items-center gap-2.5 border-l-2 transition-colors text-left whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'border-dalBlue dark:border-blue-400 bg-blue-50 dark:bg-blue-950/30 text-dalBlue dark:text-blue-300 font-bold'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                className={`profile-tab ${isActive ? 'is-active' : ''}`}
               >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                {isActive && (
+                  <motion.span
+                    layoutId="profile-tab-pill"
+                    className="profile-tab-pill"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                    aria-hidden="true"
+                  />
+                )}
+                <tab.icon className="relative w-4 h-4" />
+                <span className="relative">{tab.label}</span>
               </button>
             );
           })}
@@ -303,8 +310,9 @@ export default function Profile() {
 
         {/* Tab 2: Contractor Credentials (Editable) */}
         {activeTab === 'company' && (
-          <div className="profile-content-grid">
-          <section className="profile-panel bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 shadow-xs transition-all">
+          <Reveal className="profile-content-grid">
+          <section className="profile-panel profile-tile space-y-5">
+            <span className="ai-tile-grid" aria-hidden="true" />
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
@@ -322,7 +330,7 @@ export default function Profile() {
                   variant="outline" 
                   size="sm" 
                   onClick={handleStartEditProfile}
-                  className="text-xs gap-1.5 hover:border-dalBlue hover:text-dalBlue dark:hover:border-blue-400 dark:hover:text-blue-300 cursor-pointer"
+                  className="profile-pill-btn text-xs gap-1.5 cursor-pointer"
                 >
                   <Edit2 className="w-3.5 h-3.5" /> Edit
                 </Button>
@@ -541,12 +549,13 @@ export default function Profile() {
               Manage preferences <ArrowRight className="w-4 h-4" />
             </button>
           </aside>
-          </div>
+          </Reveal>
         )}
 
         {/* Tab 3: Filter Preferences (Editable) */}
         {activeTab === 'alerts' && (
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-7 space-y-5 max-w-3xl shadow-xs transition-all">
+          <div className="profile-panel profile-tile space-y-5 max-w-3xl">
+            <span className="ai-tile-grid" aria-hidden="true" />
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">

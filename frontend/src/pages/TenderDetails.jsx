@@ -9,16 +9,13 @@ import {
   ArrowLeft, 
   ArrowRight, 
   Building2, 
-  Calendar, 
   FileText, 
   FileSpreadsheet, 
-  IndianRupee, 
   Heart, 
   ExternalLink, 
   AlertCircle, 
   Download, 
   Layers, 
-  CreditCard, 
   MapPin, 
   Map, 
   Compass, 
@@ -30,7 +27,6 @@ import {
   Eye, 
   FolderArchive, 
   Loader2, 
-  FileCheck,
   Lock,
   Clock,
   Sparkles,
@@ -45,6 +41,7 @@ import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
+import { Tile } from '@/components/shared/BentoTile';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Modal';
 import { api } from '@/services/api';
 
@@ -347,6 +344,18 @@ export default function TenderDetails() {
                     )}
                   </div>
                 </div>
+
+                {/* Tender inviting authority */}
+                <dl className="tender-authority">
+                  <div>
+                    <dt>Inviting officer</dt>
+                    <dd>{tender.invitingAuthorityName || 'Competent Authority / Executive Engineer'}</dd>
+                  </div>
+                  <div>
+                    <dt>Office address</dt>
+                    <dd>{tender.invitingAuthorityAddress || tender.location || 'As specified in tender notice'}</dd>
+                  </div>
+                </dl>
               </div>
 
               <div className="flex flex-col sm:flex-row md:flex-col gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
@@ -447,16 +456,15 @@ export default function TenderDetails() {
         )}
 
         {/* Content Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           
           {/* Main 2-Span Column */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-2">
             
             {/* Basic Details Section */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-xs">
-              <h2 className="text-base font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2.5 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-dalBlue dark:text-blue-400" /> Basic Details
-              </h2>
+            <Tile tone="light" order={0}>
+              <p className="ai-tile-kicker">Basic details</p>
+              <div className="ai-tile-content">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <div className="space-y-0.5">
                   <DataRow label="Organisation Chain" value={tender.organisationChain?.replace(/\|\|/g, ' > ')} />
@@ -477,32 +485,18 @@ export default function TenderDetails() {
                   <DataRow label="Two Stage Bidding" value={tender.allowTwoStageBidding} />
                 </div>
               </div>
-            </section>
+            </div>
+            </Tile>
 
             {/* Work Execution Location Box */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-red-50 dark:bg-red-950/40 text-chinarRed flex items-center justify-center shrink-0 border border-red-100 dark:border-red-900">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold font-display text-slate-900 dark:text-white">
-                      Work Execution Location
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Geographic execution site and administrative jurisdiction
-                    </p>
-                  </div>
+            <Tile tone="light" order={1}>
+              <div className="ai-tile-head mb-4">
+                <div>
+                  <p className="ai-tile-kicker">Work execution location</p>
+                  <p className="ai-tile-sub">Geographic execution site and administrative jurisdiction</p>
                 </div>
-
-                <a
-                  href={workLoc.mapSearchUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-dalBlue dark:text-blue-300 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors shrink-0"
-                >
-                  <Map className="w-3.5 h-3.5 text-techCoral" />
+                <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="ai-tile-link">
+                  <Map className="w-3.5 h-3.5" />
                   <span>Google Maps</span>
                   <ExternalLink className="w-3 h-3 opacity-60" />
                 </a>
@@ -569,93 +563,17 @@ export default function TenderDetails() {
                   </p>
                 </div>
               </div>
-            </section>
+            </Tile>
 
-            {/* Payment Instruments & Covers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 shadow-xs">
-                <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-slate-500 shrink-0" /> Payment Instruments
-                </h3>
-                {genuineInstruments.length > 0 ? (
-                  <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
-                    <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[240px]">
-                      <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
-                        <tr>
-                          <th className="px-2.5 py-1.5">S.No</th>
-                          <th className="px-2.5 py-1.5">Instrument Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {genuineInstruments.map((inst, idx) => (
-                          <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60">
-                            <td className="px-2.5 py-1.5 font-mono">{inst.sNo || idx + 1}</td>
-                            <td className="px-2.5 py-1.5 font-medium">{inst.instrumentType}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : tender.paymentMode === 'Offline' ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).</p>
-                ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Online payment mode (e-Payment / Net Banking / RTGS / NEFT).</p>
-                )}
-              </section>
-
-              <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 shadow-xs">
-                <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-slate-500 shrink-0" /> Covers Information
-                  <span className="text-[11px] text-slate-400 font-normal ml-auto">
-                    No. of Covers: {tender.noOfCovers || 2}
-                  </span>
-                </h3>
-                {genuineCovers.length > 0 ? (
-                  <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
-                    <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[340px]">
-                      <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
-                        <tr>
-                          <th className="px-2.5 py-1.5 w-12">Cover</th>
-                          <th className="px-2.5 py-1.5 w-32">Cover Type</th>
-                          <th className="px-2.5 py-1.5">Description</th>
-                          <th className="px-2.5 py-1.5 w-24">Doc Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {genuineCovers.map((cover, idx) => (
-                          <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                            <td className="px-2.5 py-2 font-mono font-bold text-slate-900 dark:text-white">{cover.coverNo || idx + 1}</td>
-                            <td className="px-2.5 py-2 font-medium">{cover.coverType || 'Fee/PreQual/Technical'}</td>
-                            <td className="px-2.5 py-2 text-slate-600 dark:text-slate-300 font-normal leading-relaxed">{cover.description || 'Document requirement as per NIT'}</td>
-                            <td className="px-2.5 py-2 font-mono uppercase font-bold text-dalBlue dark:text-blue-400">{cover.documentType}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                    <p>Standard {tender.noOfCovers || 2}-cover bidding system:</p>
-                    <ul className="list-disc list-inside text-[11px] text-slate-600 dark:text-slate-300">
-                      <li>Cover 1: Fee / Pre-Qualification / Technical (.pdf)</li>
-                      <li>Cover 2: Finance / BOQ Schedule (.xls)</li>
-                    </ul>
-                  </div>
-                )}
-              </section>
-            </div>
 
             {/* Other Important Documents List (Mandatory Bidder Checklist) */}
             {tender.otherImportantDocuments && tender.otherImportantDocuments.length > 0 && (
-              <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 shadow-xs">
-                <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" /> Other Important Documents List
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-normal">
-                    {tender.otherImportantDocuments.length} Mandatory Document(s)
-                  </span>
-                </h3>
+              <Tile tone="light" order={4}>
+                <div className="ai-tile-head">
+                  <p className="ai-tile-kicker">Other important documents</p>
+                  <p className="ai-tile-sub">{tender.otherImportantDocuments.length} mandatory document(s)</p>
+                </div>
+                <div className="ai-tile-content">
                 <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
                   <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[500px]">
                     <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
@@ -680,14 +598,14 @@ export default function TenderDetails() {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </div>
+              </Tile>
             )}
             
             {/* Work Item Details */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-xs">
-              <h3 className="text-base font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2.5">
-                Work Item Details
-              </h3>
+            <Tile tone="light" order={5}>
+              <p className="ai-tile-kicker">Work item details</p>
+              <div className="ai-tile-content">
               
               <div className="space-y-3 mb-4">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -744,122 +662,132 @@ export default function TenderDetails() {
                   <DataRow label="Allow Preferential Bidder" value={tender.allowPreferentialBidder} />
                 </div>
               </div>
-            </section>
+            </div>
+            </Tile>
 
-            {/* Tender Inviting Authority */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 sm:p-6 shadow-xs">
-              <h3 className="text-base font-bold font-display text-slate-900 dark:text-white mb-3 border-b border-slate-100 dark:border-slate-700 pb-2.5 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" /> Tender Inviting Authority
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    Designation / Inviting Officer
-                  </span>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                    {tender.invitingAuthorityName || 'Competent Authority / Executive Engineer'}
-                  </p>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    Office Address / Jurisdiction
-                  </span>
-                  <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {tender.invitingAuthorityAddress || tender.location || 'As specified in tender notice'}
-                  </p>
-                </div>
-              </div>
-            </section>
+
 
           </div>
 
           {/* Right Column: Financials, Dates & Documents */}
-          <div className="space-y-6">
+          <div className="space-y-2">
             
             {/* Tender Fee & EMD Details */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-xs">
-              <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-1.5">
-                <IndianRupee className="w-4 h-4 text-dalBlue dark:text-blue-400" /> Fee &amp; EMD Details
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <span className="block text-[10px] font-bold uppercase text-slate-400">Tender Fee</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-white">{formatCurrencyINR(tender.tenderFee)}</span>
-                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                    <p>Payable To: <strong className="text-slate-700 dark:text-slate-300">{tender.feePayableTo || 'N/A'}</strong></p>
-                    <p>Payable At: <strong className="text-slate-700 dark:text-slate-300">{tender.feePayableAt || 'N/A'}</strong></p>
-                    <p>Fee Exemption: <strong className={tender.tenderFeeExemptionAllowed === 'Yes' ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-300'}>{tender.tenderFeeExemptionAllowed || 'No'}</strong></p>
-                  </div>
+            <Tile tone="blue" order={7}>
+              <p className="ai-tile-kicker">Fee &amp; EMD details</p>
+              <dl className="ai-fields ai-fields--1">
+                <div className="ai-field">
+                  <dt>Tender Fee</dt>
+                  <dd className="big">{formatCurrencyINR(tender.tenderFee)}</dd>
+                  <dd className="ai-field-meta">Payable To: <strong>{tender.feePayableTo || 'N/A'}</strong></dd>
+                  <dd className="ai-field-meta">Payable At: <strong>{tender.feePayableAt || 'N/A'}</strong></dd>
+                  <dd className="ai-field-meta">Fee Exemption: <strong>{tender.tenderFeeExemptionAllowed || 'No'}</strong></dd>
                 </div>
-                
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
-                  <span className="block text-[10px] font-bold uppercase text-slate-400">EMD Deposit</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold font-mono text-dalBlue">{formatCurrencyINR(tender.emdAmount)}</span>
-                    <span className="text-xs text-slate-500">({tender.emdFeeType || 'Fixed'})</span>
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                    <p>Payable To: <strong className="text-slate-700 dark:text-slate-300">{tender.emdPayableTo || 'N/A'}</strong></p>
-                    <p>Payable At: <strong className="text-slate-700 dark:text-slate-300">{tender.emdPayableAt || 'N/A'}</strong></p>
-                    <p>Exemption: <strong className={tender.emdExemptionAllowed === 'Yes' ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-300'}>{tender.emdExemptionAllowed || 'No'}</strong></p>
-                  </div>
+                <div className="ai-field">
+                  <dt>EMD Deposit</dt>
+                  <dd className="big">{formatCurrencyINR(tender.emdAmount)}<span className="ai-field-tag">{tender.emdFeeType || 'Fixed'}</span></dd>
+                  <dd className="ai-field-meta">Payable To: <strong>{tender.emdPayableTo || 'N/A'}</strong></dd>
+                  <dd className="ai-field-meta">Payable At: <strong>{tender.emdPayableAt || 'N/A'}</strong></dd>
+                  <dd className="ai-field-meta">Exemption: <strong>{tender.emdExemptionAllowed || 'No'}</strong></dd>
                 </div>
-              </div>
-            </section>
+              </dl>
+            </Tile>
 
             {/* Critical Dates Section */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-xs">
-              <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white mb-3 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-700 pb-2">
-                <Calendar className="w-4 h-4 text-techCoral" /> Critical Dates
-              </h3>
-              <div className="space-y-2 font-mono text-xs">
-                <div className="flex justify-between py-1">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Published</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold">{formatDateTimeDisplay(tender.publishedDateStr || tender.publishedDate)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Download Start</span>
-                  <span className="text-slate-800 dark:text-slate-200">{formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Download End</span>
-                  <span className="text-slate-800 dark:text-slate-200">{formatDateTimeDisplay(tender.documentDownloadEndDateStr || tender.documentDownloadEndDate)}</span>
-                </div>
+            <Tile tone="dark" order={8}>
+              <p className="ai-tile-kicker">Critical dates</p>
+              <dl className="ai-dates">
+                <div><dt>Published</dt><dd>{formatDateTimeDisplay(tender.publishedDateStr || tender.publishedDate)}</dd></div>
+                <div><dt>Download Start</dt><dd>{formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate)}</dd></div>
+                <div><dt>Download End</dt><dd>{formatDateTimeDisplay(tender.documentDownloadEndDateStr || tender.documentDownloadEndDate)}</dd></div>
                 {(tender.clarificationStartDateStr || tender.clarificationStartDate) && tender.clarificationStartDate !== 'NA' && (
-                  <div className="flex justify-between py-1">
-                    <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Clarification Start</span>
-                    <span className="text-slate-800 dark:text-slate-200">{formatDateTimeDisplay(tender.clarificationStartDateStr || tender.clarificationStartDate)}</span>
-                  </div>
+                  <div><dt>Clarification Start</dt><dd>{formatDateTimeDisplay(tender.clarificationStartDateStr || tender.clarificationStartDate)}</dd></div>
                 )}
                 {(tender.clarificationEndDateStr || tender.clarificationEndDate) && tender.clarificationEndDate !== 'NA' && (
-                  <div className="flex justify-between py-1">
-                    <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Clarification End</span>
-                    <span className="text-slate-800 dark:text-slate-200">{formatDateTimeDisplay(tender.clarificationEndDateStr || tender.clarificationEndDate)}</span>
-                  </div>
+                  <div><dt>Clarification End</dt><dd>{formatDateTimeDisplay(tender.clarificationEndDateStr || tender.clarificationEndDate)}</dd></div>
                 )}
-                <div className="flex justify-between py-1 bg-emerald-50 dark:bg-emerald-950/30 px-2 rounded">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-emerald-800 dark:text-emerald-300">Bid Start</span>
-                  <span className="text-emerald-800 dark:text-emerald-300 font-bold">{formatDateTimeDisplay(tender.bidSubmissionStartDateStr || tender.bidSubmissionStartDate)}</span>
-                </div>
-                <div className="flex justify-between py-1 bg-red-50 dark:bg-red-950/30 px-2 rounded">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-red-800 dark:text-red-300">Bid End</span>
-                  <span className="text-red-800 dark:text-red-300 font-bold">{formatDateTimeDisplay(tender.bidSubmissionEndDateStr || tender.bidSubmissionEndDate)}</span>
-                </div>
-                <div className="flex justify-between py-1 pt-2 border-t border-slate-100 dark:border-slate-700">
-                  <span className="font-sans text-[10px] font-semibold uppercase text-slate-500">Bid Opening</span>
-                  <span className="text-dalBlue dark:text-blue-400 font-bold">{formatDateTimeDisplay(tender.bidOpeningDateStr || tender.bidOpeningDate)}</span>
-                </div>
-              </div>
-            </section>
+                <div className="is-start"><dt>Bid Start</dt><dd>{formatDateTimeDisplay(tender.bidSubmissionStartDateStr || tender.bidSubmissionStartDate)}</dd></div>
+                <div className="is-end"><dt>Bid End</dt><dd>{formatDateTimeDisplay(tender.bidSubmissionEndDateStr || tender.bidSubmissionEndDate)}</dd></div>
+                <div className="is-open"><dt>Bid Opening</dt><dd>{formatDateTimeDisplay(tender.bidOpeningDateStr || tender.bidOpeningDate)}</dd></div>
+              </dl>
+            </Tile>
 
+            {/* Payment instruments */}
+            <Tile tone="light" order={9}>
+              <p className="ai-tile-kicker">Payment instruments</p>
+              <div className="ai-tile-content">
+              {genuineInstruments.length > 0 ? (
+                <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
+                  <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[240px]">
+                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
+                      <tr>
+                        <th className="px-2.5 py-1.5">S.No</th>
+                        <th className="px-2.5 py-1.5">Instrument Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {genuineInstruments.map((inst, idx) => (
+                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60">
+                          <td className="px-2.5 py-1.5 font-mono">{inst.sNo || idx + 1}</td>
+                          <td className="px-2.5 py-1.5 font-medium">{inst.instrumentType}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : tender.paymentMode === 'Offline' ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400">Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).</p>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">Online payment mode (e-Payment / Net Banking / RTGS / NEFT).</p>
+              )}
+            </div>
+            </Tile>
+
+            {/* Covers */}
+            <Tile tone="light" order={9}>
+              <div className="ai-tile-head">
+                <p className="ai-tile-kicker">Covers information</p>
+                <p className="ai-tile-sub">No. of Covers: {tender.noOfCovers || 2}</p>
+              </div>
+              <div className="ai-tile-content">
+              {genuineCovers.length > 0 ? (
+                <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
+                  <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[340px]">
+                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
+                      <tr>
+                        <th className="px-2.5 py-1.5 w-12">Cover</th>
+                        <th className="px-2.5 py-1.5 w-32">Cover Type</th>
+                        <th className="px-2.5 py-1.5">Description</th>
+                        <th className="px-2.5 py-1.5 w-24">Doc Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {genuineCovers.map((cover, idx) => (
+                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                          <td className="px-2.5 py-2 font-mono font-bold text-slate-900 dark:text-white">{cover.coverNo || idx + 1}</td>
+                          <td className="px-2.5 py-2 font-medium">{cover.coverType || 'Fee/PreQual/Technical'}</td>
+                          <td className="px-2.5 py-2 text-slate-600 dark:text-slate-300 font-normal leading-relaxed">{cover.description || 'Document requirement as per NIT'}</td>
+                          <td className="px-2.5 py-2 font-mono uppercase font-bold text-dalBlue dark:text-blue-400">{cover.documentType}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                  <p>Standard {tender.noOfCovers || 2}-cover bidding system:</p>
+                  <ul className="list-disc list-inside text-[11px] text-slate-600 dark:text-slate-300">
+                    <li>Cover 1: Fee / Pre-Qualification / Technical (.pdf)</li>
+                    <li>Cover 2: Finance / BOQ Schedule (.xls)</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+            </Tile>
             {/* Official Documents & Attachments Section */}
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-xs">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2.5 mb-3.5">
-                <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Download className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                  <span>Tender Documents &amp; Attachments</span>
-                </h3>
+            <Tile tone="light" order={9}>
+              <div className="ai-tile-head mb-3.5">
+                <h3 className="ai-tile-heading">Tender documents &amp; attachments</h3>
                 {totalDocsCount > 0 ? (
                   <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-dalBlue dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     {totalDocsCount} {totalDocsCount === 1 ? 'file' : 'files'}
@@ -1312,7 +1240,7 @@ export default function TenderDetails() {
                   </div>
                 )}
               </div>
-            </section>
+            </Tile>
 
           </div>
         </div>

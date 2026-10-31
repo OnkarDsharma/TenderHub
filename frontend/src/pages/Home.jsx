@@ -36,6 +36,8 @@ import {
 
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
+import { CopilotMascot } from '@/components/shared/CopilotMascot';
+import { Reveal } from '@/components/shared/Reveal';
 import { useTenderStats } from '@/hooks/useTenders';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 
@@ -47,8 +49,6 @@ const quickLocations = [
   { label: 'Electrical Works', query: 'Electrical Works' },
   { label: 'Baramulla', query: 'Baramulla' },
   { label: 'Srinagar', query: 'Srinagar' },
-  { label: 'Bandipora', query: 'Bandipora' },
-  { label: 'Anantnag', query: 'Anantnag' },
 ];
 
 export default function Home() {
@@ -473,7 +473,7 @@ export default function Home() {
         <div className="max-w-[90rem] mx-auto relative z-10">
           
           {/* Centered Pill Badge & Heading */}
-          <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
+          <Reveal className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-4 bg-white dark:bg-slate-800 shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
               <span>CLASSIFIED SECTORS</span>
@@ -486,24 +486,24 @@ export default function Home() {
             <p className="mt-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
               Explore active opportunities across six public works domains.
             </p>
-          </div>
+          </Reveal>
 
           {/* 6 Work Domain Cards Grid (Screenshot 3) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <Reveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {workDomains.map((domain, i) => {
               const IconComp = domain.icon;
               return (
                 <div
                   key={i}
                   onClick={() => navigate(`/tenders?search=${encodeURIComponent(domain.query)}`)}
-                  className="relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-sm p-7 sm:p-8 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                  className="relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 sm:p-8 shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
                 >
                   {/* Top Right Corner Peach Accent Square */}
                   <div className="absolute top-5 right-5 w-2.5 h-2.5 bg-techCoral/90" />
                   
                   <div>
                     {/* Icon container */}
-                    <div className="w-12 h-12 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center mb-5">
                       <IconComp className="w-5 h-5" />
                     </div>
 
@@ -526,7 +526,7 @@ export default function Home() {
                 </div>
               );
             })}
-          </div>
+          </Reveal>
 
         </div>
       </section>
@@ -540,7 +540,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* Left Column: Image TenderHub2.jpg in elegant rounded frame */}
-            <div className="lg:col-span-5 relative flex justify-center">
+            <Reveal className="lg:col-span-5 relative flex justify-center">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 max-w-[440px] w-full">
                 <img 
                   src="/images/TenderHub2.jpg" 
@@ -549,10 +549,10 @@ export default function Home() {
                 />
                 <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-2xl pointer-events-none" />
               </div>
-            </div>
+            </Reveal>
 
             {/* Right Column: Information & Verification Points */}
-            <div className="lg:col-span-7 space-y-6">
+            <Reveal className="lg:col-span-7 space-y-6">
               
               {/* Top Badge: Circle icon + Pill */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase shadow-2xs">
@@ -572,10 +572,10 @@ export default function Home() {
               </p>
 
               {/* The 3 Exact Verification Points from Screenshot 4 */}
-              <div className="space-y-4 pt-2">
+              <Reveal className="space-y-4 pt-2">
                 
                 {/* Point 1: Official NIC Portal Direct */}
-                <div className="flex items-start gap-3.5 p-4 rounded-sm bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <Landmark className="w-4 h-4" />
                   </div>
@@ -590,7 +590,7 @@ export default function Home() {
                 </div>
 
                 {/* Point 2: Permanent Document Archives */}
-                <div className="flex items-start gap-3.5 p-4 rounded-sm bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <FileText className="w-4 h-4" />
                   </div>
@@ -605,7 +605,7 @@ export default function Home() {
                 </div>
 
                 {/* Point 3: Clear Work Site Locations */}
-                <div className="flex items-start gap-3.5 p-4 rounded-sm bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <MapPin className="w-4 h-4" />
                   </div>
@@ -619,19 +619,19 @@ export default function Home() {
                   </div>
                 </div>
 
-              </div>
+              </Reveal>
 
               {/* Explore Notices Button */}
               <div className="pt-2">
                 <Link
                   to="/tenders"
-                  className="inline-flex items-center justify-center px-7 py-3.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm tracking-wide rounded-sm shadow-md transition-all uppercase cursor-pointer"
+                  className="inline-flex items-center justify-center px-7 py-3.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm tracking-wide rounded-full shadow-md transition-all uppercase cursor-pointer"
                 >
                   Explore All Tenders
                 </Link>
               </div>
 
-            </div>
+            </Reveal>
 
           </div>
         </div>
@@ -644,7 +644,7 @@ export default function Home() {
       {stats?.latestTenders && stats.latestTenders.length > 0 && (
         <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-[90rem] mx-auto">
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <Reveal className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
@@ -665,10 +665,10 @@ export default function Home() {
               <span>View All {stats?.activeTendersCount ?? 1288} Tenders</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          </div>
+          </Reveal>
 
           {/* Grid matching user's exact Screenshot 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {(stats?.latestTenders || []).slice(0, 6).filter(Boolean).map((tender, index) => {
               const cleanTitle = tender?.title?.replace(/[[\]]/g, '') || 'Tender Notice';
               const orgParts = String(tender?.organisationChain || '').split('||').map((p) => p.trim());
@@ -733,10 +733,11 @@ export default function Home() {
                 </div>
               );
             })}
-          </div>
+          </Reveal>
         </section>
       )}
 
+      <CopilotMascot />
     </div>
   );
 }

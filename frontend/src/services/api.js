@@ -34,6 +34,14 @@ export const api = axios.create({
   },
 });
 
+// Dev-only mock backend (src/mocks). Enabled with `?mock=1`, disabled with `?mock=0`.
+// The branch is removed from production builds.
+if (import.meta.env.DEV) {
+  const mock = await import('@/mocks/mockApi');
+  mock.applyMockQueryToggle();
+  if (mock.isMockEnabled()) mock.installMockApi(api);
+}
+
 // Interceptor for JWT tokens (filter out any dummy/mock strings)
 api.interceptors.request.use((config) => {
   const isTestMode = import.meta.env.VITE_TEST_MODE === 'true' || (typeof window !== 'undefined' && window.location.port === '5175');

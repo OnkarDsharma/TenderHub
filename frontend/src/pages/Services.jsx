@@ -7,28 +7,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles,
-  Cpu,
-  FileText,
-  Boxes,
-  Calendar,
   AlertTriangle,
   CheckCircle2,
-  Zap,
-  TrendingUp,
   Download,
   Building2,
-  ShieldAlert,
-  Check,
   RefreshCw,
   Search,
   Sliders,
-  Scale,
-  AlertCircle,
-  Info,
-  Mic,
   ArrowUp,
-  BrainCircuit,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { servicesApi } from '../services/servicesApi';
 import { api } from '../services/api';
@@ -36,6 +24,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/useAuthStore';
+import { CopilotComposer } from '@/components/services/CopilotComposer';
+import { Tile } from '@/components/shared/BentoTile';
 
 function renderCopilotText(content) {
   const parts = String(content || '').split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
@@ -169,6 +159,38 @@ export default function Services() {
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showScopeAdvisory, setShowScopeAdvisory] = useState(false);
+  const [showProfilePopover, setShowProfilePopover] = useState(false);
+  const profilePopoverRef = useRef(null);
+  const tenderInputRef = useRef(null);
+  const resetAnalysis = () => {
+    setDossierData(null);
+    setPersonalizedFit(null);
+    setChatMessages([]);
+    setChatInput('');
+    setActiveTab('preBid');
+    setStatusMsg('');
+    setError('');
+    setInputTenderId('');
+    if (paramTenderId || queryTenderId) navigate('/services', { replace: true });
+    setTimeout(() => tenderInputRef.current?.focus(), 50);
+  };
+  useEffect(() => {
+    if (!showProfilePopover && !showScopeAdvisory) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      setShowProfilePopover(false);
+      setShowScopeAdvisory(false);
+    };
+    const onClick = (e) => {
+      if (profilePopoverRef.current && !profilePopoverRef.current.contains(e.target)) setShowProfilePopover(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, [showProfilePopover, showScopeAdvisory]);
   const lastAutoAnalyzeRef = useRef('');
   const analysisInFlightRef = useRef(false);
   useEffect(() => {
@@ -433,781 +455,568 @@ export default function Services() {
   return (
     <div className="estimator-page min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
       
-      {/* 1. HEADER & CONTRACTOR PROFILE STRIP */}
-      <section className="estimator-hero pt-12 pb-14 sm:pt-16 sm:pb-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 items-center">
-            
-            {/* Left 7 Columns: Title, Scrutiny Description & Search */}
-            <div className="estimator-primary w-full max-w-3xl mx-auto space-y-4 text-center">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-white/70 dark:bg-slate-900/50 text-blue-800 dark:text-blue-200 border border-white/80 dark:border-blue-300/20">
-                <Cpu className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
-                <span>AI Quantity Surveyor &amp; Copilot</span>
-              </div>
+      {/* 1. HERO: HEADING, TENDER INPUT, PROFILE CHIP, ADVISORY */}
+      <section className={`ai-hero ${dossierData ? 'ai-hero--compact' : ''}`}>
+        <div className="ai-hero-inner max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
 
-              <h1 className="text-3xl sm:text-5xl font-display font-bold text-slate-950 dark:text-white tracking-tight">
-                AI Tender Analysis
-              </h1>
+          {/* Top row: label + contractor profile chip */}
+          <div className="ai-hero-top">
+            <span className="ai-hero-label hidden sm:inline">AI Quantity Surveyor</span>
+            <div className="ai-hero-chip-wrap" ref={profilePopoverRef}>
+              <button
+                type="button"
+                className="ai-hero-chip"
+                aria-haspopup="dialog"
+                aria-expanded={showProfilePopover}
+                onClick={() => setShowProfilePopover((open) => !open)}
+              >
+                <Building2 className="w-4 h-4 shrink-0 opacity-80" />
+                <span className="truncate">{profile?.companyName || 'Profile not set'}</span>
+                <span aria-hidden="true" className="ai-hero-chip-dot" />
+                <span className="shrink-0 opacity-80">{profile?.registrationClass || 'Class not set'}</span>
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 opacity-70 transition-transform ${showProfilePopover ? 'rotate-180' : ''}`} />
+              </button>
 
-              <p className="text-sm sm:text-base text-slate-700 dark:text-blue-100 leading-relaxed max-w-2xl mx-auto">
-                Analyze tender documents, compare turnover and solvency criteria, extract material schedules, and review contractual risks before you submit a bid. Confirm key requirements in the source documents.
-              </p>
-
-              {/* Tender Analysis Input Console */}
-              <div className="pt-2">
-                <div className="estimator-input-bar p-2 rounded-full bg-white dark:bg-slate-950 border border-white/80 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-2 shadow-2xl">
-                  <div className="relative flex-1 w-full">
-                    <Search className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-blue-500" />
-                    <Input
-                      type="text"
-                      placeholder="Enter a Tender ID or portal reference"
-                      value={inputTenderId}
-                      onChange={(e) => setInputTenderId(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                      aria-label="Tender ID or portal reference"
-                      className="pl-12 text-sm sm:text-base border-0 bg-transparent focus-visible:ring-0 shadow-none"
-                    />
-                  </div>
-                  <Button
-                    variant="primary"
-                    onClick={() => handleAnalyze()}
-                    disabled={analyzing || !profileReady}
-                    className="w-full sm:w-auto text-sm font-semibold shrink-0 rounded-full px-5"
+              <AnimatePresence>
+                {showProfilePopover && (
+                  <motion.div
+                    role="dialog"
+                    aria-label="Contractor profile baseline"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.16 }}
+                    className="ai-hero-popover"
                   >
-                    {analyzing ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                        Analyzing tender...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-3.5 h-3.5 mr-1.5" />
-                        Analyze tender
-                      </>
+                    <p className="ai-popover-eyebrow">Contractor profile baseline</p>
+                    <dl className="ai-popover-list">
+                      <div>
+                        <dt>Registered entity</dt>
+                        <dd className="truncate">{profile?.companyName || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt>Registration class</dt>
+                        <dd>{profile?.registrationClass || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt>Avg annual turnover</dt>
+                        <dd>{profile?.avgAnnualTurnoverInr ? `₹${(profile.avgAnnualTurnoverInr / 1e7).toFixed(1)} Crore` : 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt>AI dossier access</dt>
+                        <dd><Badge variant="success">Unlimited for testing</Badge></dd>
+                      </div>
+                    </dl>
+                    {profile?.companyName === 'Prime Infrastructure & Engineering' && (
+                      <p className="ai-popover-note">
+                        Example values are prefilled. Review and update them before using personalized analysis.
+                      </p>
                     )}
-                  </Button>
-                </div>
-
-                {/* Status / Feedback message */}
-                {statusMsg && (
-                  <p className="mt-2 text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{statusMsg}</span>
-                  </p>
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      className="w-full mt-3"
+                      onClick={() => { setShowProfilePopover(false); setShowProfileModal(true); }}
+                    >
+                      <Sliders className="w-3.5 h-3.5 mr-1.5" />
+                      Configure profile
+                    </Button>
+                  </motion.div>
                 )}
-                {error && (
-                  <div className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
-                    <p className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /><span>{error}</span></p>
-                    {!isAuthenticated && (
-                      <Button
-                        type="button"
-                        variant="default"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => navigate(`/signup?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)}
-                      >
-                        Sign in / Sign up
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {!dossierData && exampleTender && (
-                  <button type="button" onClick={() => setInputTenderId(exampleTender.sourceTenderId || exampleTender._id)} className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-dalBlue dark:text-blue-300 hover:underline">
-                    <span>Try an example</span>
-                    <span className="font-mono text-slate-500 dark:text-slate-400">{exampleTender.sourceTenderId || exampleTender._id}</span>
-                  </button>
-                )}
-
-              </div>
+              </AnimatePresence>
             </div>
-
-            {/* Right 5 Columns: Contractor Baseline & Capacity Card */}
-            <div className="estimator-profile w-full max-w-3xl mx-auto">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                    <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                    <span>Contractor Profile Baseline</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowProfileModal(true)}
-                    className="text-xs font-semibold text-dalBlue dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Configure Profile</span>
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Entity</span>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {profile?.companyName || 'Profile not configured'}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase block">Registration Class</span>
-                      <span className="font-semibold text-xs text-dalBlue dark:text-blue-300 block truncate mt-0.5">
-                        {profile?.registrationClass || 'Not provided'}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase block">Avg Annual Turnover</span>
-                      <span className="font-semibold text-xs text-slate-900 dark:text-white block mt-0.5">
-                        {profile?.avgAnnualTurnoverInr ? `₹${(profile.avgAnnualTurnoverInr / 1e7).toFixed(1)} Crore` : 'Not provided'}
-                      </span>
-                    </div>
-                  </div>
-                  {profile?.companyName === 'Prime Infrastructure & Engineering' && (
-                    <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
-                      Example profile values are prefilled. Review and update them before using personalized analysis.
-                    </p>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-slate-400">AI Dossier access:</span>
-                  <Badge variant="success">
-                      Unlimited for testing
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
           </div>
+
+          {/* Centre: heading + input (collapses to the title once a dossier is loaded) */}
+          <div className="ai-hero-centre">
+            <h1>AI Tender Analysis</h1>
+            <AnimatePresence initial={false} mode="wait">
+            {dossierData ? (
+              <motion.div key="compact" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+                <button type="button" className="ai-hero-ghost-btn mt-4" onClick={resetAnalysis}>
+                  Analyze another tender
+                </button>
+              </motion.div>
+            ) : (
+            <motion.div
+              key="full"
+              className="ai-hero-collapsible"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0, filter: 'blur(6px)' }}
+              transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+            <p className="ai-hero-sub">
+              Eligibility fit, material schedules and contract risk, from the tender ID.
+            </p>
+
+            <form
+              className="ai-hero-pill"
+              onSubmit={(e) => { e.preventDefault(); handleAnalyze(); }}
+            >
+              <Search className="w-[18px] h-[18px] shrink-0 opacity-60" aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Enter a tender ID or portal reference"
+                value={inputTenderId}
+                onChange={(e) => setInputTenderId(e.target.value)}
+                aria-label="Tender ID or portal reference"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={analyzing}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAnalyze(); } }}
+                ref={tenderInputRef}
+              />
+              <button
+                type="submit"
+                className="ai-hero-pill-submit"
+                aria-label={analyzing ? 'Analyzing tender' : 'Analyze tender'}
+                title={analyzing ? 'Analyzing tender' : 'Analyze tender'}
+                disabled={analyzing || !profileReady}
+              >
+                {analyzing ? <RefreshCw className="w-[18px] h-[18px] animate-spin" /> : <ArrowUp className="w-[18px] h-[18px]" />}
+              </button>
+            </form>
+
+            <div className="ai-hero-feedback" aria-live="polite">
+              {error ? (
+                <>
+                  <p className="ai-hero-feedback-error">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{error}</span>
+                  </p>
+                  {!isAuthenticated && (
+                    <button
+                      type="button"
+                      className="ai-hero-ghost-btn"
+                      onClick={() => navigate(`/signup?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)}
+                    >
+                      Sign in / Sign up
+                    </button>
+                  )}
+                </>
+              ) : statusMsg ? (
+                <p className="ai-hero-feedback-status">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{statusMsg}</span>
+                </p>
+              ) : (!dossierData && exampleTender) ? (
+                <button
+                  type="button"
+                  className="ai-hero-example"
+                  onClick={() => setInputTenderId(exampleTender.sourceTenderId || exampleTender._id)}
+                >
+                  Try an example
+                  <span aria-hidden="true"> · </span>
+                  <span className="font-mono">{exampleTender.sourceTenderId || exampleTender._id}</span>
+                </button>
+              ) : null}
+            </div>
+            </motion.div>
+            )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom: advisory line */}
+          <AnimatePresence initial={false}>
+          {!dossierData && <motion.div className="ai-hero-bottom" key="advisory" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}>
+            <div className="ai-hero-advisory">
+              <span aria-hidden="true" className="ai-hero-advisory-dot" />
+              <span>AI output is advisory. Verify every requirement in the source NIT.</span>
+              <button type="button" onClick={() => setShowScopeAdvisory(true)}>
+                Read the full scope and limitations
+              </button>
+            </div>
+          </motion.div>}
+          </AnimatePresence>
         </div>
       </section>
 
       {/* 2. MAIN WORKSPACE / DOSSIER CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {dossierData ? (
-          <div className="space-y-6">
-            {/* Executive Snapshot Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-2 max-w-3xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    {dossierData.executiveOverview?.department || 'Department not listed'}
-                  </Badge>
-                  <span className="text-xs text-slate-500 font-mono">
-                    Ref: {dossierData.sourceTenderId || dossierData.tenderId}
-                  </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">tndrr record</span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                  {dossierData.executiveOverview?.title}
-                </h2>
+          <div className="ai-dossier">
+            {/* Header: reference, title, summary, fit */}
+            <header className="ai-dossier-head">
+              <div className="min-w-0">
+                <p className="ai-eyebrow">
+                  <span>{dossierData.executiveOverview?.department || 'Department not listed'}</span>
+                  <span className="ai-eyebrow-sep" aria-hidden="true" />
+                  <span className="font-mono">{dossierData.sourceTenderId || dossierData.tenderId}</span>
+                </p>
+                <h2 className="ai-dossier-title">{dossierData.executiveOverview?.title}</h2>
                 {dossierData.summary && (
-                  <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-lg border border-slate-200/70 dark:border-slate-700/60">
-                    {renderSummaryBullets(dossierData.summary)}
-                  </div>
+                  <div className="ai-summary">{renderSummaryBullets(dossierData.summary, 'space-y-2')}</div>
                 )}
               </div>
 
-              {/* Personalized Match Pill */}
               {personalizedFit && (
-                <div className="bg-slate-50 dark:bg-slate-900/70 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0 text-center min-w-[200px]">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Contractor Fit Rating
+                <aside className="ai-fit" aria-label="Contractor fit rating">
+                  <p className="ai-label">Contractor fit</p>
+                  <p className="ai-fit-score">{personalizedFit.matchScore}<span>%</span></p>
+                  <p className={`ai-fit-verdict ${personalizedFit.matchScore >= 80 ? 'is-good' : 'is-warn'}`}>
+                    <span className="ai-dot" aria-hidden="true" />
+                    {personalizedFit.verdict}
                   </p>
-                  <p className="text-3xl font-bold text-dalBlue dark:text-blue-400 mt-1">
-                    {personalizedFit.matchScore}%
-                  </p>
-                  <div className="mt-1">
-                    <Badge variant={personalizedFit.matchScore >= 80 ? 'success' : 'warning'}>
-                      {personalizedFit.verdict}
-                    </Badge>
-                  </div>
-                </div>
+                </aside>
               )}
-            </div>
+            </header>
 
-            {/* Navigation Tabs - Clean Segmented Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3">
-              {[
-                { id: 'preBid', label: '1. Win The Bid (Pre-Bid)', icon: TrendingUp },
-                { id: 'boq', label: '2. Raw Materials & BOQ', icon: Boxes },
-                { id: 'execution', label: '3. Execution & Milestones', icon: Calendar },
-                { id: 'copilot', label: '4. Contractor Copilot Chat', icon: Sparkles },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-dalBlue text-white shadow-xs font-bold'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* TAB CONTENT PANELS */}
-            <div>
-              {/* TAB 1: PRE-BID WINNING INSIGHTS */}
-              {activeTab === 'preBid' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column: Eligibility & Gaps */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Financial & Technical Fit Breakdown */}
-                    {personalizedFit && (
-                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <Scale className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                            <span>Financial &amp; Technical Fit Breakdown</span>
-                          </h3>
-                          <span className="text-xs text-slate-500">
-                            Based on {personalizedFit.contractorName}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase">3-Yr Avg Turnover</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
-                              ₹{(personalizedFit.turnoverCheck.contractor / 1e7).toFixed(2)} Cr
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Req: ₹{(personalizedFit.turnoverCheck.required / 1e7).toFixed(2)} Cr
-                            </p>
-                            <div className="mt-2 text-xs font-semibold">
-                              {personalizedFit.turnoverCheck.passed ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" /> Compliant
-                                </span>
-                              ) : (
-                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" /> JV Needed
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Bank Solvency</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
-                              ₹{(personalizedFit.solvencyCheck.contractor / 1e7).toFixed(2)} Cr
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Req: ₹{(personalizedFit.solvencyCheck.required / 1e7).toFixed(2)} Cr
-                            </p>
-                            <div className="mt-2 text-xs font-semibold">
-                              {personalizedFit.solvencyCheck.passed ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" /> Sufficient
-                                </span>
-                              ) : (
-                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" /> Enhance Solvency
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Single Work Done</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
-                              ₹{(personalizedFit.experienceCheck.contractor / 1e7).toFixed(2)} Cr
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Req: ₹{(personalizedFit.experienceCheck.required / 1e7).toFixed(2)} Cr
-                            </p>
-                            <div className="mt-2 text-xs font-semibold">
-                              {personalizedFit.experienceCheck.passed ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" /> Fully Eligible
-                                </span>
-                              ) : (
-                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" /> Check Sub-work
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Identified Gaps Cards */}
-                        {personalizedFit.identifiedGaps?.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                              Identified Capacity Gaps:
-                            </p>
-                            {personalizedFit.identifiedGaps.map((gap, idx) => (
-                              <div
-                                key={idx}
-                                className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5"
-                              >
-                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                <div className="text-xs space-y-1">
-                                  <p className="font-semibold text-amber-900 dark:text-amber-200">{gap.title}</p>
-                                  <p className="text-slate-600 dark:text-slate-300">{gap.detail}</p>
-                                  <p className="font-medium text-dalBlue dark:text-blue-400">
-                                    Mitigation: {gap.recommendation}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Mandatory Document Submission Checklist */}
-                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                        <span>Mandatory Document &amp; Affidavit Submission Pack</span>
-                      </h3>
-                      <div className="space-y-2.5">
-                        {dossierData.preBidAnalysis?.mandatoryDocumentChecklist?.map((doc) => (
-                          <div
-                            key={doc.sNo}
-                            className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-dalBlue dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0">
-                                  {doc.sNo}
-                                </span>
-                                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{doc.title}</p>
-                                <Badge variant="outline" className="text-[10px]">
-                                  {doc.stage}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-slate-600 dark:text-slate-300 pl-7">{doc.description}</p>
-                              {doc.complianceTip && (
-                                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium pl-7">
-                                  Note: {doc.complianceTip}
-                                </p>
-                              )}
-                            </div>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/60 shrink-0">
-                              Compulsory
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Contract Risk & GCC Red Flags */}
-                  <div className="space-y-6">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <ShieldAlert className="w-4 h-4 text-rose-600" />
-                        <span>GCC Risk &amp; Contract Traps</span>
-                      </h3>
-                      <div className="space-y-3">
-                        {dossierData.preBidAnalysis?.riskAndRedFlags?.map((risk, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 space-y-1"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-mono font-semibold text-slate-500">
-                                {risk.clauseReference || 'GCC Clause'}
-                              </span>
-                              <Badge variant={risk.severity === 'HIGH' ? 'destructive' : 'warning'}>
-                                {risk.severity} Risk
-                              </Badge>
-                            </div>
-                            <p className="text-xs font-bold text-slate-900 dark:text-white">{risk.title}</p>
-                            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{risk.riskSummary}</p>
-                            <p className="text-[11px] font-medium text-dalBlue dark:text-blue-400 pt-0.5">
-                              Mitigation: {risk.mitigationAction}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: BOQ RAW MATERIAL SCHEDULE */}
-              {activeTab === 'boq' && (
-                <div className="space-y-6">
-                  {/* Summary & Download Bar */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Boxes className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                        <span>Bill of Quantities: Primary Raw Material Breakdown</span>
-                      </h3>
-                      {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary && (
-                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-                          {renderSummaryBullets(dossierData.preBidAnalysis.boqMaterialBreakdown.summary, 'space-y-1.5')}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={downloadBoqCsv}
-                      className="self-start sm:self-center text-xs"
+            {/* Tabs */}
+            <div className="ai-tabs-wrap">
+              <div className="ai-tabs" role="tablist" aria-label="Dossier sections">
+                {[
+                  { id: 'preBid', label: 'Pre-bid' },
+                  { id: 'boq', label: 'Materials & BOQ' },
+                  { id: 'execution', label: 'Execution' },
+                  { id: 'copilot', label: 'Copilot' },
+                ].map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`ai-tab ${isActive ? 'is-active' : ''}`}
                     >
-                      <Download className="w-3.5 h-3.5 mr-1.5" />
-                      Export BOQ (CSV)
-                    </Button>
+                      {isActive && <motion.span layoutId="ai-tab-pill" className="ai-tab-pill" transition={{ type: 'spring', stiffness: 420, damping: 34 }} aria-hidden="true" />}
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="ai-panel">
+              {/* PRE-BID */}
+              {activeTab === 'preBid' && (
+                <div className="ai-bento" key="preBid">
+                  <div className="ai-bento-col">
+                    {personalizedFit && (
+                      <Tile tone="light" size="tall" order={0}>
+                        <p className="ai-tile-kicker">Eligibility fit</p>
+                        <p className="ai-tile-sub">Against {personalizedFit.contractorName}</p>
+                        <dl className="ai-tile-stats">
+                          {[
+                            { label: 'Three-year average turnover', check: personalizedFit.turnoverCheck, ok: 'Compliant', warn: 'Joint venture needed' },
+                            { label: 'Bank solvency', check: personalizedFit.solvencyCheck, ok: 'Sufficient', warn: 'Enhance solvency' },
+                            { label: 'Largest single work', check: personalizedFit.experienceCheck, ok: 'Eligible', warn: 'Check similar work' },
+                          ].map((s) => (
+                            <div key={s.label}>
+                              <dt>{s.label}</dt>
+                              <dd className="ai-tile-stat-value">₹{(s.check.contractor / 1e7).toFixed(2)} Cr</dd>
+                              <dd className="ai-tile-stat-req">Required ₹{(s.check.required / 1e7).toFixed(2)} Cr</dd>
+                              <dd className={`ai-tile-stat-status ${s.check.passed ? 'is-good' : 'is-warn'}`}>
+                                <span className="ai-dot" aria-hidden="true" />{s.check.passed ? s.ok : s.warn}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </Tile>
+                    )}
                   </div>
 
-                  {/* Material Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {dossierData.preBidAnalysis?.boqMaterialBreakdown?.materials?.map((mat, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-2"
-                      >
-                        <Badge variant="outline" className="text-[10px]">
-                          {mat.category || 'Material'}
-                        </Badge>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {mat.name}
-                        </h4>
-                        <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
-                          <p className="text-xl font-bold text-slate-900 dark:text-white">
-                            {mat.estimatedQuantity}
-                          </p>
-                          <p className="text-xs text-slate-500">Rate: {mat.approxRateInr}</p>
-                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                            Est. Outlay: {mat.totalEstCost}
-                          </p>
-                        </div>
-                      </div>
+                  <div className="ai-bento-col">
+                    {dossierData.preBidAnalysis?.riskAndRedFlags?.map((risk, idx) => (
+                      <Tile key={idx} tone="dark" order={2 + idx}>
+                        <p className="ai-tile-meta">
+                          <span className={`ai-risk-level ${risk.severity === 'HIGH' ? 'is-high' : risk.severity === 'MEDIUM' ? 'is-warn' : 'is-low'}`}>
+                            <span className="ai-dot" aria-hidden="true" />
+                            {risk.severity === 'HIGH' ? 'High' : risk.severity === 'MEDIUM' ? 'Medium' : 'Low'} risk
+                          </span>
+                          <span className="font-mono">{risk.clauseReference || 'GCC'}</span>
+                        </p>
+                        <p className="ai-tile-title">{risk.title}</p>
+                        <p className="ai-tile-text">{risk.riskSummary}</p>
+                        <p className="ai-tile-note"><span>Mitigation</span>{risk.mitigationAction}</p>
+                      </Tile>
                     ))}
                   </div>
 
-                  {/* BOQ Line Items Table */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs">
-                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                        Standard Schedule of Rates (SOR) Extracted Line Items
-                      </h4>
+                  <div className="ai-bento-col">
+                    {personalizedFit?.identifiedGaps?.length > 0 && (
+                      <Tile tone="blue" size="short" order={3}>
+                        <p className="ai-tile-kicker">Capacity gaps</p>
+                        <ul className="ai-tile-list">
+                          {personalizedFit.identifiedGaps.map((gap, idx) => (
+                            <li key={idx}>
+                              <p className="ai-tile-title">{gap.title}</p>
+                              <p className="ai-tile-text">{gap.detail}</p>
+                              <p className="ai-tile-note"><span>Mitigation</span>{gap.recommendation}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </Tile>
+                    )}
+                    <Tile tone="light" size="tall" order={4}>
+                      <p className="ai-tile-kicker">Submission checklist</p>
+                      <p className="ai-tile-sub">Every item is mandatory unless marked optional</p>
+                      <ol className="ai-tile-list ai-tile-list--numbered">
+                        {dossierData.preBidAnalysis?.mandatoryDocumentChecklist?.map((doc) => (
+                          <li key={doc.sNo}>
+                            <span className="ai-tile-num font-mono">{String(doc.sNo).padStart(2, '0')}</span>
+                            <div>
+                              <p className="ai-tile-title">
+                                {doc.title}
+                                {doc.stage && <span className="ai-tag">{doc.stage}</span>}
+                                {doc.isMandatory === false && <span className="ai-tag">Optional</span>}
+                              </p>
+                              <p className="ai-tile-text">{doc.description}</p>
+                              {doc.complianceTip && <p className="ai-tile-note"><span>Tip</span>{doc.complianceTip}</p>}
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    </Tile>
+                  </div>
+                </div>
+              )}
+
+              {/* MATERIALS & BOQ */}
+              {activeTab === 'boq' && (
+                <div className="space-y-2" key="boq">
+                  <div className="ai-bento">
+                    <div className="ai-bento-col">
+                      <Tile tone="light" size="tall" order={0}>
+                        <p className="ai-tile-kicker">Material schedule</p>
+                        <p className="ai-tile-sub">Normative quantities and Schedule of Rates estimates</p>
+                        {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary && (
+                          <div className="ai-tile-summary">{renderSummaryBullets(dossierData.preBidAnalysis.boqMaterialBreakdown.summary, 'space-y-2')}</div>
+                        )}
+                      </Tile>
+                      <Tile tone="blue" size="short" order={1}>
+                        <p className="ai-tile-kicker">Export</p>
+                        <p className="ai-tile-text">
+                          {dossierData.preBidAnalysis?.boqMaterialBreakdown?.materials?.length || 0} materials and {dossierData.preBidAnalysis?.boqMaterialBreakdown?.boqLineItems?.length || 0} line items, as a spreadsheet.
+                        </p>
+                        <button type="button" onClick={downloadBoqCsv} className="ai-tile-btn">
+                          <Download className="w-3.5 h-3.5" />
+                          Export CSV
+                        </button>
+                      </Tile>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                    <div className="ai-bento-col ai-bento-col--wide">
+                      {dossierData.preBidAnalysis?.boqMaterialBreakdown?.materials?.map((mat, idx) => (
+                        <Tile key={idx} tone="dark" order={2 + idx}>
+                          <p className="ai-tile-kicker">{mat.category || 'Material'}</p>
+                          <p className="ai-tile-title">{mat.name}</p>
+                          <p className="ai-tile-big ai-tile-big--sm">{mat.estimatedQuantity}</p>
+                          <p className="ai-tile-text">{mat.approxRateInr}</p>
+                          <p className="ai-tile-note"><span>Outlay</span>{mat.totalEstCost}</p>
+                        </Tile>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Tile tone="light" order={6} className="ai-tile--full">
+                    <p className="ai-tile-kicker">Line items</p>
+                    <p className="ai-tile-sub">Extracted against the standard Schedule of Rates</p>
+                    <div className="ai-table-wrap mt-4">
+                      <table className="ai-table">
+                        <thead>
                           <tr>
-                            <th className="py-2.5 px-4 font-semibold">Item No</th>
-                            <th className="py-2.5 px-4 font-semibold">Description of Work Item</th>
-                            <th className="py-2.5 px-4 font-semibold">Quantity</th>
-                            <th className="py-2.5 px-4 font-semibold">Unit</th>
-                            <th className="py-2.5 px-4 font-semibold">Est. Rate (₹)</th>
-                            <th className="py-2.5 px-4 font-semibold">Est. Amount (₹)</th>
+                            <th>Item</th>
+                            <th>Description</th>
+                            <th className="num">Qty</th>
+                            <th>Unit</th>
+                            <th className="num">Rate</th>
+                            <th className="num">Amount</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        <tbody>
                           {dossierData.preBidAnalysis?.boqMaterialBreakdown?.boqLineItems?.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-750">
-                              <td className="py-2.5 px-4 font-mono font-semibold text-dalBlue dark:text-blue-400">{item.itemNo}</td>
-                              <td className="py-2.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">{item.description}</td>
-                              <td className="py-2.5 px-4 font-semibold">{item.quantity}</td>
-                              <td className="py-2.5 px-4 text-slate-500">{item.unit}</td>
-                              <td className="py-2.5 px-4">{formatBoqEstimate(item.estimatedRate)}</td>
-                              <td className="py-2.5 px-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                                {formatBoqEstimate(item.estimatedAmount)}
-                              </td>
+                            <tr key={idx}>
+                              <td className="font-mono">{item.itemNo}</td>
+                              <td className="desc">{item.description}</td>
+                              <td className="num">{typeof item.quantity === 'number' ? item.quantity.toLocaleString('en-IN') : item.quantity}</td>
+                              <td>{item.unit}</td>
+                              <td className="num">{formatBoqEstimate(item.estimatedRate)}</td>
+                              <td className="num strong">{formatBoqEstimate(item.estimatedAmount)}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  </Tile>
                 </div>
               )}
 
-              {/* TAB 3: POST-AWARD EXECUTION & MILESTONES */}
-              {activeTab === 'execution' && (
-                <div className="space-y-6">
-                  {/* Procurement Phasing */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                      <span>Post-Award Material Procurement &amp; Staging Schedule</span>
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {dossierData.postAwardAnalysis?.procurementSchedule?.map((phase, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 space-y-2"
-                        >
-                          <span className="text-[10px] font-bold text-dalBlue dark:text-blue-400 uppercase tracking-wider">
-                            {phase.timeframe}
-                          </span>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{phase.phase}</h4>
-                          <div className="text-xs space-y-1 text-slate-600 dark:text-slate-300">
-                            <p className="font-semibold text-slate-500">Materials to Mobilize:</p>
-                            <ul className="list-disc list-inside space-y-0.5">
-                              {phase.materialsToMobilize?.map((m, mIdx) => (
-                                <li key={mIdx}>{m}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 pt-1">
-                            Critical Path: {phase.criticalPathItems}
-                          </p>
-                        </div>
+              {/* EXECUTION */}
+              {activeTab === 'execution' && (() => {
+                const phases = dossierData.postAwardAnalysis?.procurementSchedule || [];
+                const milestones = dossierData.postAwardAnalysis?.milestones || [];
+                const half = Math.ceil(phases.length / 2);
+                const renderPhase = (phase, idx, tone, size) => (
+                  <Tile key={idx} tone={tone} size={size} order={idx}>
+                    <p className="ai-tile-kicker">{phase.timeframe}</p>
+                    <p className="ai-tile-title">{phase.phase}</p>
+                    {phase.materialsToMobilize?.length > 0 && (
+                      <ul className="ai-tile-bullets">
+                        {phase.materialsToMobilize.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    )}
+                    {phase.criticalPathItems && <p className="ai-tile-note"><span>Critical path</span>{phase.criticalPathItems}</p>}
+                  </Tile>
+                );
+                return (
+                  <div className="ai-bento" key="execution">
+                    <div className="ai-bento-col">
+                      {phases.slice(0, half).map((p, i) => renderPhase(p, i, i === 0 ? 'light' : 'blue', i === 0 ? 'tall' : 'short'))}
+                    </div>
+                    <div className="ai-bento-col">
+                      {milestones.map((m, idx) => (
+                        <Tile key={m.milestoneNo} tone="dark" order={half + idx}>
+                          <p className="ai-tile-meta"><span>Milestone {m.milestoneNo}</span><span className="font-mono">Day {m.targetDays}</span></p>
+                          <p className="ai-tile-title">{m.description}</p>
+                          <p className="ai-tile-big ai-tile-big--sm">{m.financialProgressPct}<span>% billing</span></p>
+                          {m.penaltyIfDelayed && <p className="ai-tile-note"><span>If delayed</span>{m.penaltyIfDelayed}</p>}
+                        </Tile>
                       ))}
                     </div>
+                    <div className="ai-bento-col">
+                      {phases.slice(half).map((p, i) => renderPhase(p, half + i, i === 0 && phases.length - half > 1 ? 'blue' : 'light', i === 0 && phases.length - half > 1 ? 'short' : 'tall'))}
+                    </div>
                   </div>
+                );
+              })()}
+              {/* COPILOT */}
+              {activeTab === 'copilot' && (() => {
+                const locked = Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime());
+                const remaining = profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50;
+                return (
+                  <section className="ai-chat">
+                    <div className="ai-chat-bar">
+                      <p><span className="copilot-orb ai-chat-orb" aria-hidden="true" />Copilot</p>
+                      <p>Grounded in this tender and {profile?.companyName || 'your profile'} · {remaining} queries left</p>
+                    </div>
 
-                  {/* Milestone Delivery Tracker */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-600" />
-                      <span>Departmental Physical &amp; Financial Milestones</span>
-                    </h3>
-                    <div className="space-y-3">
-                      {dossierData.postAwardAnalysis?.milestones?.map((m) => (
-                        <div
-                          key={m.milestoneNo}
-                          className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="primary" className="text-[10px]">
-                                Milestone {m.milestoneNo}
-                              </Badge>
-                              <span className="text-xs font-semibold text-slate-500">
-                                Target: {m.targetDays} Days
-                              </span>
-                            </div>
-                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {m.description}
-                            </p>
-                            <p className="text-xs text-rose-600 dark:text-rose-400">
-                              Penalty if delayed: {m.penaltyIfDelayed}
-                            </p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">Billing Target</p>
-                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
-                              {m.financialProgressPct}% Progress
-                            </p>
-                          </div>
+                    <div className="ai-chat-scroll">
+                      {chatMessages.length === 0 && !chatLoading && (
+                        <div className="ai-chat-empty">
+                          <h3>Ask about this tender</h3>
+                          <p>Eligibility, EMD rules, material quantities, penalties, or anything in the notice.</p>
+                        </div>
+                      )}
+                      {chatMessages.map((msg, idx) => (
+                        <div key={idx} className={`ai-msg ${msg.role === 'user' ? 'is-user' : 'is-ai'}`}>
+                          <div className="ai-msg-body whitespace-pre-line">{renderCopilotText(msg.content)}</div>
                         </div>
                       ))}
+                      {chatLoading && (
+                        <div className="ai-msg is-ai">
+                          <div className="ai-msg-body ai-msg-loading"><RefreshCw className="w-3.5 h-3.5 animate-spin" />Reading the tender clauses</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* TAB 4: INTERACTIVE CONTRACTOR COPILOT CHAT */}
-              {activeTab === 'copilot' && (
-                <div className="copilot-shell bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col min-h-[560px] h-[min(72vh,760px)] overflow-hidden">
-                  <div className="copilot-welcome shrink-0 px-5 pt-7 pb-5 sm:pt-10 sm:pb-7 text-center">
-                    <div className="copilot-orb mx-auto mb-4 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white dark:bg-slate-800" />
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-400">
-                      Ready to assist you
-                    </h3>
-                    <p className="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400">
-                      Ask about this tender, your eligibility, or project requirements
-                    </p>
-                    <div className="mt-4 flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-blue-500" /> Personalized Tender Copilot</span>
-                      <span>Grounded in tender specs &amp; {profile?.companyName || 'your contractor profile'} capacity</span>
-                      <span>Queries remaining: {profile?.credits?.copilotQueriesLimit - (profile?.credits?.copilotQueriesUsed || 0) || 50}</span>
-                    </div>
-                  </div>
-
-                  {/* Messages Area */}
-                  {chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime() && (
-                    <div className="mx-3 mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-                      <strong>⏳ Free Session Limit Reached (5/5 Queries)</strong>
-                      <p className="mt-1">Chat is locked for 24 hours. Resumes in: {(() => { const seconds = Math.max(0, Math.ceil((new Date(chatLockedUntil).getTime() - countdownNow) / 1000)); return `${Math.floor(seconds / 3600)}h : ${Math.floor((seconds % 3600) / 60)}m : ${seconds % 60}s`; })()}</p>
-                      <Link to="/pricing" className="mt-1 inline-block font-semibold text-blue-700 hover:underline dark:text-blue-300">⚡ Unlimited access coming soon · View plans</Link>
-                    </div>
-                  )}
-                  <div className="flex-1 min-h-24 p-4 sm:px-6 overflow-y-auto space-y-3">
-                    {chatMessages.map((msg, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex gap-2.5 max-w-2xl ${
-                          msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''
-                        }`}
-                      >
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                          msg.role === 'user'
-                            ? 'bg-dalBlue text-white'
-                            : 'bg-blue-100 dark:bg-blue-900/60 text-dalBlue dark:text-blue-300'
-                        }`}>
-                          {msg.role === 'user' ? 'You' : 'AI'}
-                        </div>
-                        <div className={`p-3 rounded-xl text-xs leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-dalBlue text-white'
-                            : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700/60'
-                        }`}>
-                          <div className="whitespace-pre-line">{renderCopilotText(msg.content)}</div>
-                        </div>
-                      </div>
-                    ))}
-                    {chatLoading && (
-                      <div className="flex gap-2.5 max-w-2xl">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 text-dalBlue flex items-center justify-center shrink-0 text-[10px] font-bold">
-                          AI
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs text-slate-500 flex items-center gap-2">
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Scanning tender clauses...</span>
-                        </div>
+                    {locked && (
+                      <div className="ai-chat-locked">
+                        <strong>Free session limit reached.</strong> Chat resumes in {(() => { const s = Math.max(0, Math.ceil((new Date(chatLockedUntil).getTime() - countdownNow) / 1000)); return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`; })()}.
+                        {' '}<Link to="/pricing">View plans</Link>
                       </div>
                     )}
-                  </div>
 
-                  {/* Tender specific prompt shortcuts */}
-                  <div className="px-4 sm:px-5 pb-3 flex items-center gap-2 overflow-x-auto text-[11px]">
-                    {[
-                      { label: 'EMD & CDR rules', prompt: 'What are the EMD amount and CDR submission rules for this tender?' },
-                      { label: 'Eligibility', prompt: 'Check my eligibility and turnover compliance for this tender.' },
-                      { label: 'BOQ quantities', prompt: 'Summarize the cement and steel quantities in the BOQ.' },
-                      { label: 'Delay penalties', prompt: 'What are the delay penalty rules for this tender?' },
-                    ].map((promptText, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setChatInput(promptText.prompt);
-                        }}
-                        className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/50 dark:hover:text-blue-300 shrink-0 cursor-pointer text-xs transition-colors"
-                      >
-                        {promptText.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Input Form */}
-                  <form onSubmit={handleSendMessage} className="copilot-composer mx-4 sm:mx-5 mb-4 rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
-                    <textarea
-                      rows={2}
-                      placeholder="Ask me anything about this tender..."
+                    <CopilotComposer
                       value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
-                      className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-sm text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                      disabled={Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())}
+                      onChange={setChatInput}
+                      onSubmit={() => handleSendMessage({ preventDefault() {} })}
+                      disabled={locked}
+                      loading={chatLoading}
+                      tenderRef={dossierData.sourceTenderId || dossierData.tenderId}
                     />
-                    <div className="flex items-center justify-between gap-3 px-3 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-300"><Search className="w-3.5 h-3.5" /> Tender context</span>
-                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-300"><BrainCircuit className="w-3.5 h-3.5" /> Profile aware</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button type="button" aria-label="Voice input unavailable" title="Voice input is not available yet" className="p-2 text-slate-400"><Mic className="w-5 h-5" /></button>
-                        <button type="submit" aria-label="Send message" disabled={chatLoading || !chatInput.trim() || Boolean(chatLockedUntil && countdownNow < new Date(chatLockedUntil).getTime())} className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-700">
-                          <ArrowUp className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              )}
+                  </section>
+                );
+              })()}
 
-              {/* Advisory Footnote in Active Dossier */}
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
-                <Info className="w-4 h-4 text-dalBlue dark:text-blue-400 shrink-0 mt-0.5" />
-                <div className="leading-relaxed">
-                  <strong className="text-slate-800 dark:text-slate-200">Advisory Notice &amp; Scope: </strong>
-                  All AI-generated BOQ breakdowns, contractor compatibility scores, and risk clauses are advisory estimations intended to speed up pre-bid due diligence. Always cross-check mandatory terms and technical qualifications against the official published NIT document.
-                </div>
-              </div>
+              <p className="ai-footnote">
+                AI output is advisory. BOQ quantities, fit scores and risk clauses are estimates to speed up due diligence. Confirm every mandatory term against the published NIT.
+              </p>
             </div>
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Standard Empty Workspace Prompt */}
-            <div className="estimator-empty-state border-t border-slate-200 dark:border-slate-700 py-6 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-dalBlue dark:text-blue-400 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-white">Analysis Workspace</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Enter a tender reference or portal ID above to begin. The AI will extract raw materials, evaluate financial turnover fit, and identify GCC risk clauses.
-                </p>
-              </div>
+          <div className="ai-coverage">
+            <div>
+              <h2>Eligibility fit</h2>
+              <p>Turnover and solvency against the NIT thresholds, with your contractor profile applied.</p>
             </div>
-
-            <button type="button" aria-expanded={showScopeAdvisory} onClick={() => setShowScopeAdvisory((open) => !open)} className="mx-auto flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950">
-              <AlertCircle className="h-4 w-4" />
-              Important Contractor Advisory
-              <span aria-hidden="true" className="text-base">{showScopeAdvisory ? '−' : '+'}</span>
-            </button>
-
-            {/* Current System Scope & Limitations Section */}
-            {showScopeAdvisory && <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-700 shadow-xs space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Current Platform Scope &amp; AI Limitations
-                  </h3>
-                </div>
-                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 w-fit">
-                  Important Contractor Advisory
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Limitation Card 1 */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-dalBlue dark:text-blue-300 flex items-center justify-center">
-                    <FileText className="w-3.5 h-3.5" />
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    1. Scanned Document Verification
-                  </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    AI models ingest published portal metadata and digital notices. Bespoke special conditions or handwritten notes inside attached non-OCR/scanned PDFs should always be physically verified in the source NIT.
-                  </p>
-                </div>
-
-                {/* Limitation Card 2 */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
-                    <Boxes className="w-3.5 h-3.5" />
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    2. Normative BOQ Rate Estimates
-                  </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Extracted material schedules, cement/steel quantities, and estimated rates reflect standard CPWD/PWD Schedule of Rates (SOR). Actual local supplier rates, GST, and logistics freight must be factored in prior to bidding.
-                  </p>
-                </div>
-
-                {/* Limitation Card 3 */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center">
-                    <Scale className="w-3.5 h-3.5" />
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    3. Benchmark Eligibility Checks
-                  </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Turnover and solvency checks apply general procurement ratios (120% 3-yr turnover, 40% bank solvency). Departmental relaxations, MSME exemptions, or Joint Venture (JV) allowances must be confirmed per individual gazette.
-                  </p>
-                </div>
-              </div>
-            </div>}
+            <div>
+              <h2>Materials and BOQ</h2>
+              <p>Cement, steel and aggregate quantities with Schedule of Rates based estimates.</p>
+            </div>
+            <div>
+              <h2>Contract risk</h2>
+              <p>GCC clauses, penalties and milestone exposure flagged for review before you bid.</p>
+            </div>
           </div>
         )}
 
 
       </main>
 
+      {/* 3. DIALOG: PLATFORM SCOPE & AI LIMITATIONS */}
+      <AnimatePresence>
+        {showScopeAdvisory && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setShowScopeAdvisory(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ai-scope-title"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => e.stopPropagation()}
+              className="ai-scope-dialog"
+            >
+              <div className="ai-scope-head">
+                <div>
+                  <p className="ai-popover-eyebrow">Important contractor advisory</p>
+                  <h2 id="ai-scope-title">Current platform scope and AI limitations</h2>
+                </div>
+                <button type="button" aria-label="Close" className="ai-scope-close" onClick={() => setShowScopeAdvisory(false)}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <ol className="ai-scope-list">
+                <li>
+                  <span className="ai-scope-num">01</span>
+                  <div>
+                    <h3>Scanned document verification</h3>
+                    <p>AI models ingest published portal metadata and digital notices. Bespoke special conditions or handwritten notes inside attached non-OCR or scanned PDFs should always be physically verified in the source NIT.</p>
+                  </div>
+                </li>
+                <li>
+                  <span className="ai-scope-num">02</span>
+                  <div>
+                    <h3>Normative BOQ rate estimates</h3>
+                    <p>Extracted material schedules, cement and steel quantities, and estimated rates reflect standard CPWD/PWD Schedule of Rates (SOR). Actual local supplier rates, GST, and logistics freight must be factored in prior to bidding.</p>
+                  </div>
+                </li>
+                <li>
+                  <span className="ai-scope-num">03</span>
+                  <div>
+                    <h3>Benchmark eligibility checks</h3>
+                    <p>Turnover and solvency checks apply general procurement ratios (120% three-year turnover, 40% bank solvency). Departmental relaxations, MSME exemptions, or Joint Venture (JV) allowances must be confirmed per individual gazette.</p>
+                  </div>
+                </li>
+              </ol>
+
+              <div className="ai-scope-foot">
+                <Button type="button" variant="default" size="sm" onClick={() => setShowScopeAdvisory(false)}>
+                  Understood
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       {/* 4. MODAL: EDIT CONTRACTOR PROFILE MEMORY */}
       <AnimatePresence>
         {showProfileModal && (
@@ -1316,7 +1125,7 @@ export default function Services() {
                   </Button>
                   <Button
                     type="submit"
-                    variant="primary"
+                    variant="default"
                     size="sm"
                   >
                     Save Baseline

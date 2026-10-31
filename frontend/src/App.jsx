@@ -2,7 +2,7 @@
  * @file src/App.jsx
  * @description Top-level component establishing the application layout shell and route definitions.
  */
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import TenderDetails from './pages/TenderDetails';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
@@ -26,6 +26,10 @@ import { useAuthStore } from './store/useAuthStore';
 
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { CursorFollower } from './components/ui/cursor-follower';
+// Dev-only mock badge: loaded lazily so none of the mock code or fixture data ships in production builds.
+const MockBadge = import.meta.env.DEV
+  ? lazy(() => import('./mocks/MockBadge').then((m) => ({ default: m.MockBadge })))
+  : null;
 
 export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -65,6 +69,7 @@ export default function App() {
       </main>
 
       <Footer />
+      {MockBadge && <Suspense fallback={null}><MockBadge /></Suspense>}
     </div>
   );
 }
