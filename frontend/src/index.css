@@ -285,6 +285,20 @@
   color: #64748b;
 }
 
+/* Keep authentication surfaces light even when the rest of the app is in dark mode. */
+.auth-page,
+.dark .auth-page {
+  color: #0f172a;
+  background-color: #f5f8fc;
+}
+
+.auth-page input,
+.auth-page select {
+  color: #0f172a !important;
+  background-color: #fff !important;
+  border-color: #cbd5e1 !important;
+}
+
 .profile-tabs {
   gap: .25rem;
 }

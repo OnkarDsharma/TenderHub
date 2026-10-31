@@ -256,25 +256,25 @@ export default function Login({ defaultMode }) {
   const errorMessage = localError || storeError;
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-paper dark:bg-slate-900 transition-colors duration-200">
-      <div className="w-full max-w-lg space-y-5 sm:space-y-6">
+    <div className="auth-page min-h-[85vh] flex items-center justify-center py-10 sm:py-14 px-4 sm:px-6 lg:px-8 bg-[#f5f8fc] transition-colors duration-200">
+      <div className="w-full max-w-[460px] space-y-5 sm:space-y-6">
         
         {/* Brand Card Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <Link to="/" className="inline-flex items-center gap-2.5 mx-auto">
-            <img src="/tndrr-logo.png" alt="tndrr — Every tender. One search." className="w-[142px] h-auto dark:brightness-0 dark:invert" />
-            <span className="text-[10px] font-semibold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+            <img src="/tndrr-logo.png" alt="tndrr — Every tender. One search." className="w-[156px] h-auto" />
+            <span className="text-[10px] font-semibold tracking-wide bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
               J&amp;K
             </span>
           </Link>
-          <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white pt-2">
+          <h2 className="text-2xl sm:text-[28px] font-bold font-display text-slate-900 pt-2">
             {step === 'otp' 
               ? 'Check Your Email'
               : mode === 'signup' 
                 ? 'Create Contractor Account' 
                 : 'Sign In to Workspace'}
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
             {step === 'otp'
               ? `We sent a 6-digit verification code to ${email}`
               : mode === 'signup'
@@ -284,40 +284,12 @@ export default function Login({ defaultMode }) {
         </div>
 
         {/* Main Authentication Card */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 xs:p-5 sm:p-8 shadow-xs space-y-4 sm:space-y-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-[0_20px_60px_-32px_rgba(15,45,80,.28)] space-y-5 sm:space-y-6">
           
-          {/* Mode Selector Tabs (only shown on email step) */}
-          {step === 'email' && (
-            <div className="flex rounded-2xl bg-slate-100 dark:bg-slate-900/80 p-1 border border-slate-200 dark:border-slate-700/60">
-              <button
-                type="button"
-                onClick={() => switchMode('login')}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  mode === 'login'
-                    ? 'bg-white dark:bg-slate-800 text-dalBlue dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('signup')}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  mode === 'signup'
-                    ? 'bg-white dark:bg-slate-800 text-dalBlue dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Create Account (New User)
-              </button>
-            </div>
-          )}
-
           {/* Error Banner with helpful cross-mode suggestions */}
           {errorMessage && (
             <div className="space-y-2">
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-700 dark:text-red-300 animate-in fade-in">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 animate-in fade-in">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-1">
                   <span>{errorMessage}</span>
@@ -325,7 +297,7 @@ export default function Login({ defaultMode }) {
                     <button
                       type="button"
                       onClick={() => switchMode('signup')}
-                      className="block font-bold text-dalBlue dark:text-blue-300 underline hover:no-underline cursor-pointer pt-0.5"
+                      className="block font-bold text-dalBlue underline hover:no-underline cursor-pointer pt-0.5"
                     >
                       Click here to create a new account with this email →
                     </button>
@@ -334,7 +306,7 @@ export default function Login({ defaultMode }) {
                     <button
                       type="button"
                       onClick={() => switchMode('login')}
-                      className="block font-bold text-dalBlue dark:text-blue-300 underline hover:no-underline cursor-pointer pt-0.5"
+                      className="block font-bold text-dalBlue underline hover:no-underline cursor-pointer pt-0.5"
                     >
                       Click here to sign in with this email →
                     </button>
@@ -351,7 +323,7 @@ export default function Login({ defaultMode }) {
               <button
                 type="button"
                 onClick={() => loginWithGoogle(mode, searchParams.get('redirect') || '')}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
+                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold shadow-xs hover:border-slate-400 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -376,18 +348,18 @@ export default function Login({ defaultMode }) {
 
               {/* Clean Divider */}
               <div className="relative flex items-center justify-center">
-                <div className="border-t border-slate-200 dark:border-slate-700 w-full" />
-                <span className="bg-white dark:bg-slate-800 px-3 text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">
-                  Or use Email OTP
+                <div className="border-t border-slate-200 w-full" />
+                <span className="bg-white px-3 text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">
+                  Continue with email
                 </span>
-                <div className="border-t border-slate-200 dark:border-slate-700 w-full" />
+                <div className="border-t border-slate-200 w-full" />
               </div>
 
               {/* Form */}
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Official Email Address <span className="text-chinarRed">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Email address <span className="text-chinarRed">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 sm:top-3" />
@@ -395,7 +367,7 @@ export default function Login({ defaultMode }) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="contractor@domain.com"
+                      placeholder="you@company.com"
                       required
                       className="pl-9 text-xs sm:text-sm h-10 sm:h-11"
                     />
@@ -404,19 +376,19 @@ export default function Login({ defaultMode }) {
 
                 {/* SIGNUP ONLY: Optional Contractor Onboarding Details */}
                 {mode === 'signup' && (
-                  <div className="border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-900/40 space-y-3.5">
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-3.5">
                     <button
                       type="button"
                       onClick={() => setShowOptionalFields(!showOptionalFields)}
                       className="w-full flex items-center justify-between text-left cursor-pointer focus:outline-none"
                     >
                       <div className="flex items-center gap-2">
-                        <Building className="w-4 h-4 text-dalBlue dark:text-blue-400" />
+                        <Building className="w-4 h-4 text-dalBlue" />
                         <div>
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          <span className="text-xs font-bold text-slate-800">
                             Contractor Profile &amp; Preferences
                           </span>
-                          <span className="ml-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                          <span className="ml-2 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             All Optional
                           </span>
                         </div>
@@ -428,15 +400,15 @@ export default function Login({ defaultMode }) {
                       )}
                     </button>
 
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] text-slate-500">
                       Customize your radar and contractor workspace now, or fill these out anytime later in your profile.
                     </p>
 
                     {showOptionalFields && (
-                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-slate-700/60 animate-in fade-in duration-150">
+                      <div className="space-y-3 pt-2 border-t border-slate-200/80 animate-in fade-in duration-150">
                         {/* Contractor Full Name */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                             Representative / Full Name
                           </label>
                           <Input
@@ -450,7 +422,7 @@ export default function Login({ defaultMode }) {
 
                         {/* Firm / Company Affiliation */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                             Firm / Affiliation / Department
                           </label>
                           <Input
@@ -465,7 +437,7 @@ export default function Login({ defaultMode }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* Contractor Registration ID */}
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Contractor ID / Reg. No.
                             </label>
                             <Input
@@ -479,13 +451,13 @@ export default function Login({ defaultMode }) {
 
                           {/* Registration Class */}
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Registration Class
                             </label>
                             <select
                               value={profileDetails.registrationClass}
                               onChange={(e) => setProfileDetails({ ...profileDetails, registrationClass: e.target.value })}
-                              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
                             >
                               {REGISTRATION_CLASSES.map((c) => (
                                 <option key={c} value={c}>{c}</option>
@@ -497,7 +469,7 @@ export default function Login({ defaultMode }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* Preferred Operating District */}
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Primary District
                             </label>
                             <select
@@ -509,7 +481,7 @@ export default function Login({ defaultMode }) {
                                   preferredLocations: [e.target.value]
                                 }
                               })}
-                              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
                             >
                               {PREF_DISTRICT_OPTIONS.map((d) => (
                                 <option key={d} value={d}>{d}</option>
@@ -519,7 +491,7 @@ export default function Login({ defaultMode }) {
 
                           {/* Target Work Category */}
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Target Sector
                             </label>
                             <select
@@ -531,7 +503,7 @@ export default function Login({ defaultMode }) {
                                   targetSectors: [e.target.value]
                                 }
                               })}
-                              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-dalBlue/30"
                             >
                               {PREF_SECTOR_OPTIONS.map((s) => (
                                 <option key={s} value={s}>{s}</option>
@@ -547,7 +519,7 @@ export default function Login({ defaultMode }) {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-dalBlue hover:bg-dalBlue-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+                  className="w-full bg-dalBlue hover:bg-dalBlue-700 text-white font-bold py-3 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -564,14 +536,14 @@ export default function Login({ defaultMode }) {
               </form>
 
               {/* Bottom switch link */}
-              <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+              <div className="pt-2 text-center text-xs text-slate-500">
                 {mode === 'signup' ? (
                   <span>
                     Already have an account?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('login')}
-                      className="font-bold text-dalBlue dark:text-blue-400 hover:underline cursor-pointer"
+                      className="font-bold text-dalBlue hover:underline cursor-pointer"
                     >
                       Sign in here
                     </button>
@@ -582,7 +554,7 @@ export default function Login({ defaultMode }) {
                     <button
                       type="button"
                       onClick={() => switchMode('signup')}
-                      className="font-bold text-dalBlue dark:text-blue-400 hover:underline cursor-pointer"
+                      className="font-bold text-dalBlue hover:underline cursor-pointer"
                     >
                       Create contractor account
                     </button>
@@ -602,18 +574,18 @@ export default function Login({ defaultMode }) {
                     setStep('email');
                     setLocalError('');
                   }}
-                  className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-dalBlue dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                  className="text-xs font-semibold text-slate-500 hover:text-dalBlue flex items-center gap-1 cursor-pointer transition-colors shrink-0"
                 >
                   <ChevronLeft className="w-4 h-4" /> Change email
                 </button>
-                <span className="text-xs font-mono text-slate-600 dark:text-slate-300 font-semibold truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px]">
+                <span className="text-xs font-mono text-slate-600 font-semibold truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px]">
                   {email}
                 </span>
               </div>
 
               {/* 6 Individual Digit Inputs */}
               <div>
-                <label className="block text-center text-xs font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                <label className="block text-center text-xs font-semibold text-slate-700 mb-3">
                   Enter 6-Digit Verification Code
                 </label>
                 <div className="flex justify-center gap-1.5 sm:gap-2.5 md:gap-3">
@@ -629,7 +601,7 @@ export default function Login({ defaultMode }) {
                       onChange={(e) => handleDigitChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       autoFocus={index === 0}
-                      className="w-8 xs:w-10 sm:w-12 h-11 xs:h-12 sm:h-14 text-center text-lg xs:text-xl sm:text-2xl font-bold font-mono rounded-lg xs:rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-dalBlue dark:focus:border-blue-400 focus:ring-2 focus:ring-dalBlue/20 shadow-xs transition-all"
+                      className="w-8 xs:w-10 sm:w-12 h-11 xs:h-12 sm:h-14 text-center text-lg xs:text-xl sm:text-2xl font-bold font-mono rounded-lg xs:rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-dalBlue focus:ring-2 focus:ring-dalBlue/20 shadow-xs transition-all"
                     />
                   ))}
                 </div>
@@ -667,7 +639,7 @@ export default function Login({ defaultMode }) {
                       type="button"
                       onClick={handleSendOtp}
                       disabled={isSubmitting}
-                      className="text-xs font-semibold text-dalBlue dark:text-blue-400 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-dalBlue hover:underline cursor-pointer"
                     >
                       Didn't receive the code? Resend email
                     </button>
@@ -681,11 +653,11 @@ export default function Login({ defaultMode }) {
 
         {/* Security & Regulatory Institutional Badge */}
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            <BadgeCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <BadgeCheck className="w-4 h-4 text-emerald-600" />
             <span>Official tndrr Northern States Portal Identity</span>
           </div>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+          <p className="text-[10px] text-slate-400">
             Protected by HttpOnly cookies, session encryption, and rate-limited abuse prevention.
           </p>
         </div>
