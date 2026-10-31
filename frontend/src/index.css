@@ -1678,7 +1678,35 @@ body { background-color: #f7faff; }
 .home-hero a { color: inherit; }
 .home-statbar { background: #fff; border-color: #dbe6f5; }
 
-.navbar-source-strip { background-color: #102f6b; border-color: #1e478e; }
+.navbar-source-strip {
+  position: relative;
+  isolation: isolate;
+  color: rgba(255, 255, 255, .88);
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(147, 197, 253, .34), transparent 48%),
+    linear-gradient(105deg, rgba(30, 64, 175, .94), rgba(29, 78, 216, .88) 52%, rgba(30, 64, 175, .94));
+  border-color: rgba(191, 219, 254, .3);
+  -webkit-backdrop-filter: blur(16px) saturate(155%);
+  backdrop-filter: blur(16px) saturate(155%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), inset 0 -1px 0 rgba(15, 49, 119, .2), 0 3px 14px rgba(30, 64, 175, .12);
+}
+.navbar-source-strip > div { position: relative; z-index: 1; }
+.navbar-source-strip > div::before {
+  content: '';
+  position: absolute;
+  inset: 0 18%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse, rgba(219, 234, 254, .15), transparent 72%);
+}
+.navbar-source-strip > div > div:first-child > svg { color: #bfdbfe; }
+.navbar-source-strip > div > div:nth-child(2) > a { color: #dbeafe; }
+.navbar-source-strip > div > div:nth-child(2) > a:hover { color: #fff; }
+.navbar-source-strip > div > div:nth-child(2) > div { background: rgba(219, 234, 254, .4); }
+.navbar-source-strip button,
+.navbar-source-strip > div > div:nth-child(2) > a:last-child { color: rgba(255, 255, 255, .82); }
+.navbar-source-strip button:hover,
+.navbar-source-strip > div > div:nth-child(2) > a:last-child:hover { color: #fff; }
 .navbar-main-row + nav a[aria-current="page"] { color: #1d4ed8; }
 
 .tenders-page-header,
@@ -1714,7 +1742,13 @@ body { background-color: #f7faff; }
 .dark .home-hero-main p { color: #eaf2ff; }
 .dark .home-hero-art { opacity: .2; }
 .dark .home-statbar { background: #102448; border-color: #263b60; }
-.dark .navbar-source-strip { background-color: #081a3b; }
+.dark .navbar-source-strip {
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(96, 165, 250, .24), transparent 48%),
+    linear-gradient(105deg, rgba(8, 26, 59, .96), rgba(23, 61, 130, .94) 52%, rgba(8, 26, 59, .96));
+  border-color: rgba(147, 197, 253, .24);
+  box-shadow: inset 0 1px 0 rgba(219, 234, 254, .2), inset 0 -1px 0 rgba(2, 12, 34, .3), 0 3px 14px rgba(0, 0, 0, .18);
+}
 .dark footer { background-color: #081a3b; border-color: #1e3763; }
 
 @media (max-width: 640px) {
