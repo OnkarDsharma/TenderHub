@@ -216,7 +216,7 @@ export default function Home() {
           className="home-hero-art absolute inset-0 pointer-events-none"
           style={{ backgroundImage: "url('/images/TenderHUB1.jpg')" }}
         />
-        <div className="home-hero-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <div className="home-hero-main max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className="relative z-10 max-w-2xl">
             
             {/* Official Procurement Badge */}
@@ -327,7 +327,7 @@ export default function Home() {
 
         {/* Bottom Hero Stats Bar */}
         <div className="home-statbar relative z-10 bg-white dark:bg-[#18191E] border-t border-slate-200 dark:border-slate-800 w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             
             {/* Real Procurement Counters */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">
@@ -390,7 +390,7 @@ export default function Home() {
           Styled in the clean Techbyte card format with badges and arrows
           ========================================================================= */}
       <section className="home-pipeline py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#141519]">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[90rem] mx-auto">
           
           {/* Section Heading & Link */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8">
@@ -470,7 +470,7 @@ export default function Home() {
           Styled in the Techbyte "WHAT WE DO" aesthetic with peach corner indicators
           ========================================================================= */}
       <section className="home-domains relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#121316] border-b border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-[90rem] mx-auto relative z-10">
           
           {/* Centered Pill Badge & Heading */}
           <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
@@ -536,7 +536,7 @@ export default function Home() {
           Styled using Techbyte 2-column layout with TenderHub2.jpg on the left!
           ========================================================================= */}
       <section className="home-integrity py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-slate-50/70 dark:bg-[#141519] border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[90rem] mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* Left Column: Image TenderHub2.jpg in elegant rounded frame */}
@@ -642,7 +642,7 @@ export default function Home() {
           Exact live cards with source ID, title, department, date, and values
           ========================================================================= */}
       {stats?.latestTenders && stats.latestTenders.length > 0 && (
-        <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-[90rem] mx-auto">
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
