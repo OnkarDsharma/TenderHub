@@ -781,15 +781,15 @@ export default function GeMTenders() {
                           {item.emdAmount > 0 ? formatCurrencyINR(item.emdAmount) : 'Exempted / Zero'}
                         </span>
                       </div>
-                      <div className="p-2">
-                        <span className="text-slate-400 block font-medium">Published</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <div className="p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/25">
+                        <span className="text-blue-700 dark:text-blue-300 block font-semibold">Published</span>
+                        <span className="font-mono font-bold text-blue-900 dark:text-blue-100">
                           {formatDateDisplay(item.publishedDateStr || item.publishedDate || item.publishedDateOnly)}
                         </span>
                       </div>
-                      <div className="p-2">
-                        <span className="text-slate-400 block font-medium">Bid Closing</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <div className="p-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/25">
+                        <span className="text-amber-700 dark:text-amber-300 block font-semibold">Bid Closing</span>
+                        <span className="font-mono font-bold text-amber-900 dark:text-amber-100">
                           {formatDateDisplay(item.closingDateStr || item.closingDate)}
                         </span>
                       </div>
