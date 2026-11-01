@@ -870,13 +870,27 @@ export const refresh = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (refreshToken) {
       try {
         const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
-        await redis.del(`refreshToken:${decoded.userId}`);
+        const storedToken = await redis.get(`refreshToken:${decoded.userId}`);
+        if (storedToken === refreshToken) await redis.del(`refreshToken:${decoded.userId}`);
       } catch (err) {
         // Ignore token verification errors on logout
+      }
+    }
+
+    const accessToken = req.cookies?.accessToken ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+    if (accessToken) {
+      try {
+        const decoded = jwt.verify(accessToken, env.JWT_ACCESS_SECRET);
+        const digest = crypto.createHash('sha256').update(accessToken).digest('hex');
+        const ttl = Math.max(1, Math.min(ACCESS_TOKEN_EXPIRY, decoded.exp - Math.floor(Date.now() / 1000)));
+        await redis.setex(`revokedAccess:${digest}`, ttl, '1');
+      } catch (err) {
+        // Invalid or expired access tokens need no revocation entry.
       }
     }
 

@@ -5,7 +5,8 @@ const aiAnalysisSchema = new mongoose.Schema({
   documentHash: { type: String, required: true, index: true }, // To cache responses against pdf hashes
   summary: { type: String, required: true },
   extractedEligibility: { type: Array },
-  rawOpenAiResponse: { type: Object }
+  rawAiResponse: { type: String },
+  rawOpenAiResponse: { type: Object } // Legacy OpenAI analysis records
 }, { timestamps: true });
 
 export default mongoose.model('AiAnalysis', aiAnalysisSchema);

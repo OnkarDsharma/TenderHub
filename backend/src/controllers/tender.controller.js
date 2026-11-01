@@ -6,8 +6,10 @@
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import Tender from '../models/Tender.js';
+import AiAnalysis from '../models/AiAnalysis.js';
 import User from '../models/User.js';
 import Subscription from '../modules/billing/models/Subscription.js';
+import { env } from '../config/env.js';
 import { aiQueue } from '../workers/queue.js';
 import { getTenderR2Object } from '../utils/r2Storage.js';
 import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
@@ -667,18 +669,24 @@ export const getTenderById = async (req, res, next) => {
  */
 export const triggerAiAnalysis = async (req, res, next) => {
   try {
+    if (!env.GEMINI_API_KEY || env.GEMINI_API_KEY === 'dummy_key') {
+      return res.status(503).json({ message: 'AI analysis is not configured.' });
+    }
     const { id } = req.params;
     
-    // NOTE: In production, these variables should be dynamically extracted 
-    // from the actual PDF file stored in an S3 bucket or equivalent.
-    const mockDocumentText = "Extracted text from the tender PDF goes here...";
-    const mockDocumentHash = "abc123hash"; 
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'Invalid tender ID.' });
+    const tender = await Tender.findById(id).select('nitDocuments pdfUrls').lean();
+    if (!tender) return res.status(404).json({ message: 'Tender not found.' });
+    const documentUrl = tender.nitDocuments?.find((document) => document.fileUrl)?.fileUrl || tender.pdfUrls?.[0];
+    if (!documentUrl) return res.status(404).json({ message: 'No tender PDF is available for analysis.' });
+    const existingAnalysis = await AiAnalysis.findOne({ tenderId: id }).sort({ createdAt: -1 }).lean();
+    if (existingAnalysis) return res.status(200).json({ message: 'AI analysis already exists.', analysis: existingAnalysis });
 
-    // Add the AI extraction task to the Redis worker queue
+    // The worker downloads and parses the stored PDF to keep CPU and memory load
+    // out of the public HTTP request process.
     const job = await aiQueue.add('analyze-tender', {
       tenderId: id,
-      documentText: mockDocumentText,
-      documentHash: mockDocumentHash
+      documentUrl
     });
 
     // Return a 202 Accepted status indicating the job is queued

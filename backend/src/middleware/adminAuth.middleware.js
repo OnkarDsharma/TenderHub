@@ -3,7 +3,7 @@
  * @description Secure administrative authorization middleware.
  * Validates either:
  * 1. Dual-credential verification: Valid Admin Secret Key (`x-admin-key`) AND Authorized Admin Email (`x-admin-email`)
- * 2. Administrative JWT Token via `Authorization: Bearer <token>`
+ * 2. Administrative JWT Token signed only with the dedicated admin secret.
  */
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
@@ -63,12 +63,12 @@ export const adminAuth = (req, res, next) => {
       });
     }
 
-    // Method 2: Bearer JWT Token signed with ADMIN_SECRET or JWT_ACCESS_SECRET
+    // Method 2: Bearer JWT signed with the dedicated admin secret only.
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       
       try {
-        // Try verifying with ADMIN_SECRET first
+        if (!ADMIN_SECRET) throw new Error('Admin secret is not configured');
         const decoded = jwt.verify(token, ADMIN_SECRET);
         if (
           (decoded.role === 'SUPER_ADMIN' || decoded.role === 'admin') &&
@@ -78,21 +78,7 @@ export const adminAuth = (req, res, next) => {
           return next();
         }
       } catch (err1) {
-        // Fallback to JWT_ACCESS_SECRET
-        try {
-          const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-          if (
-            ADMIN_EMAIL &&
-            decoded.email &&
-            decoded.email.toLowerCase() === ADMIN_EMAIL &&
-            (decoded.role === 'SUPER_ADMIN' || decoded.role === 'admin' || decoded.role === 'superadmin' || decoded.isAdmin)
-          ) {
-            req.adminUser = decoded;
-            return next();
-          }
-        } catch (err2) {
-          // Token invalid
-        }
+        // Token invalid or signed by a non-admin key.
       }
     }
 

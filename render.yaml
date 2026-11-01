@@ -45,8 +45,10 @@ services:
         value: tenderhub
       - key: UNLIMITED_TENDER_ACCESS_EMAILS
         sync: false # Comma-separated email allowlist for unlimited tender detail and ZIP access
-      - key: OPENAI_API_KEY
-        value: dummy_key
+      - key: GEMINI_API_KEY
+        sync: false # Set the existing Gemini key in the Render dashboard
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
 
   # ----------------------------------------------------------------------------
   # 2. Frontend Web Client (Vite / React SPA)

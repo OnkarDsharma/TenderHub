@@ -16,11 +16,12 @@ export const presignSchema = Joi.object({
   }),
   fileType: Joi.string().valid(...ALLOWED_MIME_TYPES).required().messages({
     'any.only': 'Invalid or unpermitted document MIME type.'
-  })
+  }),
+  size: Joi.number().integer().min(1).max(15 * 1024 * 1024).required()
 });
 
 export const confirmDocumentSchema = Joi.object({
   title: Joi.string().trim().min(1).max(200).required(),
-  url: Joi.string().uri({ scheme: ['http', 'https'] }).required(),
+  key: Joi.string().max(512).required(),
   type: Joi.string().trim().max(100).optional()
 });

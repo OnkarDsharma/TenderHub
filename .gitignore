@@ -24,3 +24,7 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Database exports and local backup archives contain private production data.
+backend/backups/*.zip
+backend/backups/*.gz

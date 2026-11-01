@@ -74,7 +74,7 @@ If you prefer to configure each service manually in the Render UI, follow these 
 | `R2_SECRET_ACCESS_KEY` | Your Cloudflare R2 Secret Access Key |
 | `R2_ACCOUNT_ID` | Your Cloudflare Account ID |
 | `R2_BUCKET_NAME` | `tenderhub` |
-| `OPENAI_API_KEY` | `dummy_key` *(or your real key if AI summarizer is active)* |
+| `GEMINI_API_KEY` | Set the existing Gemini key in the hosting dashboard to enable tender analysis |
 
 6. Click **Create Web Service**. Wait for the build and deployment to finish.
 7. Once deployed, verify by opening `https://<your-api-name>.onrender.com/health` in your browser. You should see:

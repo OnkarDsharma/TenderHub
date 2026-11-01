@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { env } from '../config/env.js';
+import { redis } from '../config/redis.js';
 
 export const verifyToken = async (req, res, next) => {
   // Test port / test mode bypass - STRICTLY allowed only when explicit ALLOW_TEST_BYPASS is set and on localhost during development
@@ -46,6 +48,10 @@ export const verifyToken = async (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+      const tokenDigest = crypto.createHash('sha256').update(token).digest('hex');
+      if (await redis.get(`revokedAccess:${tokenDigest}`)) {
+        return res.status(401).json({ error: 'Session revoked. Please sign in again.', requireLogin: true });
+      }
       req.user = {
         userId: decoded.userId,
         role: decoded.role || 'contractor',
@@ -64,6 +70,11 @@ export const verifyToken = async (req, res, next) => {
     try {
       const decodedRefresh = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
       if (decodedRefresh?.userId) {
+        // A signed refresh JWT is not sufficient: logout revokes its Redis session.
+        const activeRefreshToken = await redis.get(`refreshToken:${decodedRefresh.userId}`);
+        if (activeRefreshToken !== refreshToken) {
+          return res.status(401).json({ error: 'Session revoked. Please sign in again.', requireLogin: true });
+        }
         // Dynamic import to prevent circular dependencies
         const { default: User } = await import('../models/User.js');
         const { default: OrganizationMember } = await import('../models/OrganizationMember.js');
@@ -106,7 +117,7 @@ export const verifyToken = async (req, res, next) => {
  * Optional authentication middleware: if token exists and is valid, attaches req.user;
  * otherwise leaves req.user = null and continues without erroring.
  */
-export const optionalAuth = (req, res, next) => {
+export const optionalAuth = async (req, res, next) => {
   const clientIp = req.ip || req.connection?.remoteAddress || '';
   const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('localhost') || clientIp === '::ffff:127.0.0.1';
   if (process.env.ALLOW_TEST_BYPASS === 'true' && env.NODE_ENV === 'development' && isLocalhost && (
@@ -138,6 +149,11 @@ export const optionalAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+    const tokenDigest = crypto.createHash('sha256').update(token).digest('hex');
+    if (await redis.get(`revokedAccess:${tokenDigest}`)) {
+      req.user = null;
+      return next();
+    }
     req.user = {
       userId: decoded.userId,
       role: decoded.role || 'contractor',

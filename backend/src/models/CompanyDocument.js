@@ -4,7 +4,9 @@ const companyDocumentSchema = new mongoose.Schema({
   organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', index: true, required: true },
   title: { type: String, required: true },
   type: { type: String }, // e.g., 'GST_Certificate', 'Balance_Sheet'
-  url: { type: String, required: true },
+  key: { type: String, required: true },
+  size: { type: Number, required: true },
+  contentType: { type: String, required: true },
   
   // RAG / Vector DB Future-Proofing
   documentId: { type: String },

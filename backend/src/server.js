@@ -6,6 +6,7 @@ import { schedulerService } from './services/scheduler.service.js';
 import { keepAliveService } from './services/keepAlive.service.js';
 import { tenderSyncWorker } from './workers/tenderSync.worker.js';
 import { whatsappWorker } from './modules/notifications/workers/whatsapp.worker.js';
+import { aiSummaryWorker, startAiSummaryWorker } from './workers/aiSummary.worker.js';
 import pino from 'pino';
 
 const logger = pino();
@@ -14,6 +15,7 @@ const startServer = async () => {
   try {
     // 1. Connect to MongoDB Atlas
     await connectDB();
+    startAiSummaryWorker();
     
     // 2. Start HTTP Express Server
     const server = app.listen(env.PORT, () => {
@@ -38,6 +40,12 @@ const startServer = async () => {
     whatsappWorker.on('failed', (job, err) => {
       logger.error(`[Worker] WhatsApp Alert Job ${job?.id || 'unknown'} failed: ${err.message}`);
     });
+    aiSummaryWorker.on('failed', (job, err) => {
+      logger.error(`[Worker] AI Summary Job ${job?.id || 'unknown'} failed: ${err.message}`);
+    });
+    aiSummaryWorker.on('error', (err) => {
+      logger.error(`[Worker] AI Summary Worker error: ${err.message}`);
+    });
 
     // 4. Graceful Shutdown Logic
     const shutdown = async () => {
@@ -50,6 +58,7 @@ const startServer = async () => {
         try {
           await tenderSyncWorker.close();
           await whatsappWorker.close();
+          await aiSummaryWorker.close();
           logger.info('Background workers closed.');
 
           await closeDB();
