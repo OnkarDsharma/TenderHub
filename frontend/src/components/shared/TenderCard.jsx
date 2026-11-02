@@ -29,6 +29,12 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   
   const tenderId = tender._id || tender.sourceTenderId;
   const bookmarked = isBookmarked(tenderId);
+  const isGeM = tender.sourcePortal === 'GEM' || tender.departmentCode === 'GEM' || String(tender.sourceTenderId || '').startsWith('GEM/');
+  const stateLabel = isGeM
+    ? (tender.officialStateConfidence === 'verified' && tender.state && tender.state !== 'Other'
+      ? tender.state
+      : (tender.officialState ? `${tender.officialState} (${tender.officialStateConfidence || 'unverified'})` : 'State not confirmed'))
+    : tender.state;
 
   const handleCardClick = () => {
     if (onViewDetails) {
@@ -48,8 +54,10 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const cleanDepartment = cleanDisplayText(tender.departmentName || orgParts[0] || tender.department || 'Government Authority');
   const fullOrganisation = cleanDisplayText(tender.organisationChain, cleanDepartment);
   const cleanTitle = cleanDisplayText(tender.title?.replace(/[[\]]/g, ''), 'Untitled Tender Notice');
-  const famousLoc = extractFamousLocation(tender);
-  const locationText = cleanDisplayText(famousLoc || tender.location, 'Location not specified');
+  const famousLoc = isGeM ? null : extractFamousLocation(tender);
+  const locationText = isGeM
+    ? (tender.location ? `${tender.location}${tender.locationVerificationStatus === 'VERIFIED' ? '' : ' (unverified)'}` : 'Location not confirmed')
+    : cleanDisplayText(famousLoc || tender.location, 'Location not specified');
 
   // Calculate days remaining to bid submission deadline
   const calculateDaysLeft = (closingDateStr) => {
@@ -60,7 +68,6 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const daysLeft = calculateDaysLeft(tender.bidSubmissionEndDate?.$date || tender.closingDateStr || tender.closingDate);
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 2;
 
-  const isGeM = tender.sourcePortal === 'GEM' || tender.departmentCode === 'GEM' || String(tender.sourceTenderId || '').startsWith('GEM/');
   const rawDocUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl;
   const docUrl = isGeM
     ? gemApi.getPdfDownloadUrl(tender.sourceTenderId || tenderId, rawDocUrl)
@@ -84,9 +91,9 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
         {/* Top Badges & Actions */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {tender.state && (
+            {stateLabel && (
               <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
-                <span>{tender.state}</span>
+                <span>{stateLabel}</span>
               </div>
             )}
             {tender.productCategory && (

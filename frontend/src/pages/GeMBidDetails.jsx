@@ -24,6 +24,10 @@ const display = (value, fallback = 'Not specified') => {
   const cleaned = String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim();
   return cleaned || fallback;
 };
+const formatDateTimeIST = (value) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return 'date unavailable';
+  return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value)) + ' IST';
+};
 
 const parseGemDescription = (value) => {
   const raw = String(value || '').replace(/^\[GeM Procurement\]\s*/i, '').trim();
@@ -60,6 +64,9 @@ export default function GeMBidDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [reportField, setReportField] = useState('officialState');
+  const [reportNote, setReportNote] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
   const { data: bid, isLoading, isError } = useTender(id);
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
 
@@ -89,6 +96,27 @@ export default function GeMBidDetails() {
     bid.detailsUrl,
   ].filter(Boolean))];
   const bookmarked = isBookmarked(bid._id || bid.sourceTenderId);
+  const stateConfidence = bid.officialStateConfidence || 'unknown';
+  const checkedAt = bid.lastCheckedAt ? new Date(bid.lastCheckedAt) : null;
+  const checkWindowMs = bid.closingDate && new Date(bid.closingDate).getTime() - Date.now() < 48 * 60 * 60 * 1000 ? 8 * 3600000 : 24 * 3600000;
+  const isStale = !checkedAt || Date.now() - checkedAt.getTime() > checkWindowMs;
+  const stateLabel = stateConfidence === 'verified' && bid.state && bid.state !== 'Other'
+    ? bid.state
+    : (bid.officialState ? `${bid.officialState} (${stateConfidence})` : 'Not confirmed');
+  const locationLabel = bid.location
+    ? `${display(bid.location)}${bid.locationVerificationStatus === 'VERIFIED' ? '' : ' (unverified)'}`
+    : 'Not confirmed';
+
+  const submitDataReport = async (event) => {
+    event.preventDefault();
+    try {
+      await gemApi.reportIncorrectData(bidId, { field: reportField, displayedValue: reportField === 'location' ? (bid.location || '') : (reportField === 'officialState' ? (bid.officialState || bid.state || '') : String(bid[reportField] || '')), note: reportNote });
+      setReportMessage('Thanks. Your report was recorded for review.');
+      setReportNote('');
+    } catch {
+      setReportMessage('Could not submit the report. Please try again later.');
+    }
+  };
 
   const handleCopyBidId = async () => {
     try {
@@ -114,13 +142,13 @@ export default function GeMBidDetails() {
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
                   <Landmark className="w-3.5 h-3.5" /> Government e-Marketplace (GeM)
                 </span>
-                {bid.state && <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">{bid.state}</span>}
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${bid.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{bid.status || 'GeM Bid'}</span>
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">{stateLabel}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${bid.gemStatus === 'ACTIVE' && !isStale ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'}`}>{isStale ? 'STALE / UNCONFIRMED' : (bid.gemStatus || 'UNKNOWN')}</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-display font-bold leading-tight text-slate-900 dark:text-white">{display(bid.title, 'Untitled GeM bid')}</h1>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <span className="inline-flex items-center gap-1.5"><Building2 className="w-4 h-4 text-slate-400" />{display(bid.departmentName || bid.organisationChain)}</span>
-                <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4 text-techCoral" />{display(bid.location)}</span>
+                <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4 text-techCoral" />{locationLabel}</span>
               </div>
               <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs font-bold text-dalBlue dark:bg-slate-800 dark:text-blue-300">
                 Bid Number: {bidId}
@@ -160,8 +188,9 @@ export default function GeMBidDetails() {
                 <Field label="Bid Number"><span className="font-mono">{display(bidId)}</span></Field>
                 <Field label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</Field>
                 <Field label="Product Category">{display(bid.productCategory)}</Field>
-                <Field label="State / Consignee Region">{display(bid.state || parsed.consignee)}</Field>
-                <Field label="Bid Status">{display(bid.status, 'Not specified')}</Field>
+                <Field label="Ministry / State Name in GeM PDF">{display(bid.officialState, stateLabel)}</Field>
+                <Field label="State confidence">{stateConfidence}</Field>
+                <Field label="GeM status evidence">{display(bid.gemStatus, 'UNKNOWN')}</Field>
                 <Field label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</Field>
               </dl>
             </Tile>
@@ -176,10 +205,10 @@ export default function GeMBidDetails() {
                   {itemCategories.map((item, index) => <span key={`${item}-${index}`}>{display(item)}</span>)}
                 </div>
               )}
-              {(parsed.consignee || parsed.stations) && (
+              {(bid.rawDeliverySection || parsed.consignee || parsed.stations) && (
                 <dl className="ai-fields">
-                  {parsed.consignee && <Field label="Consignee Address">{parsed.consignee}</Field>}
-                  {parsed.stations && <Field label="Delivery Stations">{parsed.stations}</Field>}
+                  {(bid.rawDeliverySection || parsed.consignee) && <Field label="Raw consignee / delivery text">{display(bid.rawDeliverySection || parsed.consignee)}</Field>}
+                  {(bid.deliveryStations?.length || parsed.stations) && <Field label="Recognized delivery stations">{display(bid.deliveryStations?.join(', ') || parsed.stations)}</Field>}
                 </dl>
               )}
               {parsed.raw && <div className="ai-tile-raw">{parsed.raw}</div>}
@@ -204,7 +233,7 @@ export default function GeMBidDetails() {
             <Tile tone="dark" order={3}>
               <p className="ai-tile-kicker">Fee & EMD</p>
               <dl className="ai-fields">
-                <Field label="EMD Deposit" big wide>{bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero'}</Field>
+                <Field label="EMD Deposit" big wide>{bid.emdAmount === null || bid.emdAmount === undefined ? 'Not confirmed' : (bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero')}</Field>
                 <Field label="Tender Fee" big wide>{bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero'}</Field>
                 <Field label="Fee Payable To">{display(bid.feePayableTo)}</Field>
                 <Field label="Fee Payable At">{display(bid.feePayableAt)}</Field>
@@ -226,8 +255,22 @@ export default function GeMBidDetails() {
 
             <Tile tone="blue" order={5}>
               <p className="ai-tile-kicker">Delivery location</p>
-              <p className="ai-tile-big ai-tile-big--sm">{display(bid.location, 'Location not specified')}</p>
-              {bid.state && <p className="ai-tile-note"><span>Filtered state</span>{bid.state}</p>}
+              <p className="ai-tile-big ai-tile-big--sm">{locationLabel}</p>
+              <p className="ai-tile-note"><span>Official state from GeM document</span>{stateLabel}</p>
+              <p className="ai-tile-note">Per official GeM document, fetched {formatDateTimeIST(bid.gemPdfFetchedAt)} · Last checked {formatDateTimeIST(bid.lastCheckedAt)}{isStale ? ' · Stale' : ''}</p>
+              <p className="ai-tile-note">Status: {bid.gemStatus || 'UNKNOWN'} · Absence from an ongoing-bids search does not prove cancellation or closure.</p>
+            </Tile>
+
+            <Tile tone="light" order={6}>
+              <p className="ai-tile-kicker">Report incorrect data</p>
+              <form className="space-y-2" onSubmit={submitDataReport}>
+                <select aria-label="Field to report" value={reportField} onChange={(event) => setReportField(event.target.value)} className="w-full rounded border p-2 text-sm">
+                  <option value="officialState">Official state</option><option value="location">Delivery location</option><option value="departmentName">Department</option><option value="title">Title</option><option value="closingDate">Closing date</option><option value="status">Status</option><option value="other">Other</option>
+                </select>
+                <textarea aria-label="Report note" value={reportNote} onChange={(event) => setReportNote(event.target.value)} maxLength={1000} rows={3} placeholder="What looks incorrect? (optional)" className="w-full rounded border p-2 text-sm" />
+                <Button type="submit">Submit report</Button>
+                {reportMessage && <p role="status" className="text-xs text-slate-600">{reportMessage}</p>}
+              </form>
             </Tile>
           </aside>
         </div>

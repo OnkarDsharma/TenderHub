@@ -1,6 +1,6 @@
 /**
  * @file backend/src/scripts/fetchGeMBids.js
- * @description CLI script to crawl Government e-Marketplace (GeM) bids for Jammu & Kashmir.
+ * @description CLI script to crawl Government e-Marketplace (GeM) bids.
  * 
  * Usage:
  *   node src/scripts/fetchGeMBids.js --limit 50 --pages 5 --delay 1200
@@ -36,8 +36,8 @@ const isMock = hasFlag('--mock') || hasFlag('--seed');
 const targetStateArg = getArg('--state', 'JAMMU & KASHMIR');
 
 /**
- * Verified Real GeM Bids Dataset for J&K (from official GeM portal)
- * Includes the exact bid from the user's uploaded document
+ * Synthetic local demo records. These are never a fallback for failed live scraping
+ * and are explicitly marked unverified when the optional --mock/--seed mode is used.
  */
 const VERIFIED_GEM_JK_BIDS = [
   {
@@ -432,7 +432,7 @@ const VERIFIED_GEM_PUNJAB_BIDS = [
   }
 ];
 
-async function seedVerifiedSampleBids(filterState = null) {
+async function seedSyntheticDemoBids(filterState = null) {
   let datasetsToSeed = [];
   const stateUpper = (filterState || targetStateArg).toUpperCase();
 
@@ -446,19 +446,26 @@ async function seedVerifiedSampleBids(filterState = null) {
     datasetsToSeed = VERIFIED_GEM_JK_BIDS;
   }
 
-  logger.info(`[GeM Seeder] Seeding ${datasetsToSeed.length} verified sample GeM bids into database...`);
+  logger.info(`[GeM Seeder] Seeding ${datasetsToSeed.length} synthetic demo records; none are source-verified...`);
   let count = 0;
   for (const rawBid of datasetsToSeed) {
     const normalized = gemAdapter.normalize(rawBid);
-    await Tender.findOneAndUpdate(
-      { sourcePortal: 'GEM', sourceTenderId: normalized.sourceTenderId },
-      { $set: normalized },
-      { upsert: true, returnDocument: 'after' }
-    );
+    normalized.officialStateConfidence = 'unverified';
+    normalized.locationVerificationStatus = 'UNVERIFIED';
+    normalized.gemValidationFlags = [...new Set([...(normalized.gemValidationFlags || []), 'SYNTHETIC_SEED_DATA'])];
+    normalized.pdfFetchStatus = 'NOT_AVAILABLE';
+    normalized.pdfParseStatus = 'FAILED';
+    normalized.gemStatus = 'UNKNOWN';
+    const existing = await Tender.findOne({ sourcePortal: 'GEM', sourceTenderId: normalized.sourceTenderId }).select('_id').lean();
+    if (existing) {
+      logger.warn(`[GeM Seeder] Skipped ${normalized.sourceTenderId}; mock mode never overwrites an existing record.`);
+      continue;
+    }
+    await Tender.create(normalized);
     count++;
-    logger.info(`[GeM Seeder] Saved: [${normalized.state}] ${normalized.sourceTenderId} - ${normalized.title.slice(0, 40)}... (EMD: ₹${normalized.emdAmount.toLocaleString('en-IN')})`);
+    logger.info(`[GeM Seeder] Saved unverified demo row: ${normalized.sourceTenderId}`);
   }
-  logger.info(`[GeM Seeder] Successfully seeded ${count} GeM bids.`);
+  logger.info(`[GeM Seeder] Successfully seeded ${count} synthetic demo rows.`);
 }
 
 async function scrapeSingleState(stateName) {
@@ -479,13 +486,7 @@ async function scrapeSingleState(stateName) {
     return result;
   } catch (crawlErr) {
     logger.error(`[GeM] Live portal crawl notice for [${stateName}]: ${crawlErr.message}`);
-    const countInDb = await Tender.countDocuments({ sourcePortal: 'GEM', state: stateName });
-    if (countInDb === 0) {
-      logger.info(`[GeM] Database has 0 GeM bids for ${stateName}. Seeding verified dataset...`);
-      await seedVerifiedSampleBids(stateName);
-    } else {
-      logger.info(`[GeM] Database holds ${countInDb} GeM bids for ${stateName}. Existing data retained.`);
-    }
+    throw crawlErr;
   }
 }
 
@@ -499,7 +500,8 @@ async function run() {
     await connectDB();
 
     if (isMock) {
-      await seedVerifiedSampleBids();
+      if (process.env.NODE_ENV !== 'development') throw new Error('Synthetic --mock/--seed data may only be written with NODE_ENV=development');
+      await seedSyntheticDemoBids();
       process.exit(0);
     }
 

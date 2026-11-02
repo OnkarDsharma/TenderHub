@@ -6,10 +6,49 @@ const tenderSchema = new mongoose.Schema({
   state: { 
     type: String, 
     required: true, 
-    enum: ['Jammu & Kashmir', 'Himachal Pradesh', 'Punjab', 'Ladakh', 'Other'],
+    enum: [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa',
+      'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala',
+      'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland',
+      'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+      'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Jammu & Kashmir', 'Ladakh',
+      'Andaman & Nicobar Islands', 'Chandigarh', 'Dadra & Nagar Haveli and Daman & Diu',
+      'Delhi', 'Lakshadweep', 'Puducherry', 'Other'
+    ],
     default: 'Jammu & Kashmir', 
     index: true 
   },
+  // GeM discovery keyword is not authoritative geography. officialState stores
+  // the PDF's raw "Ministry/State Name" value; sourceSearchRegions is diagnostic only.
+  officialState: { type: String, index: true },
+  officialStateConfidence: { type: String, enum: ['verified', 'partial', 'unverified', 'unknown'], default: 'unknown' },
+  sourceSearchRegions: [{ type: String }],
+  rawLegacyState: { type: String },
+  rawMinistryStateName: { type: String },
+  gemStatus: { type: String, enum: ['ACTIVE', 'CLOSED_BY_DATE', 'STALE', 'UNCONFIRMED', 'CANCELLED', 'UNKNOWN'], index: true },
+  gemFieldConfidence: { type: mongoose.Schema.Types.Mixed, default: {} },
+  gemValidationFlags: [{ type: String }],
+  lastSeenInListingAt: { type: Date, index: true },
+  lastCheckedAt: { type: Date, index: true },
+  gemPdfUrl: { type: String },
+  gemPdfFetchedAt: { type: Date },
+  gemPdfError: { type: String, maxlength: 500 },
+  gemPdfSha256: { type: String },
+  gemDocumentType: { type: String, enum: ['BID', 'RA', 'UNKNOWN'] },
+  gemParserVersion: { type: String },
+  gemRawText: { type: String, select: false },
+  gemRawTextTruncated: { type: Boolean, default: false },
+  rawDeliverySection: { type: String },
+  deliveryStations: [{ type: String }],
+  locationVerificationStatus: {
+    type: String,
+    enum: ['VERIFIED', 'UNVERIFIED', 'NOT_PROVIDED', 'PARSE_FAILED'],
+    default: 'UNVERIFIED'
+  },
+  geographyEvidence: { type: String },
+  geographyCorrectedAt: { type: Date },
+  pdfParsedAt: { type: Date },
+  pdfParseStatus: { type: String, enum: ['COMPLETED', 'FAILED', 'PENDING'] },
   sourceTenderId: { type: String, required: true, index: true }, // e.g. 2026_APD_321986_1
   isMultiTender: { type: Boolean, default: false, index: true },
   baseTenderId: { type: String, index: true }, // e.g. 2026_RDPR_325394
@@ -165,6 +204,8 @@ const tenderSchema = new mongoose.Schema({
   delistReason: { type: String },
   archivedAt: { type: Date, index: true }
 }, { timestamps: true });
+
+tenderSchema.index({ sourcePortal: 1, gemStatus: 1, lastCheckedAt: 1 });
 
 // Indexes for fast filtering, deduplication, and retention management
 tenderSchema.index({ sourcePortal: 1, sourceTenderId: 1 }, { unique: true });

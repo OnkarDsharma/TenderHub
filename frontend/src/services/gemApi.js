@@ -41,6 +41,11 @@ export const gemApi = {
     return response.data;
   },
 
+  async reportIncorrectData(id, payload) {
+    const response = await api.post(`/gem/tenders/${encodeURIComponent(id)}/report`, payload);
+    return response.data;
+  },
+
   /**
    * Get direct PDF download URL proxied via backend with official session tokens
    * @param {string} idOrBidNumber Tender ID or sourceTenderId

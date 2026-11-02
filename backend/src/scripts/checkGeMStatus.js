@@ -24,10 +24,12 @@ async function checkGeMStatus() {
 
     // 1. Total counts
     const totalGeMBids = await Tender.countDocuments({ sourcePortal: 'GEM' });
-    const activeGeMBids = await Tender.countDocuments({ 
-      sourcePortal: 'GEM', 
-      closingDate: { $gte: now } 
-    });
+    const activeGeMBids = await Tender.countDocuments({ sourcePortal: 'GEM', gemStatus: 'ACTIVE', closingDate: { $gte: now } });
+    const unknownStatus = await Tender.countDocuments({ sourcePortal: 'GEM', $or: [{ gemStatus: { $exists: false } }, { gemStatus: 'UNKNOWN' }, { gemStatus: 'UNCONFIRMED' }] });
+    const stale24h = await Tender.countDocuments({ sourcePortal: 'GEM', $or: [{ lastCheckedAt: { $exists: false } }, { lastCheckedAt: { $lt: new Date(Date.now() - 24 * 3600000) } }] });
+    const unknownOfficialState = await Tender.countDocuments({ sourcePortal: 'GEM', officialStateConfidence: { $ne: 'verified' } });
+    const failedPdf = await Tender.countDocuments({ sourcePortal: 'GEM', pdfFetchStatus: { $in: ['FAILED', 'NOT_AVAILABLE'] } });
+    const reportsPending = await (await import('../models/GeMDataReport.js')).default.countDocuments({ reviewStatus: 'OPEN' });
     const expiredGeMBids = await Tender.countDocuments({ 
       sourcePortal: 'GEM', 
       closingDate: { $lt: now } 
@@ -44,6 +46,11 @@ async function checkGeMStatus() {
     console.log('📊 OVERALL METRICS:');
     console.log(`  • Total GeM Bids in Database : ${totalGeMBids.toLocaleString('en-IN')}`);
     console.log(`  • Active (Open for Bidding)  : ${activeGeMBids.toLocaleString('en-IN')}`);
+    console.log(`  • Unknown/unconfirmed status : ${unknownStatus.toLocaleString('en-IN')}`);
+    console.log(`  • Not checked in 24h         : ${stale24h.toLocaleString('en-IN')}`);
+    console.log(`  • State not verified         : ${unknownOfficialState.toLocaleString('en-IN')}`);
+    console.log(`  • PDF unavailable/failed     : ${failedPdf.toLocaleString('en-IN')}`);
+    console.log(`  • User reports to review     : ${reportsPending.toLocaleString('en-IN')}`);
     console.log(`  • Expired / Closed           : ${expiredGeMBids.toLocaleString('en-IN')}`);
     console.log(`  • Closing in < 48 Hours      : ${closingIn48h.toLocaleString('en-IN')}`);
     console.log(`  • Technical Specs Parsed     : ${parsedPdfSpecs.toLocaleString('en-IN')} (${totalGeMBids > 0 ? Math.round((parsedPdfSpecs / totalGeMBids) * 100) : 0}%)\n`);
@@ -65,7 +72,7 @@ async function checkGeMStatus() {
       console.log(`  • Last Ingested Bid ID       : ${latestScrapedRecord.sourceTenderId}`);
       console.log(`  • Item Category              : ${latestScrapedRecord.title}`);
       console.log(`  • Department                 : ${latestScrapedRecord.departmentName || 'N/A'}`);
-      console.log(`  • Delivery Station           : ${latestScrapedRecord.location || 'Jammu & Kashmir'}\n`);
+      console.log(`  • Delivery Station           : ${latestScrapedRecord.location || 'Not confirmed'}\n`);
     }
 
     // 3. Newest published bid (by publishedDate)
@@ -100,7 +107,7 @@ async function checkGeMStatus() {
     }
 
     console.log('=============================================================');
-    console.log(`✅ VERDICT: Database is UP-TO-DATE with ${totalGeMBids.toLocaleString('en-IN')} J&K bids.`);
+    console.log(`VERDICT: ${totalGeMBids.toLocaleString('en-IN')} GeM records are stored. This count does not prove source completeness; inspect stale, unknown, and failed counts above.`);
     console.log('=============================================================\n');
 
     process.exit(0);

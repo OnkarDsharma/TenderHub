@@ -23,7 +23,13 @@ env:
   NODE_ENV: production
   TZ: Asia/Kolkata
   MONGO_URI: ${{ secrets.MONGO_URI }}
-  REDIS_URL: ${{ secrets.REDIS_URL }}
+  # env.js validates the full application environment even for standalone scraper scripts.
+  # These CI-only fallbacks satisfy validation when those services are not used by the scraper.
+  REDIS_URL: ${{ secrets.REDIS_URL || 'redis://127.0.0.1:6379' }}
+  JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'github-actions-scraper-ci-access-secret' }}
+  JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'github-actions-scraper-ci-refresh-secret' }}
+  ADMIN_SECRET_KEY: ${{ secrets.ADMIN_SECRET_KEY || 'github-actions-scraper-ci-admin-secret' }}
+  ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || 'scraper-ci@example.com' }}
   R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
   R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
   R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

@@ -674,6 +674,11 @@ export default function Home() {
               const orgParts = String(tender?.organisationChain || '').split('||').map((p) => p.trim());
               const primaryDept = orgParts[orgParts.length - 1] || orgParts[0] || 'Govt Authority';
               const tenderKey = tender?._id || `tender-${index}`;
+              const tenderStateLabel = tender.sourcePortal === 'GEM'
+                ? (tender.officialStateConfidence === 'verified' && tender.state && tender.state !== 'Other'
+                  ? tender.state
+                  : (tender.officialState ? `${tender.officialState} (${tender.officialStateConfidence || 'unverified'})` : 'State not confirmed'))
+                : tender.state;
 
               return (
                 <div
@@ -687,9 +692,9 @@ export default function Home() {
                         <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate max-w-[190px]">
                           {tender.sourceTenderId}
                         </span>
-                        {tender.state && (
+                        {tenderStateLabel && (
                           <span className="text-[10px] text-slate-500 font-medium px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            {tender.state}
+                            {tenderStateLabel}
                           </span>
                         )}
                       </div>

@@ -7,8 +7,19 @@ import express from 'express';
 import axios from 'axios';
 import Tender from '../models/Tender.js';
 import { gemAdapter } from '../services/adapters/GeMAdapter.js';
+import GeMDataReport from '../models/GeMDataReport.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+const dataReportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: 'Too many data reports. Try again later.' } });
+const confirmedActiveFilter = (now = new Date()) => ({
+  gemStatus: 'ACTIVE',
+  closingDate: { $gte: now },
+  $or: [
+    { closingDate: { $gte: new Date(now.getTime() + 48 * 3600000) }, lastCheckedAt: { $gte: new Date(now.getTime() - 24 * 3600000) } },
+    { closingDate: { $lt: new Date(now.getTime() + 48 * 3600000) }, lastCheckedAt: { $gte: new Date(now.getTime() - 8 * 3600000) } },
+  ],
+});
 
 /**
  * @route GET /api/v1/gem/tenders
@@ -41,6 +52,7 @@ router.get('/tenders', async (req, res, next) => {
       withdrawalAllowed,
       twoStageBidding,
       preferentialBidder,
+      verificationStatus,
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10));
@@ -56,19 +68,19 @@ router.get('/tenders', async (req, res, next) => {
     // Base conditions array (combined with $and to prevent $or collisions)
     const conditions = [{ sourcePortal: 'GEM' }];
 
-    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
+    // GeM state is normalized from the official PDF; sourceSearchRegions is discovery only.
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
       const cleanState = escapeRegex(state);
       conditions.push({ state: { $regex: `^${cleanState}$`, $options: 'i' } });
+    }
+    if (verificationStatus && ['verified', 'partial', 'unverified', 'unknown'].includes(String(verificationStatus))) {
+      conditions.push({ officialStateConfidence: verificationStatus });
     }
 
     // Status filter
     const now = new Date();
     if (status === 'active') {
-      conditions.push({
-        status: 'ACTIVE',
-        closingDate: { $gte: now }
-      });
+      conditions.push(confirmedActiveFilter(now));
     } else if (status === 'archived' || status === 'expired') {
       conditions.push({
         closingDate: { $lt: now }
@@ -310,17 +322,18 @@ router.get('/stats', async (req, res, next) => {
   try {
     const now = new Date();
     const in48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    const { state } = req.query;
+    const { state, verificationStatus } = req.query;
 
     const baseFilter = { sourcePortal: 'GEM' };
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
       baseFilter.state = { $regex: `^${state.trim()}$`, $options: 'i' };
     }
+    if (verificationStatus && ['verified', 'partial', 'unverified', 'unknown'].includes(String(verificationStatus))) baseFilter.officialStateConfidence = verificationStatus;
 
     const [totalActive, closingSoon, highEmdCount] = await Promise.all([
-      Tender.countDocuments({ ...baseFilter, status: 'ACTIVE', closingDate: { $gte: now } }),
-      Tender.countDocuments({ ...baseFilter, status: 'ACTIVE', closingDate: { $gte: now, $lte: in48h } }),
-      Tender.countDocuments({ ...baseFilter, status: 'ACTIVE', emdAmount: { $gt: 5000000 } })
+      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now) }),
+      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now), closingDate: { $gte: now, $lte: in48h } }),
+      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now), emdAmount: { $gt: 5000000 } })
     ]);
 
     res.status(200).json({
@@ -329,13 +342,28 @@ router.get('/stats', async (req, res, next) => {
         totalActive,
         closingSoon,
         highEmdCount,
-        verifiedState: state || 'Northern Region (J&K, HP, Punjab)',
+        officialStateConfidence: verificationStatus || 'all',
+        verifiedState: state || 'All official states',
         portal: 'Government e-Marketplace (GeM)'
       }
     });
   } catch (err) {
     next(err);
   }
+});
+
+router.post('/tenders/:id/report', dataReportLimiter, async (req, res, next) => {
+  try {
+    const { field, displayedValue = '', note = '' } = req.body || {};
+    const allowed = ['officialState', 'location', 'departmentName', 'title', 'closingDate', 'status', 'other'];
+    if (!allowed.includes(field) || typeof displayedValue !== 'string' || typeof note !== 'string' || displayedValue.length > 500 || note.length > 1000 || /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(note) || /(?:\+?\d[\d\s().-]{8,}\d)/.test(note)) {
+      return res.status(400).json({ success: false, error: 'Invalid report fields' });
+    }
+    const tender = await Tender.findOne({ sourcePortal: 'GEM', $or: [{ sourceTenderId: req.params.id }, { _id: /^[0-9a-fA-F]{24}$/.test(req.params.id) ? req.params.id : null }] }).select('sourceTenderId').lean();
+    if (!tender) return res.status(404).json({ success: false, error: 'GeM bid not found' });
+    await GeMDataReport.create({ sourceTenderId: tender.sourceTenderId, field, displayedValue, note });
+    return res.status(201).json({ success: true });
+  } catch (err) { next(err); }
 });
 
 /**
