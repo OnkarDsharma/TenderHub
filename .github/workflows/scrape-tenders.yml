@@ -48,6 +48,7 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           CURRENT_RUN_ID: ${{ github.run_id }}
         run: |
@@ -59,6 +60,7 @@ jobs:
 
           echo "Scheduled cron fallback detected. Checking for recent dispatches in last 45 minutes..."
           RECENT_DISPATCH=$(gh run list \
+            --repo "$GH_REPO" \
             --workflow scrape-tenders.yml \
             --json databaseId,event,createdAt,status \
             --jq "[.[] | select(.event == \"workflow_dispatch\" and .databaseId != ($CURRENT_RUN_ID | tonumber) and ((now - (.createdAt | fromdateiso8601)) < 2700))] | length")
