@@ -2,13 +2,13 @@ name: Automated 6-Slot Multi-State Tender Ingestion
 
 on:
   schedule:
-    # Fallback only: off-peak minutes ~20m after each slot, avoiding :00 and :30
-    - cron: '50 2 * * *'   # 08:20 AM IST (Slot 1 Fallback)
-    - cron: '50 4 * * *'   # 10:20 AM IST (Slot 2 Fallback)
-    - cron: '10 6 * * *'   # 11:40 AM IST (Slot 3 Fallback - 11:30 Slot)
-    - cron: '50 9 * * *'   # 03:20 PM IST (Slot 4 Fallback)
-    - cron: '20 12 * * *'  # 05:50 PM IST (Slot 5 Fallback)
-    - cron: '15 14 * * *'  # 07:45 PM IST (Test Slot)
+    # 6 Human-Like Non-Round Office Hour Slots across the day (Asia/Kolkata IST)
+    - cron: '54 2 * * *'   # 08:24 AM IST (Slot 1: Morning Opening)
+    - cron: '43 5 * * *'   # 11:13 AM IST (Slot 2: Mid-Morning)
+    - cron: '12 8 * * *'   # 01:42 PM IST (Slot 3: Post-Lunch)
+    - cron: '48 10 * * *'  # 04:18 PM IST (Slot 4: Afternoon)
+    - cron: '07 13 * * *'  # 06:37 PM IST (Slot 5: Late Office Hours)
+    - cron: '41 15 * * *'  # 09:11 PM IST (Slot 6: Nightly Wrap-Up)
   workflow_dispatch:        # Primary external trigger & manual UI trigger
 
 permissions:
