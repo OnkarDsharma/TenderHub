@@ -81,7 +81,7 @@ jobs:
     needs: guard
     if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
