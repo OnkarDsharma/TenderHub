@@ -24,6 +24,7 @@
     "scrape:gem:punjab": "node src/scripts/fetchGeMBids.js --state=PUNJAB",
     "scrape:gem:ladakh": "node src/scripts/fetchGeMBids.js --state=LADAKH",
     "scrape:gem:all": "node src/scripts/fetchGeMBids.js --state=ALL",
+    "scrape:gem:dry-run": "node src/scripts/fetchGeMBids.js --state=ALL --dry-run",
     "scrape:jk": "node src/scripts/fetchTendersByDate.js --state jk",
     "scrape:hp": "node src/scripts/fetchTendersByDate.js --state hp",
     "scrape:punjab": "node src/scripts/fetchTendersByDate.js --state punjab",

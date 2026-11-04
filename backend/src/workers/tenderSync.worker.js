@@ -161,25 +161,12 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
       logger.error(`[Worker] ⚠️ Ladakh Tenders ingestion error: ${ladakhErr.message}`);
     }
 
-    // 5. GeM Multi-State Sweep (Jammu & Kashmir, Ladakh, Himachal Pradesh, Punjab)
+    // 5. GeM sweep: consignee-state listing for J&K, Ladakh, HP, Punjab + capped PDF pass
     try {
-      logger.info('[Worker] 📦 Ingesting Latest GeM Bids across Northern States...');
-      for (const st of ['JAMMU & KASHMIR', 'LADAKH', 'HIMACHAL PRADESH', 'PUNJAB']) {
-        try {
-          const gemRes = await gemAdapter.fetchList(1, {
-            limit: 50,
-            maxPages: 5,
-            delay: 1200,
-            headless: true,
-            state: st
-          });
-          if (gemRes && gemRes.totalSaved) {
-            totalIngested += gemRes.totalSaved;
-          }
-        } catch (stErr) {
-          logger.warn(`[Worker] Notice during GeM crawl for ${st}: ${stErr.message}`);
-        }
-      }
+      logger.info('[Worker] 📦 Syncing GeM bids by consignee state...');
+      const gemReport = await gemAdapter.syncConsigneeStates({ states: 'ALL', pdfLimit: 150, delay: 1200 });
+      totalIngested += gemReport.listing.inserted;
+      if (gemReport.errors.length) logger.warn({ errors: gemReport.errors }, '[Worker] GeM sync finished with state errors');
       logger.info(`[Worker] ✅ GeM Bids regional sweep completed`);
     } catch (gemErr) {
       logger.error(`[Worker] ⚠️ GeM Bids ingestion error: ${gemErr.message}`);

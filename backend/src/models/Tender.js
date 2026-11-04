@@ -25,7 +25,15 @@ const tenderSchema = new mongoose.Schema({
   sourceSearchRegions: [{ type: String }],
   rawLegacyState: { type: String },
   rawMinistryStateName: { type: String },
-  gemStatus: { type: String, enum: ['ACTIVE', 'CLOSED_BY_DATE', 'STALE', 'UNCONFIRMED', 'CANCELLED', 'UNKNOWN'], index: true },
+  // GeM only. States whose official GeM "Search by Consignee Location" list
+  // returned this bid, i.e. where the goods are delivered. This (not the PDF's
+  // Ministry/State, which is often a central ministry) is GeM geography.
+  consigneeStates: { type: [String], default: undefined, index: true },
+  // NOT_LISTED: absent from a complete consignee-state pass (closed, cancelled
+  // or withdrawn on GeM).
+  gemStatus: { type: String, enum: ['ACTIVE', 'CLOSED_BY_DATE', 'NOT_LISTED', 'STALE', 'UNCONFIRMED', 'CANCELLED', 'UNKNOWN'], index: true },
+  gemPdfRefreshDue: { type: Boolean },
+  gemPdfFailCount: { type: Number },
   gemFieldConfidence: { type: mongoose.Schema.Types.Mixed, default: {} },
   gemValidationFlags: [{ type: String }],
   lastSeenInListingAt: { type: Date, index: true },

@@ -25,6 +25,11 @@
  * 
  *   # Watch in visible browser (headed mode):
  *   node src/scripts/fetchTendersByDate.js --headed
+ *
+ *   # Full-portal sweep (used by CI): read every organisation's complete listing, correct
+ *   # extended closing dates, and ingest up to N tenders that are live but missing from the DB:
+ *   node src/scripts/fetchTendersByDate.js --state jk --sweep --max-new 150 --max-minutes 80
+ *   node src/scripts/fetchTendersByDate.js --sweep --org "HAUDD" --dry-run   # report only, no writes
  */
 
 import 'dotenv/config';
@@ -43,10 +48,24 @@ async function main() {
   let force = false;
   let isHeadless = true;
   let shard = null;
+  let sweep = false;
+  let maxNew = 150;
+  let dryRun = false;
+  let maxMinutes = Infinity;
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if ((a === '--date' || a === '-d') && args[i + 1]) {
+    if (a === '--sweep') {
+      sweep = true;
+    } else if (a === '--dry-run') {
+      dryRun = true;
+    } else if (a === '--max-minutes' && args[i + 1]) {
+      maxMinutes = parseFloat(args[i + 1]);
+      i++;
+    } else if (a === '--max-new' && args[i + 1]) {
+      maxNew = parseInt(args[i + 1], 10);
+      i++;
+    } else if ((a === '--date' || a === '-d') && args[i + 1]) {
       dateArg = args[i + 1];
       i++;
     } else if ((a === '--org' || a === '-o') && args[i + 1]) {
@@ -122,12 +141,59 @@ async function main() {
   // Send Telegram crawl started update (if configured)
   try {
     await telegramService.sendCrawlStarted?.({
-      mode: `TARGETED DATE (${dateConfig.displayString}) [${stateName}]${shard ? ` [Shard ${shard}]` : ''}`,
+      mode: sweep
+        ? `FULL SWEEP [${stateName}]`
+        : `TARGETED DATE (${dateConfig.displayString}) [${stateName}]${shard ? ` [Shard ${shard}]` : ''}`,
       targetLimit: orgFilter ? `Org: ${orgFilter}` : (shard ? `Shard ${shard}` : 'All Organisations')
     });
   } catch {}
 
   const adapter = new JKTenderDateAdapter(portalName, baseUrl, stateName);
+
+  if (sweep) {
+    try {
+      const result = await adapter.sweepPortal({
+        orgFilter,
+        excludeOrg,
+        headless: isHeadless,
+        maxNew: Number.isFinite(maxNew) ? maxNew : 150,
+        maxMinutes,
+        dryRun
+      });
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      console.log(`\n======================================================================`);
+      console.log(`🏁 INGESTION & DOCUMENT METRICS: FULL SWEEP [${stateName}]`);
+      console.log(`======================================================================`);
+      console.log(`⏱️ Duration:                          ${elapsedSeconds}s (~${(elapsedSeconds / 60).toFixed(1)} min)`);
+      console.log(`📋 Tenders Listed On Portal:          ${result.portalListed}`);
+      console.log(`📅 Dates Corrected (corrigenda):      ${result.datesUpdated} (${result.revivedToActive} revived to ACTIVE)`);
+      console.log(`🕳️ Missing From DB Before Run:        ${result.missingFromDb}`);
+      console.log(`✅ Backfilled This Run:                ${result.totalIngested} (${result.totalWithDocuments} with docs)`);
+      console.log(`⏳ Missing Still Remaining:            ${result.missingRemaining}`);
+      console.log(`📄 NIT PDFs / 📦 BOQ ZIPs Secured:     ${result.totalPdfsSecured} / ${result.totalBoqsSecured}`);
+      console.log(`======================================================================\n`);
+      try {
+        await telegramService.sendCrawlCompleted({
+          mode: `FULL SWEEP [${stateName}]`,
+          slotLabel: `Sweep (${dryRun ? 'dry run' : `max ${maxNew}`})`,
+          savedCount: result.totalIngested || 0,
+          skippedCount: result.alreadyInDb || 0,
+          pdfCount: result.totalPdfsSecured || 0,
+          boqCount: result.totalBoqsSecured || 0,
+          missingPdfCount: result.totalWithoutDocuments || 0,
+          durationMs: Date.now() - startTime
+        });
+      } catch (tgErr) {
+        console.warn('Telegram completion dispatch warning:', tgErr.message);
+      }
+    } catch (err) {
+      console.error(`\n❌ Error running portal sweep:`, err);
+      await closeDB();
+      process.exit(1);
+    }
+    await closeDB();
+    process.exit(0);
+  }
 
   // Handle graceful interrupts
   const handleInterrupt = async (signal) => {

@@ -200,14 +200,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
 
     const page = await this.context.newPage();
 
-    let totalInspected = 0;
-    let totalTargetDateFound = 0;
-    let totalIngested = 0;
-    let totalSkippedAlreadyComplete = 0;
-    let totalWithDocuments = 0;
-    let totalWithoutDocuments = 0;
-    let totalPdfsSecured = 0;
-    let totalBoqsSecured = 0;
+    const stats = { totalInspected: 0, totalTargetDateFound: 0, totalIngested: 0, totalSkippedAlreadyComplete: 0, totalWithDocuments: 0, totalWithoutDocuments: 0, totalPdfsSecured: 0, totalBoqsSecured: 0 };
 
     try {
       console.log(`🌐 Navigating to FrontEndTendersByOrganisation...`);
@@ -228,7 +221,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
 
       console.log(`🏛️ Found ${organisations.length} active organisations on portal.\n`);
 
-      for (let o = 0; o < organisations.length && totalIngested < limit; o++) {
+      for (let o = 0; o < organisations.length && stats.totalIngested < limit; o++) {
         const org = organisations[o];
         if (shardPart !== null && shardTotal !== null) {
           if (o % shardTotal !== (shardPart - 1)) {
@@ -266,12 +259,15 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
           countLink.click({ noWaitAfter: true, timeout: 20000 }).catch(() => countLink.click({ force: true, noWaitAfter: true }))
         ]);
         await page.waitForSelector("table.list_table tr[id^='informal']", { timeout: 35000 }).catch(() => {});
+        // The portal renders an organisation's whole list on one page and streams rows in;
+        // wait for all of them so later rows are not silently missed.
+        await this.waitForFullListing(page, org.tenderCount);
         await this.humanDelay(page, 400, 700);
 
         let orgHasMore = true;
         let orgPageNum = 1;
 
-        while (orgHasMore && totalIngested < limit) {
+        while (orgHasMore && stats.totalIngested < limit) {
           // Extract listing table rows with explicit columns:
           // tds[0]: S.No
           // tds[1]: e-Published Date
@@ -311,9 +307,9 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
           let pageHasNewerThanTarget = false;
           let targetDateRowsOnThisPage = 0;
 
-          for (let t = 0; t < tenderRows.length && totalIngested < limit; t++) {
+          for (let t = 0; t < tenderRows.length && stats.totalIngested < limit; t++) {
             const rowSummary = tenderRows[t];
-            totalInspected++;
+            stats.totalInspected++;
 
             const pubDateStr = rowSummary.publishedDateStr; // e.g. "22-Sep-2026 06:55 PM"
             const pubDatePart = pubDateStr ? pubDateStr.split(' ')[0].toLowerCase() : ''; // "22-sep-2026"
@@ -323,7 +319,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
             const isTargetDate = pubDatePart === targetPrefix;
 
             if (isTargetDate) {
-              totalTargetDateFound++;
+              stats.totalTargetDateFound++;
               targetDateRowsOnThisPage++;
 
               // Check if already in MongoDB with documents completed (with resilient network retry)
@@ -342,277 +338,16 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
                 (existing.boqZipUrl || existing.boqFetchStatus === 'COMPLETED' || existing.boqFetchStatus === 'NOT_AVAILABLE' || existing.isDocumentAvailable === false);
 
               if (isComplete && !force) {
-                totalSkippedAlreadyComplete++;
+                stats.totalSkippedAlreadyComplete++;
                 console.log(`   ⏩ [ALREADY INGESTED & COMPLETE] ${rowSummary.sourceTenderId} (${rowSummary.publishedDateStr})`);
                 continue;
               }
 
-              console.log(`\n👉 [${totalIngested + 1}] Processing Target Date Tender: ${rowSummary.sourceTenderId}`);
+              console.log(`\n👉 [${stats.totalIngested + 1}] Processing Target Date Tender: ${rowSummary.sourceTenderId}`);
               console.log(`   📅 Portal Published Date: "${rowSummary.publishedDateStr}"`);
               console.log(`   🔖 Title: "${rowSummary.title.slice(0, 75)}..."`);
 
-              try {
-                // Click tender link: match exact bracketed tender ID to avoid substring or index shift collisions
-                let tenderRow = page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${rowSummary.sourceTenderId}]` }).first();
-                let hasExactRow = (await tenderRow.count().catch(() => 0)) > 0;
-                let tenderLink;
-                if (hasExactRow) {
-                  tenderLink = tenderRow.locator("td:nth-child(5) a, a").first();
-                } else {
-                  const candidateRow = page.locator("table.list_table tr[id^='informal']").nth(rowSummary.index);
-                  const candidateText = await candidateRow.innerText().catch(() => '');
-                  if (candidateText.includes(rowSummary.sourceTenderId)) {
-                    tenderLink = candidateRow.locator("td:nth-child(5) a, a").first();
-                  } else {
-                    console.warn(`⚠️ [Strict Match Guard] Row for ${rowSummary.sourceTenderId} not verified on current page. Skipping to avoid cross-tender contamination.`);
-                    continue;
-                  }
-                }
-
-                await Promise.all([
-                  page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
-                  tenderLink.click({ noWaitAfter: true, timeout: 15000 }).catch(() => tenderLink.click({ force: true, noWaitAfter: true }))
-                ]);
-                await this.humanDelay(page, 500, 800);
-
-                // Check if loaded page is an intermediate multi-item list ("Tender List : Open Tender")
-                const isMultiTenderList = await page.evaluate(() => {
-                  const text = document.body ? document.body.innerText : '';
-                  const hasSubTable = !!document.querySelector("table.list_table tr[id^='informal']");
-                  const hasBasicDetails = text.includes('Basic Details') || !!document.querySelector("table:has(td:has-text('Basic Details'))");
-                  return (text.includes('Tender List : Open Tender') || text.includes('Tender List :')) && hasSubTable && !hasBasicDetails;
-                }).catch(() => false);
-
-                if (isMultiTenderList) {
-                  console.log(`\n🗂️ [MULTI-TENDER DETECTED] Portal opened multi-work table for NIT: ${rowSummary.sourceTenderId}`);
-
-                  const workRows = await page.evaluate(() => {
-                    const rows = Array.from(document.querySelectorAll("table.list_table tr[id^='informal']"));
-                    return rows.map((r, idx) => {
-                      const tds = r.querySelectorAll('td');
-                      if (tds.length < 5) return null;
-                      const fullText = r.innerText.trim();
-                      const bracketMatches = fullText.match(/\[(.*?)\]/g) || [];
-                      const tenderId = bracketMatches.length >= 1 ? bracketMatches[bracketMatches.length - 1].replace(/[\[\]]/g, '').trim() : '';
-                      const a = tds[4].querySelector('a');
-                      return {
-                        index: idx,
-                        sourceTenderId: tenderId,
-                        title: a ? a.innerText.trim() : tds[4].innerText.trim(),
-                        publishedDateStr: tds[1] ? tds[1].innerText.trim() : '',
-                        closingDateStr: tds[2] ? tds[2].innerText.trim() : '',
-                        openingDateStr: tds[3] ? tds[3].innerText.trim() : '',
-                        hasLink: !!a
-                      };
-                    }).filter(w => w && w.hasLink && w.sourceTenderId);
-                  });
-
-                  console.log(`   📋 Found ${workRows.length} work items in multi-tender table.`);
-                  const allWorkIds = workRows.map(w => w.sourceTenderId);
-                  const baseId = rowSummary.sourceTenderId.replace(/_\d+$/, '') || rowSummary.sourceTenderId;
-
-                  for (let w = 0; w < workRows.length && totalIngested < limit; w++) {
-                    const workSummary = workRows[w];
-                    console.log(`\n   🔨 [Multi-Work Item ${w + 1}/${workRows.length}] Processing: ${workSummary.sourceTenderId}`);
-                    console.log(`      🔖 Work Title: "${workSummary.title.slice(0, 70)}..."`);
-
-                    // Strictly locate work item row by bracketed ID to avoid index drift
-                    let workRow = page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${workSummary.sourceTenderId}]` }).first();
-                    let hasExactWork = (await workRow.count().catch(() => 0)) > 0;
-                    let workLink;
-                    if (hasExactWork) {
-                      workLink = workRow.locator("td:nth-child(5) a, a").first();
-                    } else {
-                      const candidateWork = page.locator("table.list_table tr[id^='informal']").nth(workSummary.index);
-                      const candText = await candidateWork.innerText().catch(() => '');
-                      if (candText.includes(workSummary.sourceTenderId)) {
-                        workLink = candidateWork.locator("td:nth-child(5) a, a").first();
-                      } else {
-                        console.warn(`⚠️ [Strict Match Guard] Sub-table row for ${workSummary.sourceTenderId} not verified. Skipping.`);
-                        continue;
-                      }
-                    }
-
-                    await Promise.all([
-                      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
-                      workLink.click({ noWaitAfter: true, timeout: 15000 }).catch(() => workLink.click({ force: true, noWaitAfter: true }))
-                    ]);
-                    await page.waitForSelector("table:has-text('Basic Details'), table:has-text('Critical Dates')", { timeout: 30000 }).catch(() => {});
-                    await this.humanDelay(page, 400, 650);
-
-                    const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeDetailAndDocuments(page, workSummary, org.orgName);
-                    if (pdfCount > 0) totalPdfsSecured += pdfCount;
-                    if (boqCount > 0) totalBoqsSecured += boqCount;
-
-                    const isActuallyMulti = workRows.length > 1;
-                    processedItem.isMultiTender = isActuallyMulti;
-                    processedItem.baseTenderId = isActuallyMulti ? baseId : null;
-                    processedItem.relatedTenderIds = isActuallyMulti ? allWorkIds.filter(id => id !== workSummary.sourceTenderId) : [];
-
-                    const saved = await this.saveTenderAndUploadR2(processedItem);
-                    totalIngested++;
-
-                    if (hasDocuments) {
-                      totalWithDocuments++;
-                      console.log(`      ✅ [Saved Multi-Tender Work] ${saved.sourceTenderId} (${saved.pdfUrls?.length || 0} PDFs, BOQ: ${saved.boqZipUrl ? 'Yes' : 'No'})`);
-                      await withDbRetry(() =>
-                        PendingDocumentTender.findOneAndUpdate(
-                          { sourceTenderId: saved.sourceTenderId },
-                          { $set: { status: 'DOWNLOADED', downloadedAt: new Date(), lastCheckedAt: new Date() } }
-                        )
-                      ).catch(() => {});
-                    } else {
-                      totalWithoutDocuments++;
-                      console.log(`      ⏳ [Pending Docs Multi-Tender Work] ${saved.sourceTenderId} -> pending_document_tenders`);
-                      const isFuture = processedItem.documentDownloadStartDate && processedItem.documentDownloadStartDate > new Date();
-                      await withDbRetry(() =>
-                        PendingDocumentTender.findOneAndUpdate(
-                          { sourceTenderId: saved.sourceTenderId },
-                          {
-                          $set: {
-                            sourcePortal: 'JK_TENDERS',
-                            sourceTenderId: saved.sourceTenderId,
-                            tenderReferenceNumber: saved.tenderReferenceNumber || '',
-                            title: saved.title,
-                            organisationChain: saved.organisationChain || org.orgName,
-                            departmentName: saved.departmentName,
-                            departmentCode: saved.departmentCode,
-                            tenderCategory: saved.tenderCategory || '',
-                            estimatedValue: saved.estimatedValue || 0,
-                            publishedDateStr: saved.publishedDateStr,
-                            publishedDate: saved.publishedDate,
-                            publishedTime: saved.publishedTime,
-                            documentDownloadStartDateStr: processedItem.documentDownloadStartDateStr,
-                            documentDownloadStartDate: processedItem.documentDownloadStartDate,
-                            documentDownloadEndDateStr: processedItem.documentDownloadEndDateStr,
-                            documentDownloadEndDate: processedItem.documentDownloadEndDate,
-                            bidSubmissionStartDateStr: processedItem.bidSubmissionStartDateStr,
-                            bidSubmissionStartDate: processedItem.bidSubmissionStartDate,
-                            bidSubmissionEndDateStr: processedItem.bidSubmissionEndDateStr,
-                            bidSubmissionEndDate: processedItem.bidSubmissionEndDate,
-                            bidOpeningDateStr: processedItem.bidOpeningDateStr,
-                            bidOpeningDate: processedItem.bidOpeningDate,
-                            hasDownloadLinks: (processedItem.rawNitDocs?.length > 0 || processedItem.isDocumentAvailable),
-                            portalTenderUrl: page.url(),
-                            reason: docReason,
-                            status: isFuture ? 'AWAITING_DOWNLOAD_DATE' : 'READY_TO_DOWNLOAD',
-                            lastCheckedAt: new Date()
-                          },
-                          $inc: { attemptCount: 1 }
-                        },
-                        { upsert: true, new: true }
-                      )
-                    ).catch(() => {});
-                    }
-
-                    if (options.onProgress) {
-                      await options.onProgress({
-                        tender: saved,
-                        totalIngested,
-                        totalTargetDateFound
-                      });
-                    }
-
-                    // Return from work details to intermediate "Tender List : Open Tender"
-                    await this.navigateBackFromTenderDetails(page);
-                    await this.humanDelay(page, 300, 500);
-                  }
-
-                  // After all works finished, return to organisation's main tender list
-                  await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
-                  await this.humanDelay(page, 300, 500);
-
-                } else {
-                  // Standard Single Tender Flow
-                  await page.waitForSelector("table:has-text('Basic Details'), table:has-text('Critical Dates')", { timeout: 30000 }).catch(() => {});
-                  await this.humanDelay(page, 400, 650);
-
-                  const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeDetailAndDocuments(page, rowSummary, org.orgName);
-                  if (pdfCount > 0) totalPdfsSecured += pdfCount;
-                  if (boqCount > 0) totalBoqsSecured += boqCount;
-
-                  const saved = await this.saveTenderAndUploadR2(processedItem);
-                  totalIngested++;
-
-                  if (hasDocuments) {
-                    totalWithDocuments++;
-                    console.log(`   ✅ [Saved to MongoDB & R2] ${saved.sourceTenderId}`);
-                    console.log(`      📅 Published: "${saved.publishedDateStr}" (${saved.publishedTime})`);
-                    console.log(`      📁 R2 Key:    ${saved.r2StorageKey}`);
-                    console.log(`      📄 PDFs:      ${saved.pdfUrls?.length || 0} secured`);
-                    console.log(`      📦 BOQ:       ${saved.boqZipUrl ? 'Secured ✅' : 'None / Not Released'}`);
-
-                    await withDbRetry(() =>
-                      PendingDocumentTender.findOneAndUpdate(
-                        { sourceTenderId: saved.sourceTenderId },
-                        { $set: { status: 'DOWNLOADED', downloadedAt: new Date(), lastCheckedAt: new Date() } }
-                      )
-                    ).catch(() => {});
-                  } else {
-                    totalWithoutDocuments++;
-                    console.log(`   ⏳ [Unpublished Documents -> Stored in pending_document_tenders] ${saved.sourceTenderId}`);
-                    console.log(`      📅 Published:           "${saved.publishedDateStr}" (${saved.publishedTime})`);
-                    console.log(`      🕒 Download Start Date: "${processedItem.documentDownloadStartDateStr || 'Not Specified'}"`);
-                    console.log(`      ℹ️ Reason:              ${docReason}`);
-
-                    const isFuture = processedItem.documentDownloadStartDate && processedItem.documentDownloadStartDate > new Date();
-                    await withDbRetry(() =>
-                      PendingDocumentTender.findOneAndUpdate(
-                        { sourceTenderId: saved.sourceTenderId },
-                        {
-                        $set: {
-                          sourcePortal: 'JK_TENDERS',
-                          sourceTenderId: saved.sourceTenderId,
-                          tenderReferenceNumber: saved.tenderReferenceNumber || '',
-                          title: saved.title,
-                          organisationChain: saved.organisationChain || org.orgName,
-                          departmentName: saved.departmentName,
-                          departmentCode: saved.departmentCode,
-                          tenderCategory: saved.tenderCategory || '',
-                          estimatedValue: saved.estimatedValue || 0,
-                          publishedDateStr: saved.publishedDateStr,
-                          publishedDate: saved.publishedDate,
-                          publishedTime: saved.publishedTime,
-                          documentDownloadStartDateStr: processedItem.documentDownloadStartDateStr,
-                          documentDownloadStartDate: processedItem.documentDownloadStartDate,
-                          documentDownloadEndDateStr: processedItem.documentDownloadEndDateStr,
-                          documentDownloadEndDate: processedItem.documentDownloadEndDate,
-                          bidSubmissionStartDateStr: processedItem.bidSubmissionStartDateStr,
-                          bidSubmissionStartDate: processedItem.bidSubmissionStartDate,
-                          bidSubmissionEndDateStr: processedItem.bidSubmissionEndDateStr,
-                          bidSubmissionEndDate: processedItem.bidSubmissionEndDate,
-                          bidOpeningDateStr: processedItem.bidOpeningDateStr,
-                          bidOpeningDate: processedItem.bidOpeningDate,
-                          hasDownloadLinks: (processedItem.rawNitDocs?.length > 0 || processedItem.isDocumentAvailable),
-                          portalTenderUrl: page.url(),
-                          reason: docReason,
-                          status: isFuture ? 'AWAITING_DOWNLOAD_DATE' : 'READY_TO_DOWNLOAD',
-                          lastCheckedAt: new Date()
-                        },
-                        $inc: { attemptCount: 1 }
-                      },
-                      { upsert: true, new: true }
-                    )
-                  ).catch(() => {});
-                  }
-
-                  if (options.onProgress) {
-                    await options.onProgress({
-                      tender: saved,
-                      totalIngested,
-                      totalTargetDateFound
-                    });
-                  }
-
-                  // Return to organisation's tender list
-                  await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
-                  await this.humanDelay(page, 300, 500);
-                }
-
-              } catch (itemErr) {
-                console.error(`   ⚠️ Error ingesting ${rowSummary.sourceTenderId}: ${itemErr.message}`);
-                await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
-              }
+              await this.ingestListingRow(page, rowSummary, org, orgPageNum, stats, { limit, onProgress: options.onProgress });
 
             } else if (parsedPubDate && parsedPubDate < dateConfig.targetDateIST) {
               // Row date is strictly older than target date
@@ -647,7 +382,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
             return false;
           }, nextPg);
 
-          if (hasNextPage && totalIngested < limit) {
+          if (hasNextPage && stats.totalIngested < limit) {
             orgPageNum++;
             await page.waitForSelector("table.list_table tr[id^='informal']", { timeout: 25000 }).catch(() => {});
             await this.humanDelay(page, 500, 900);
@@ -664,33 +399,648 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       console.log(`\n======================================================================`);
       console.log(`🎉 TARGETED CRAWL COMPLETE FOR DATE: ${dateConfig.displayString}`);
       console.log(`======================================================================`);
-      console.log(`📋 Total Tenders Inspected:           ${totalInspected}`);
-      console.log(`🎯 Tenders Found on Target Date:      ${totalTargetDateFound}`);
-      console.log(`✅ Newly Ingested to DB & R2:        ${totalIngested}`);
-      console.log(`📄 Tenders WITH Documents Secured:    ${totalWithDocuments}`);
-      console.log(`⏳ Tenders WITHOUT Documents Yet:     ${totalWithoutDocuments} (in pending_document_tenders)`);
+      console.log(`📋 Total Tenders Inspected:           ${stats.totalInspected}`);
+      console.log(`🎯 Tenders Found on Target Date:      ${stats.totalTargetDateFound}`);
+      console.log(`✅ Newly Ingested to DB & R2:        ${stats.totalIngested}`);
+      console.log(`📄 Tenders WITH Documents Secured:    ${stats.totalWithDocuments}`);
+      console.log(`⏳ Tenders WITHOUT Documents Yet:     ${stats.totalWithoutDocuments} (in pending_document_tenders)`);
       console.log(`🔐 Captchas Encountered / Solved:     ${this.captchaAttempts} / ${this.captchaSuccesses}`);
-      console.log(`⏩ Skipped (Already Complete in DB): ${totalSkippedAlreadyComplete}`);
-      console.log(`📄 NIT PDFs Secured:                 ${totalPdfsSecured}`);
-      console.log(`📦 BOQ ZIPs Secured:                 ${totalBoqsSecured}`);
+      console.log(`⏩ Skipped (Already Complete in DB): ${stats.totalSkippedAlreadyComplete}`);
+      console.log(`📄 NIT PDFs Secured:                 ${stats.totalPdfsSecured}`);
+      console.log(`📦 BOQ ZIPs Secured:                 ${stats.totalBoqsSecured}`);
       console.log(`======================================================================\n`);
 
       return {
         targetDate: dateConfig.displayString,
-        totalInspected,
-        totalTargetDateFound,
-        totalIngested,
-        totalSkippedAlreadyComplete,
-        totalWithDocuments,
-        totalWithoutDocuments,
-        totalPdfsSecured,
-        totalBoqsSecured,
+        totalInspected: stats.totalInspected,
+        totalTargetDateFound: stats.totalTargetDateFound,
+        totalIngested: stats.totalIngested,
+        totalSkippedAlreadyComplete: stats.totalSkippedAlreadyComplete,
+        totalWithDocuments: stats.totalWithDocuments,
+        totalWithoutDocuments: stats.totalWithoutDocuments,
+        totalPdfsSecured: stats.totalPdfsSecured,
+        totalBoqsSecured: stats.totalBoqsSecured,
         totalCaptchaAttempts: this.captchaAttempts,
         totalCaptchaSuccess: this.captchaSuccesses
       };
 
     } finally {
       await this.closeBrowser();
+    }
+  }
+
+  /**
+   * Waits until an organisation's tender list has finished rendering. The portal puts every tender
+   * of an organisation on one page (2,000+ rows for RDPR) and the table streams in, so the first row
+   * appearing does not mean the list is complete. Resolves when the row count reaches `expected`
+   * or stops growing.
+   */
+  async waitForFullListing(page, expected = 0, timeoutMs = 90000) {
+    const selector = "table.list_table tr[id^='informal']";
+    await page.waitForLoadState('load', { timeout: timeoutMs }).catch(() => {});
+    const deadline = Date.now() + timeoutMs;
+    let last = -1;
+    let stableTicks = 0;
+    while (Date.now() < deadline) {
+      const count = await page.locator(selector).count().catch(() => 0);
+      if (expected > 0 && count >= expected) return count;
+      if (count > 0 && count === last) {
+        stableTicks++;
+        if (stableTicks >= 3) return count;
+      } else {
+        stableTicks = 0;
+      }
+      last = count;
+      await page.waitForTimeout(1000);
+    }
+    return last;
+  }
+
+  /** Reads every tender row currently rendered on an organisation's listing page. */
+  async readListingRows(page) {
+    return page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll("table.list_table tr[id^='informal']"));
+      return rows.map((row, index) => {
+        const tds = row.querySelectorAll('td');
+        if (tds.length < 5) return null;
+        const bracketMatches = row.innerText.trim().match(/\[(.*?)\]/g) || [];
+        const tenderId = bracketMatches.length ? bracketMatches[bracketMatches.length - 1].replace(/[\[\]]/g, '').trim() : '';
+        const a = tds[4].querySelector('a');
+        return {
+          index,
+          sourceTenderId: tenderId,
+          title: a ? a.innerText.trim() : tds[4].innerText.trim(),
+          publishedDateStr: tds[1] ? tds[1].innerText.trim() : '',
+          closingDateStr: tds[2] ? tds[2].innerText.trim() : '',
+          openingDateStr: tds[3] ? tds[3].innerText.trim() : '',
+          hasLink: !!a
+        };
+      }).filter(t => t && t.hasLink && t.sourceTenderId);
+    });
+  }
+
+  /** Opens an organisation's full tender list from the directory and waits for every row. */
+  async openOrganisationListing(page, org) {
+    const directorySelector = "table#table tr[id^='informal']";
+    if ((await page.locator(directorySelector).count().catch(() => 0)) === 0) {
+      await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await page.waitForSelector(directorySelector, { timeout: 35000 }).catch(() => {});
+    }
+    let orgRow = page.locator(directorySelector).filter({ hasText: org.orgName }).first();
+    if ((await orgRow.count().catch(() => 0)) === 0) {
+      orgRow = page.locator(directorySelector).nth(org.index);
+    }
+    const countLink = orgRow.locator("td:nth-child(3) a, a.link2, a").first();
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
+      countLink.click({ noWaitAfter: true, timeout: 20000 }).catch(() => countLink.click({ force: true, noWaitAfter: true }))
+    ]);
+    await page.waitForSelector("table.list_table tr[id^='informal']", { timeout: 35000 }).catch(() => {});
+    await this.waitForFullListing(page, org.tenderCount);
+    await this.humanDelay(page, 300, 600);
+  }
+
+  /** Makes sure the row for `tenderId` is rendered on the current listing, reopening the organisation if not. */
+  async ensureListingRowVisible(page, org, tenderId) {
+    const rowLocator = () => page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${tenderId}]` }).first();
+    const found = await rowLocator().waitFor({ state: 'attached', timeout: 30000 }).then(() => true).catch(() => false);
+    if (found) return true;
+    await this.returnToOrganisationDirectory(page);
+    await this.openOrganisationListing(page, org);
+    return (await rowLocator().count().catch(() => 0)) > 0;
+  }
+
+  /**
+   * Full-portal sweep. Unlike the date crawl (today only), this reads every organisation's complete
+   * listing and:
+   *   1. Corrects closing / opening dates that changed on the portal (corrigendum extensions), and
+   *      returns tenders wrongly marked EXPIRED/ARCHIVED to ACTIVE when the portal still lists them open.
+   *   2. Ingests tenders that are live on the portal but absent from MongoDB, newest first, capped at
+   *      `maxNew` per run so the job stays within the CI time budget. Leftovers are picked up next run.
+   * It never deletes or delists anything; removal of tenders gone from the portal stays with reconciliation.
+   *
+   * @param {Object} options
+   * @param {string} [options.orgFilter]
+   * @param {string} [options.excludeOrg]
+   * @param {boolean} [options.headless=true]
+   * @param {number} [options.maxNew=150] - Max missing tenders to ingest this run (0 = dates only)
+   * @param {boolean} [options.dryRun=false] - Report what would change without writing anything
+   */
+  async sweepPortal(options = {}) {
+    const orgFilter = options.orgFilter || null;
+    const excludeOrg = options.excludeOrg || null;
+    const isHeadless = options.headless !== false && process.env.SCRAPER_HEADLESS !== 'false';
+    const maxNew = Number.isFinite(options.maxNew) ? options.maxNew : 150;
+    const dryRun = !!options.dryRun;
+    const maxMinutes = Number.isFinite(options.maxMinutes) && options.maxMinutes > 0 ? options.maxMinutes : Infinity;
+    const sweepStartedAt = Date.now();
+    const outOfTime = () => (Date.now() - sweepStartedAt) / 60000 >= maxMinutes;
+    const portal = this.portalName || 'JK_TENDERS';
+    const now = new Date();
+    // Tenders already saved but still missing documents get retried while they are this fresh,
+    // which is what the old run-6-times-a-day date crawl did for today's tenders.
+    const retryIncompleteSince = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const summary = {
+      organisationsScanned: 0,
+      portalListed: 0,
+      alreadyInDb: 0,
+      missingFromDb: 0,
+      listingShortfalls: [],
+      datesUpdated: 0,
+      revivedToActive: 0,
+      retryIncomplete: 0,
+      backfillSelected: 0,
+      stoppedForTime: false,
+      backfillSkippedNowPresent: 0,
+      backfillRowNotFound: 0
+    };
+    const stats = { totalIngested: 0, totalTargetDateFound: 0, totalWithDocuments: 0, totalWithoutDocuments: 0, totalPdfsSecured: 0, totalBoqsSecured: 0 };
+
+    console.log(`\n======================================================================`);
+    console.log(`🧹 FULL PORTAL SWEEP: ${portal}`);
+    console.log(`======================================================================`);
+    console.log(`🏛️ Organisation Filter:   ${orgFilter || 'ALL ORGANISATIONS'}`);
+    console.log(`🆕 Max New Ingests:       ${maxNew}`);
+    console.log(`⏱️ Time Budget:           ${maxMinutes === Infinity ? 'None' : `${maxMinutes} min`}`);
+    console.log(`🧪 Dry Run:               ${dryRun}`);
+    console.log(`======================================================================\n`);
+
+    this.browser = await chromium.launch({
+      headless: isHeadless,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    this.context = await this.browser.newContext({
+      acceptDownloads: true,
+      viewport: { width: 1280, height: 800 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    });
+    const page = await this.context.newPage();
+
+    try {
+      await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.waitForSelector("table#table tr[id^='informal']", { timeout: 35000 });
+
+      const organisations = (await page.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll("table#table tr[id^='informal']"));
+        return rows.map((row, index) => {
+          const tds = row.querySelectorAll('td');
+          const orgName = tds[1] ? tds[1].innerText.trim() : '';
+          const countLink = tds[2] ? tds[2].querySelector('a') : null;
+          const tenderCount = countLink ? parseInt(countLink.innerText.trim(), 10) : 0;
+          return { index, orgName, tenderCount, hasCountLink: !!countLink };
+        }).filter(o => o.hasCountLink && o.tenderCount > 0);
+      })).filter(org => {
+        if (orgFilter && !org.orgName.toLowerCase().includes(orgFilter.toLowerCase())) return false;
+        if (excludeOrg && org.orgName.toLowerCase().includes(excludeOrg.toLowerCase())) return false;
+        return true;
+      });
+
+      console.log(`🏛️ ${organisations.length} organisations to sweep.\n`);
+
+      // ---------- Phase 1: read every listing, fix dates, collect missing IDs ----------
+      const missing = [];
+      for (const org of organisations) {
+        await this.openOrganisationListing(page, org);
+        const rows = await this.readListingRows(page);
+        summary.organisationsScanned++;
+        summary.portalListed += rows.length;
+        if (rows.length < org.tenderCount) {
+          summary.listingShortfalls.push({ org: org.orgName, expected: org.tenderCount, read: rows.length });
+        }
+
+        const ids = rows.map(r => r.sourceTenderId);
+        const existing = await withDbRetry(() =>
+          Tender.find({ sourcePortal: portal, sourceTenderId: { $in: ids } })
+            .select('sourceTenderId status isDelisted closingDate bidSubmissionEndDate bidOpeningDate publishedDate pdfFetchStatus boqZipUrl boqFetchStatus isDocumentAvailable')
+            .lean()
+        );
+        const byId = new Map(existing.map(t => [t.sourceTenderId, t]));
+        const ops = [];
+        let orgMissing = 0;
+        let orgDateFixes = 0;
+
+        for (const row of rows) {
+          const doc = byId.get(row.sourceTenderId);
+          if (!doc) {
+            orgMissing++;
+            missing.push({ org, row, publishedAt: parseISTDate(row.publishedDateStr), kind: 'MISSING' });
+            continue;
+          }
+          summary.alreadyInDb++;
+
+          const docsComplete = doc.pdfFetchStatus === 'COMPLETED' &&
+            (doc.boqZipUrl || doc.boqFetchStatus === 'COMPLETED' || doc.boqFetchStatus === 'NOT_AVAILABLE' || doc.isDocumentAvailable === false);
+          if (!docsComplete && doc.publishedDate && doc.publishedDate >= retryIncompleteSince) {
+            summary.retryIncomplete++;
+            missing.push({ org, row, publishedAt: parseISTDate(row.publishedDateStr) || doc.publishedDate, kind: 'INCOMPLETE' });
+          }
+
+          // The listing's "Closing Date" is the bid submission end date (what closingDate stores).
+          const portalClose = parseISTDate(row.closingDateStr);
+          const portalOpen = parseISTDate(row.openingDateStr);
+          const $set = {};
+          const differs = (a, b) => !a || Math.abs(new Date(a).getTime() - b.getTime()) > 60 * 1000;
+
+          if (portalClose && (differs(doc.closingDate, portalClose) || differs(doc.bidSubmissionEndDate, portalClose))) {
+            Object.assign($set, {
+              closingDate: portalClose,
+              closingDateStr: row.closingDateStr,
+              closingTime: formatStandardTime(row.closingDateStr),
+              bidSubmissionEndDate: portalClose,
+              bidSubmissionEndDateStr: row.closingDateStr,
+              bidSubmissionEndTime: formatStandardTime(row.closingDateStr)
+            });
+          }
+          if (portalOpen && differs(doc.bidOpeningDate, portalOpen)) {
+            Object.assign($set, {
+              bidOpeningDate: portalOpen,
+              bidOpeningDateStr: row.openingDateStr,
+              bidOpeningTime: formatStandardTime(row.openingDateStr)
+            });
+          }
+          const listedOpen = portalClose && portalClose > now;
+          if (listedOpen && (doc.status === 'EXPIRED' || doc.status === 'ARCHIVED')) {
+            $set.status = 'ACTIVE';
+            summary.revivedToActive++;
+          }
+
+          if (Object.keys($set).length > 0) {
+            $set.updatedAt = new Date();
+            orgDateFixes++;
+            ops.push({ updateOne: { filter: { _id: doc._id }, update: { $set } } });
+          }
+        }
+
+        summary.datesUpdated += orgDateFixes;
+        if (ops.length > 0 && !dryRun) {
+          await withDbRetry(() => Tender.bulkWrite(ops, { ordered: false }));
+        }
+
+        console.log(`🏛️ ${org.orgName}: portal ${org.tenderCount}, read ${rows.length}, in DB ${rows.length - orgMissing}, missing ${orgMissing}, dates ${dryRun ? 'to fix' : 'fixed'} ${orgDateFixes}`);
+
+        await this.returnToOrganisationDirectory(page);
+        await this.humanDelay(page, 300, 600);
+      }
+      summary.missingFromDb = missing.filter(m => m.kind === 'MISSING').length;
+
+      // ---------- Phase 2: ingest missing (and recent incomplete) tenders, newest first, capped ----------
+      missing.sort((a, b) => (b.publishedAt?.getTime() || 0) - (a.publishedAt?.getTime() || 0));
+      const selected = dryRun ? [] : missing.slice(0, Math.max(0, maxNew));
+      summary.backfillSelected = selected.length;
+
+      if (selected.length > 0) {
+        console.log(`\n🆕 Processing ${selected.length} of ${missing.length} candidates (${summary.missingFromDb} missing, ${summary.retryIncomplete} recent without docs), newest first...\n`);
+      }
+
+      // Group by organisation so each listing is opened once.
+      const byOrg = new Map();
+      for (const item of selected) {
+        if (!byOrg.has(item.org.orgName)) byOrg.set(item.org.orgName, { org: item.org, rows: [] });
+        byOrg.get(item.org.orgName).rows.push({ ...item.row, kind: item.kind });
+      }
+
+      for (const { org, rows } of byOrg.values()) {
+        if (stats.totalIngested >= maxNew) break;
+        if (outOfTime()) { summary.stoppedForTime = true; break; }
+        await this.openOrganisationListing(page, org);
+
+        for (const row of rows) {
+          if (stats.totalIngested >= maxNew) break;
+          if (outOfTime()) { summary.stoppedForTime = true; break; }
+
+          // A multi-work NIT ingests all its sibling works at once, so re-check before opening.
+          const nowPresent = row.kind === 'MISSING' && await withDbRetry(() =>
+            Tender.exists({ sourcePortal: portal, sourceTenderId: row.sourceTenderId })
+          ).catch(() => null);
+          if (nowPresent) {
+            summary.backfillSkippedNowPresent++;
+            continue;
+          }
+
+          if (!(await this.ensureListingRowVisible(page, org, row.sourceTenderId))) {
+            summary.backfillRowNotFound++;
+            console.warn(`   ⚠️ Row ${row.sourceTenderId} no longer on ${org.orgName} listing. Skipping.`);
+            continue;
+          }
+
+          console.log(`\n👉 [${row.kind === 'MISSING' ? 'Backfill' : 'Retry docs'} ${stats.totalIngested + 1}/${maxNew}] ${row.sourceTenderId} (published ${row.publishedDateStr})`);
+          // Row index is unreliable after re-renders; ingestListingRow matches by bracketed ID first.
+          await this.ingestListingRow(page, row, org, 1, stats, { limit: maxNew, onProgress: options.onProgress });
+        }
+
+        await this.returnToOrganisationDirectory(page);
+        await this.humanDelay(page, 300, 600);
+      }
+
+      const missingIds = missing.filter(m => m.kind === 'MISSING').map(m => m.row.sourceTenderId);
+      const nowSaved = (dryRun || missingIds.length === 0) ? 0 : await withDbRetry(() =>
+        Tender.countDocuments({ sourcePortal: portal, sourceTenderId: { $in: missingIds } })
+      ).catch(() => 0);
+
+      const result = {
+        ...summary,
+        missingRemaining: missingIds.length - nowSaved,
+        totalIngested: stats.totalIngested,
+        totalWithDocuments: stats.totalWithDocuments,
+        totalWithoutDocuments: stats.totalWithoutDocuments,
+        totalPdfsSecured: stats.totalPdfsSecured,
+        totalBoqsSecured: stats.totalBoqsSecured,
+        totalCaptchaAttempts: this.captchaAttempts,
+        totalCaptchaSuccess: this.captchaSuccesses
+      };
+
+      console.log(`\n======================================================================`);
+      console.log(`🧹 SWEEP COMPLETE: ${portal}`);
+      console.log(`======================================================================`);
+      console.log(`🏛️ Organisations Scanned:             ${result.organisationsScanned}`);
+      console.log(`📋 Tenders Listed On Portal:          ${result.portalListed}`);
+      console.log(`🗄️ Already In DB:                     ${result.alreadyInDb}`);
+      console.log(`📅 Closing/Opening Dates ${dryRun ? 'To Fix' : 'Fixed'}:      ${result.datesUpdated}`);
+      console.log(`♻️ Revived EXPIRED/ARCHIVED -> ACTIVE: ${result.revivedToActive}`);
+      console.log(`🕳️ Missing From DB:                   ${result.missingFromDb}`);
+      console.log(`✅ Backfilled This Run:                ${result.totalIngested}`);
+      console.log(`⏳ Missing Still Remaining:            ${result.missingRemaining}`);
+      if (result.stoppedForTime) console.log(`⏱️ Stopped early: time budget of ${maxMinutes} min reached.`);
+      if (result.listingShortfalls.length > 0) {
+        console.log(`⚠️ Listings read short of portal count: ${result.listingShortfalls.map(s => `${s.org} (${s.read}/${s.expected})`).join(', ')}`);
+      }
+      console.log(`======================================================================\n`);
+
+      return result;
+    } finally {
+      await this.closeBrowser();
+    }
+  }
+
+  /**
+   * Opens one tender row from an organisation's listing page, scrapes details + documents,
+   * saves it to MongoDB/R2 and records pending-document state. Shared by the date crawl and the sweep.
+   * The page must be on the organisation's tender list (page orgPageNum) when called; it is returned there.
+   */
+  async ingestListingRow(page, rowSummary, org, orgPageNum, stats, options = {}) {
+    const limit = options.limit || Infinity;
+    try {
+      // Click tender link: match exact bracketed tender ID to avoid substring or index shift collisions
+      let tenderRow = page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${rowSummary.sourceTenderId}]` }).first();
+      let hasExactRow = (await tenderRow.count().catch(() => 0)) > 0;
+      let tenderLink;
+      if (hasExactRow) {
+        tenderLink = tenderRow.locator("td:nth-child(5) a, a").first();
+      } else {
+        const candidateRow = page.locator("table.list_table tr[id^='informal']").nth(rowSummary.index);
+        const candidateText = await candidateRow.innerText().catch(() => '');
+        if (candidateText.includes(rowSummary.sourceTenderId)) {
+          tenderLink = candidateRow.locator("td:nth-child(5) a, a").first();
+        } else {
+          console.warn(`⚠️ [Strict Match Guard] Row for ${rowSummary.sourceTenderId} not verified on current page. Skipping to avoid cross-tender contamination.`);
+          return;
+        }
+      }
+
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+        tenderLink.click({ noWaitAfter: true, timeout: 15000 }).catch(() => tenderLink.click({ force: true, noWaitAfter: true }))
+      ]);
+      await this.humanDelay(page, 500, 800);
+
+      // Check if loaded page is an intermediate multi-item list ("Tender List : Open Tender")
+      const isMultiTenderList = await page.evaluate(() => {
+        const text = document.body ? document.body.innerText : '';
+        const hasSubTable = !!document.querySelector("table.list_table tr[id^='informal']");
+        const hasBasicDetails = text.includes('Basic Details') || !!document.querySelector("table:has(td:has-text('Basic Details'))");
+        return (text.includes('Tender List : Open Tender') || text.includes('Tender List :')) && hasSubTable && !hasBasicDetails;
+      }).catch(() => false);
+
+      if (isMultiTenderList) {
+        console.log(`\n🗂️ [MULTI-TENDER DETECTED] Portal opened multi-work table for NIT: ${rowSummary.sourceTenderId}`);
+
+        const workRows = await page.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll("table.list_table tr[id^='informal']"));
+          return rows.map((r, idx) => {
+            const tds = r.querySelectorAll('td');
+            if (tds.length < 5) return null;
+            const fullText = r.innerText.trim();
+            const bracketMatches = fullText.match(/\[(.*?)\]/g) || [];
+            const tenderId = bracketMatches.length >= 1 ? bracketMatches[bracketMatches.length - 1].replace(/[\[\]]/g, '').trim() : '';
+            const a = tds[4].querySelector('a');
+            return {
+              index: idx,
+              sourceTenderId: tenderId,
+              title: a ? a.innerText.trim() : tds[4].innerText.trim(),
+              publishedDateStr: tds[1] ? tds[1].innerText.trim() : '',
+              closingDateStr: tds[2] ? tds[2].innerText.trim() : '',
+              openingDateStr: tds[3] ? tds[3].innerText.trim() : '',
+              hasLink: !!a
+            };
+          }).filter(w => w && w.hasLink && w.sourceTenderId);
+        });
+
+        console.log(`   📋 Found ${workRows.length} work items in multi-tender table.`);
+        const allWorkIds = workRows.map(w => w.sourceTenderId);
+        const baseId = rowSummary.sourceTenderId.replace(/_\d+$/, '') || rowSummary.sourceTenderId;
+
+        for (let w = 0; w < workRows.length && stats.totalIngested < limit; w++) {
+          const workSummary = workRows[w];
+          console.log(`\n   🔨 [Multi-Work Item ${w + 1}/${workRows.length}] Processing: ${workSummary.sourceTenderId}`);
+          console.log(`      🔖 Work Title: "${workSummary.title.slice(0, 70)}..."`);
+
+          // Strictly locate work item row by bracketed ID to avoid index drift
+          let workRow = page.locator("table.list_table tr[id^='informal']").filter({ hasText: `[${workSummary.sourceTenderId}]` }).first();
+          let hasExactWork = (await workRow.count().catch(() => 0)) > 0;
+          let workLink;
+          if (hasExactWork) {
+            workLink = workRow.locator("td:nth-child(5) a, a").first();
+          } else {
+            const candidateWork = page.locator("table.list_table tr[id^='informal']").nth(workSummary.index);
+            const candText = await candidateWork.innerText().catch(() => '');
+            if (candText.includes(workSummary.sourceTenderId)) {
+              workLink = candidateWork.locator("td:nth-child(5) a, a").first();
+            } else {
+              console.warn(`⚠️ [Strict Match Guard] Sub-table row for ${workSummary.sourceTenderId} not verified. Skipping.`);
+              continue;
+            }
+          }
+
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+            workLink.click({ noWaitAfter: true, timeout: 15000 }).catch(() => workLink.click({ force: true, noWaitAfter: true }))
+          ]);
+          await page.waitForSelector("table:has-text('Basic Details'), table:has-text('Critical Dates')", { timeout: 30000 }).catch(() => {});
+          await this.humanDelay(page, 400, 650);
+
+          const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeDetailAndDocuments(page, workSummary, org.orgName);
+          if (pdfCount > 0) stats.totalPdfsSecured += pdfCount;
+          if (boqCount > 0) stats.totalBoqsSecured += boqCount;
+
+          const isActuallyMulti = workRows.length > 1;
+          processedItem.isMultiTender = isActuallyMulti;
+          processedItem.baseTenderId = isActuallyMulti ? baseId : null;
+          processedItem.relatedTenderIds = isActuallyMulti ? allWorkIds.filter(id => id !== workSummary.sourceTenderId) : [];
+
+          const saved = await this.saveTenderAndUploadR2(processedItem);
+          stats.totalIngested++;
+
+          if (hasDocuments) {
+            stats.totalWithDocuments++;
+            console.log(`      ✅ [Saved Multi-Tender Work] ${saved.sourceTenderId} (${saved.pdfUrls?.length || 0} PDFs, BOQ: ${saved.boqZipUrl ? 'Yes' : 'No'})`);
+            await withDbRetry(() =>
+              PendingDocumentTender.findOneAndUpdate(
+                { sourceTenderId: saved.sourceTenderId },
+                { $set: { status: 'DOWNLOADED', downloadedAt: new Date(), lastCheckedAt: new Date() } }
+              )
+            ).catch(() => {});
+          } else {
+            stats.totalWithoutDocuments++;
+            console.log(`      ⏳ [Pending Docs Multi-Tender Work] ${saved.sourceTenderId} -> pending_document_tenders`);
+            const isFuture = processedItem.documentDownloadStartDate && processedItem.documentDownloadStartDate > new Date();
+            await withDbRetry(() =>
+              PendingDocumentTender.findOneAndUpdate(
+                { sourceTenderId: saved.sourceTenderId },
+                {
+                $set: {
+                  sourcePortal: 'JK_TENDERS',
+                  sourceTenderId: saved.sourceTenderId,
+                  tenderReferenceNumber: saved.tenderReferenceNumber || '',
+                  title: saved.title,
+                  organisationChain: saved.organisationChain || org.orgName,
+                  departmentName: saved.departmentName,
+                  departmentCode: saved.departmentCode,
+                  tenderCategory: saved.tenderCategory || '',
+                  estimatedValue: saved.estimatedValue || 0,
+                  publishedDateStr: saved.publishedDateStr,
+                  publishedDate: saved.publishedDate,
+                  publishedTime: saved.publishedTime,
+                  documentDownloadStartDateStr: processedItem.documentDownloadStartDateStr,
+                  documentDownloadStartDate: processedItem.documentDownloadStartDate,
+                  documentDownloadEndDateStr: processedItem.documentDownloadEndDateStr,
+                  documentDownloadEndDate: processedItem.documentDownloadEndDate,
+                  bidSubmissionStartDateStr: processedItem.bidSubmissionStartDateStr,
+                  bidSubmissionStartDate: processedItem.bidSubmissionStartDate,
+                  bidSubmissionEndDateStr: processedItem.bidSubmissionEndDateStr,
+                  bidSubmissionEndDate: processedItem.bidSubmissionEndDate,
+                  bidOpeningDateStr: processedItem.bidOpeningDateStr,
+                  bidOpeningDate: processedItem.bidOpeningDate,
+                  hasDownloadLinks: (processedItem.rawNitDocs?.length > 0 || processedItem.isDocumentAvailable),
+                  portalTenderUrl: page.url(),
+                  reason: docReason,
+                  status: isFuture ? 'AWAITING_DOWNLOAD_DATE' : 'READY_TO_DOWNLOAD',
+                  lastCheckedAt: new Date()
+                },
+                $inc: { attemptCount: 1 }
+              },
+              { upsert: true, new: true }
+            )
+          ).catch(() => {});
+          }
+
+          if (options.onProgress) {
+            await options.onProgress({
+              tender: saved,
+              totalIngested: stats.totalIngested,
+              totalTargetDateFound: stats.totalTargetDateFound
+            });
+          }
+
+          // Return from work details to intermediate "Tender List : Open Tender"
+          await this.navigateBackFromTenderDetails(page);
+          await this.humanDelay(page, 300, 500);
+        }
+
+        // After all works finished, return to organisation's main tender list
+        await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
+        await this.humanDelay(page, 300, 500);
+
+      } else {
+        // Standard Single Tender Flow
+        await page.waitForSelector("table:has-text('Basic Details'), table:has-text('Critical Dates')", { timeout: 30000 }).catch(() => {});
+        await this.humanDelay(page, 400, 650);
+
+        const { processedItem, pdfCount, boqCount, hasDocuments, docReason } = await this.scrapeDetailAndDocuments(page, rowSummary, org.orgName);
+        if (pdfCount > 0) stats.totalPdfsSecured += pdfCount;
+        if (boqCount > 0) stats.totalBoqsSecured += boqCount;
+
+        const saved = await this.saveTenderAndUploadR2(processedItem);
+        stats.totalIngested++;
+
+        if (hasDocuments) {
+          stats.totalWithDocuments++;
+          console.log(`   ✅ [Saved to MongoDB & R2] ${saved.sourceTenderId}`);
+          console.log(`      📅 Published: "${saved.publishedDateStr}" (${saved.publishedTime})`);
+          console.log(`      📁 R2 Key:    ${saved.r2StorageKey}`);
+          console.log(`      📄 PDFs:      ${saved.pdfUrls?.length || 0} secured`);
+          console.log(`      📦 BOQ:       ${saved.boqZipUrl ? 'Secured ✅' : 'None / Not Released'}`);
+
+          await withDbRetry(() =>
+            PendingDocumentTender.findOneAndUpdate(
+              { sourceTenderId: saved.sourceTenderId },
+              { $set: { status: 'DOWNLOADED', downloadedAt: new Date(), lastCheckedAt: new Date() } }
+            )
+          ).catch(() => {});
+        } else {
+          stats.totalWithoutDocuments++;
+          console.log(`   ⏳ [Unpublished Documents -> Stored in pending_document_tenders] ${saved.sourceTenderId}`);
+          console.log(`      📅 Published:           "${saved.publishedDateStr}" (${saved.publishedTime})`);
+          console.log(`      🕒 Download Start Date: "${processedItem.documentDownloadStartDateStr || 'Not Specified'}"`);
+          console.log(`      ℹ️ Reason:              ${docReason}`);
+
+          const isFuture = processedItem.documentDownloadStartDate && processedItem.documentDownloadStartDate > new Date();
+          await withDbRetry(() =>
+            PendingDocumentTender.findOneAndUpdate(
+              { sourceTenderId: saved.sourceTenderId },
+              {
+              $set: {
+                sourcePortal: 'JK_TENDERS',
+                sourceTenderId: saved.sourceTenderId,
+                tenderReferenceNumber: saved.tenderReferenceNumber || '',
+                title: saved.title,
+                organisationChain: saved.organisationChain || org.orgName,
+                departmentName: saved.departmentName,
+                departmentCode: saved.departmentCode,
+                tenderCategory: saved.tenderCategory || '',
+                estimatedValue: saved.estimatedValue || 0,
+                publishedDateStr: saved.publishedDateStr,
+                publishedDate: saved.publishedDate,
+                publishedTime: saved.publishedTime,
+                documentDownloadStartDateStr: processedItem.documentDownloadStartDateStr,
+                documentDownloadStartDate: processedItem.documentDownloadStartDate,
+                documentDownloadEndDateStr: processedItem.documentDownloadEndDateStr,
+                documentDownloadEndDate: processedItem.documentDownloadEndDate,
+                bidSubmissionStartDateStr: processedItem.bidSubmissionStartDateStr,
+                bidSubmissionStartDate: processedItem.bidSubmissionStartDate,
+                bidSubmissionEndDateStr: processedItem.bidSubmissionEndDateStr,
+                bidSubmissionEndDate: processedItem.bidSubmissionEndDate,
+                bidOpeningDateStr: processedItem.bidOpeningDateStr,
+                bidOpeningDate: processedItem.bidOpeningDate,
+                hasDownloadLinks: (processedItem.rawNitDocs?.length > 0 || processedItem.isDocumentAvailable),
+                portalTenderUrl: page.url(),
+                reason: docReason,
+                status: isFuture ? 'AWAITING_DOWNLOAD_DATE' : 'READY_TO_DOWNLOAD',
+                lastCheckedAt: new Date()
+              },
+              $inc: { attemptCount: 1 }
+            },
+            { upsert: true, new: true }
+          )
+        ).catch(() => {});
+        }
+
+        if (options.onProgress) {
+          await options.onProgress({
+            tender: saved,
+            totalIngested: stats.totalIngested,
+            totalTargetDateFound: stats.totalTargetDateFound
+          });
+        }
+
+        // Return to organisation's tender list
+        await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
+        await this.humanDelay(page, 300, 500);
+      }
+
+    } catch (itemErr) {
+      console.error(`   ⚠️ Error ingesting ${rowSummary.sourceTenderId}: ${itemErr.message}`);
+      await this.ensureOnOrganisationTenderList(page, org.orgName, orgPageNum);
     }
   }
 

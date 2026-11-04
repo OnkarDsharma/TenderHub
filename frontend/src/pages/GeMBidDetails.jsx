@@ -96,16 +96,13 @@ export default function GeMBidDetails() {
     bid.detailsUrl,
   ].filter(Boolean))];
   const bookmarked = isBookmarked(bid._id || bid.sourceTenderId);
-  const stateConfidence = bid.officialStateConfidence || 'unknown';
   const checkedAt = bid.lastCheckedAt ? new Date(bid.lastCheckedAt) : null;
-  const checkWindowMs = bid.closingDate && new Date(bid.closingDate).getTime() - Date.now() < 48 * 60 * 60 * 1000 ? 8 * 3600000 : 24 * 3600000;
-  const isStale = !checkedAt || Date.now() - checkedAt.getTime() > checkWindowMs;
-  const stateLabel = stateConfidence === 'verified' && bid.state && bid.state !== 'Other'
-    ? bid.state
-    : (bid.officialState ? `${bid.officialState} (${stateConfidence})` : 'Not confirmed');
+  // Matches the API's 26h listing freshness window.
+  const isStale = !checkedAt || Date.now() - checkedAt.getTime() > 26 * 3600000;
+  const stateLabel = bid.consigneeStates?.length ? bid.consigneeStates.join(', ') : 'Not in a northern-state GeM list';
   const locationLabel = bid.location
-    ? `${display(bid.location)}${bid.locationVerificationStatus === 'VERIFIED' ? '' : ' (unverified)'}`
-    : 'Not confirmed';
+    ? display(bid.location)
+    : (bid.pdfParseStatus === 'COMPLETED' ? 'City not stated in bid document' : 'Bid document not read yet');
 
   const submitDataReport = async (event) => {
     event.preventDefault();
@@ -188,8 +185,8 @@ export default function GeMBidDetails() {
                 <Field label="Bid Number"><span className="font-mono">{display(bidId)}</span></Field>
                 <Field label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</Field>
                 <Field label="Product Category">{display(bid.productCategory)}</Field>
-                <Field label="Ministry / State Name in GeM PDF">{display(bid.officialState, stateLabel)}</Field>
-                <Field label="State confidence">{stateConfidence}</Field>
+                <Field label="Buyer ministry / state (GeM PDF)">{display(bid.officialState, bid.pdfParseStatus === 'COMPLETED' ? 'Not stated' : 'Bid document not read yet')}</Field>
+                <Field label="Delivery state (GeM consignee search)">{stateLabel}</Field>
                 <Field label="GeM status evidence">{display(bid.gemStatus, 'UNKNOWN')}</Field>
                 <Field label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</Field>
               </dl>
@@ -256,9 +253,9 @@ export default function GeMBidDetails() {
             <Tile tone="blue" order={5}>
               <p className="ai-tile-kicker">Delivery location</p>
               <p className="ai-tile-big ai-tile-big--sm">{locationLabel}</p>
-              <p className="ai-tile-note"><span>Official state from GeM document</span>{stateLabel}</p>
+              <p className="ai-tile-note"><span>Delivery state (GeM consignee search)</span>{stateLabel}</p>
               <p className="ai-tile-note">Per official GeM document, fetched {formatDateTimeIST(bid.gemPdfFetchedAt)} · Last checked {formatDateTimeIST(bid.lastCheckedAt)}{isStale ? ' · Stale' : ''}</p>
-              <p className="ai-tile-note">Status: {bid.gemStatus || 'UNKNOWN'} · Absence from an ongoing-bids search does not prove cancellation or closure.</p>
+              <p className="ai-tile-note">Status: {bid.gemStatus === 'NOT_LISTED' ? 'No longer listed on GeM (closed, cancelled or withdrawn)' : (bid.gemStatus || 'UNKNOWN')}</p>
             </Tile>
 
             <Tile tone="light" order={6}>

@@ -80,10 +80,9 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const tenderId = tender._id || tender.sourceTenderId;
   const bookmarked = isBookmarked(tenderId);
   const isGeM = tender.sourcePortal === 'GEM' || tender.departmentCode === 'GEM' || String(tender.sourceTenderId || '').startsWith('GEM/');
+  // GeM geography = delivery state(s) from GeM's consignee-state search.
   const stateLabel = isGeM
-    ? (tender.officialStateConfidence === 'verified' && tender.state && tender.state !== 'Other'
-      ? tender.state
-      : (tender.officialState ? `${tender.officialState} (${tender.officialStateConfidence || 'unverified'})` : 'State not confirmed'))
+    ? (tender.consigneeStates?.length ? tender.consigneeStates.join(' · ') : null)
     : tender.state;
 
   const handleCardClick = () => {

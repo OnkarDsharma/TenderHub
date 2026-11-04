@@ -1,25 +1,52 @@
 /**
  * @file backend/src/routes/gem.routes.js
- * @description Dedicated API endpoints for Government e-Marketplace (GeM) Jammu & Kashmir bids.
+ * @description API endpoints for Government e-Marketplace (GeM) bids delivered
+ * to Jammu & Kashmir, Ladakh, Himachal Pradesh and Punjab.
+ *
+ * Geography is `consigneeStates`: the states whose official GeM consignee
+ * search lists the bid. Records without it (out-of-region, or from the old
+ * keyword crawler and not yet re-listed) are never returned.
  */
 
 import express from 'express';
 import axios from 'axios';
 import Tender from '../models/Tender.js';
-import { gemAdapter } from '../services/adapters/GeMAdapter.js';
+import { gemAdapter, GEM_REGION_STATES, canonicalRegionState } from '../services/adapters/GeMAdapter.js';
 import GeMDataReport from '../models/GeMDataReport.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 const dataReportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: 'Too many data reports. Try again later.' } });
-const confirmedActiveFilter = (now = new Date()) => ({
+// Listing passes run several times a day; 26h tolerates one missed run
+// (including the overnight gap) before a bid stops counting as confirmed.
+export const GEM_FRESHNESS_HOURS = 26;
+export const PDF_STATUS_FILTERS = {
+  parsed: { pdfParseStatus: 'COMPLETED' },
+  pending: { pdfParseStatus: { $in: ['PENDING', null] }, pdfFetchStatus: { $ne: 'FAILED' } },
+  failed: { $or: [{ pdfFetchStatus: 'FAILED' }, { pdfParseStatus: 'FAILED' }] },
+};
+
+/** Active = in GeM's current consignee list recently and not past closing. */
+export const confirmedActiveFilter = (now = new Date()) => ({
   gemStatus: 'ACTIVE',
   closingDate: { $gte: now },
-  $or: [
-    { closingDate: { $gte: new Date(now.getTime() + 48 * 3600000) }, lastCheckedAt: { $gte: new Date(now.getTime() - 24 * 3600000) } },
-    { closingDate: { $lt: new Date(now.getTime() + 48 * 3600000) }, lastCheckedAt: { $gte: new Date(now.getTime() - 8 * 3600000) } },
-  ],
+  lastSeenInListingAt: { $gte: new Date(now.getTime() - GEM_FRESHNESS_HOURS * 3600000) },
 });
+
+/** Region, state, document-status and status conditions shared by list and stats. */
+export function buildGeMScopeConditions({ state, pdfStatus, status = 'active' } = {}, now = new Date()) {
+  const conditions = [{ sourcePortal: 'GEM' }];
+  const canonical = state && String(state).toUpperCase() !== 'ALL' ? canonicalRegionState(state) : null;
+  if (state && String(state).toUpperCase() !== 'ALL' && !canonical) {
+    conditions.push({ _id: null }); // unknown state: match nothing rather than everything
+  } else {
+    conditions.push({ consigneeStates: canonical || { $in: GEM_REGION_STATES } });
+  }
+  if (pdfStatus && PDF_STATUS_FILTERS[pdfStatus]) conditions.push(PDF_STATUS_FILTERS[pdfStatus]);
+  if (status === 'active') conditions.push(confirmedActiveFilter(now));
+  else if (status === 'archived' || status === 'expired') conditions.push({ $or: [{ closingDate: { $lt: now } }, { gemStatus: 'NOT_LISTED' }] });
+  return conditions;
+}
 
 /**
  * @route GET /api/v1/gem/tenders
@@ -52,7 +79,7 @@ router.get('/tenders', async (req, res, next) => {
       withdrawalAllowed,
       twoStageBidding,
       preferentialBidder,
-      verificationStatus,
+      pdfStatus,
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10));
@@ -65,27 +92,14 @@ router.get('/tenders', async (req, res, next) => {
       return str.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     };
 
-    // Base conditions array (combined with $and to prevent $or collisions)
-    const conditions = [{ sourcePortal: 'GEM' }];
-
-    // GeM state is normalized from the official PDF; sourceSearchRegions is discovery only.
-    if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
-      const cleanState = escapeRegex(state);
-      conditions.push({ state: { $regex: `^${cleanState}$`, $options: 'i' } });
-    }
-    if (verificationStatus && ['verified', 'partial', 'unverified', 'unknown'].includes(String(verificationStatus))) {
-      conditions.push({ officialStateConfidence: verificationStatus });
-    }
-
-    // Status filter
+    // Base conditions (combined with $and to prevent $or collisions):
+    // delivery-state scope, document status and listing status.
     const now = new Date();
-    if (status === 'active') {
-      conditions.push(confirmedActiveFilter(now));
-    } else if (status === 'archived' || status === 'expired') {
-      conditions.push({
-        closingDate: { $lt: now }
-      });
-    }
+    const conditions = buildGeMScopeConditions({
+      state: typeof state === 'string' ? state.trim() : undefined,
+      pdfStatus: typeof pdfStatus === 'string' ? pdfStatus : undefined,
+      status,
+    }, now);
 
     // Search keyword
     if (search && typeof search === 'string' && search.trim()) {
@@ -322,18 +336,18 @@ router.get('/stats', async (req, res, next) => {
   try {
     const now = new Date();
     const in48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    const { state, verificationStatus } = req.query;
+    const { state, pdfStatus } = req.query;
+    const active = buildGeMScopeConditions({
+      state: typeof state === 'string' ? state.trim() : undefined,
+      pdfStatus: typeof pdfStatus === 'string' ? pdfStatus : undefined,
+      status: 'active',
+    }, now);
 
-    const baseFilter = { sourcePortal: 'GEM' };
-    if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
-      baseFilter.state = { $regex: `^${state.trim()}$`, $options: 'i' };
-    }
-    if (verificationStatus && ['verified', 'partial', 'unverified', 'unknown'].includes(String(verificationStatus))) baseFilter.officialStateConfidence = verificationStatus;
-
-    const [totalActive, closingSoon, highEmdCount] = await Promise.all([
-      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now) }),
-      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now), closingDate: { $gte: now, $lte: in48h } }),
-      Tender.countDocuments({ ...baseFilter, ...confirmedActiveFilter(now), emdAmount: { $gt: 5000000 } })
+    const [totalActive, closingSoon, highEmdCount, lastListing] = await Promise.all([
+      Tender.countDocuments({ $and: active }),
+      Tender.countDocuments({ $and: [...active, { closingDate: { $gte: now, $lte: in48h } }] }),
+      Tender.countDocuments({ $and: [...active, { emdAmount: { $gt: 5000000 } }] }),
+      Tender.findOne({ sourcePortal: 'GEM', consigneeStates: { $in: GEM_REGION_STATES } }).sort({ lastSeenInListingAt: -1 }).select('lastSeenInListingAt').lean(),
     ]);
 
     res.status(200).json({
@@ -342,8 +356,9 @@ router.get('/stats', async (req, res, next) => {
         totalActive,
         closingSoon,
         highEmdCount,
-        officialStateConfidence: verificationStatus || 'all',
-        verifiedState: state || 'All official states',
+        deliveryState: canonicalRegionState(state) || 'All northern states',
+        documentStatus: pdfStatus || 'all',
+        lastListingCheckAt: lastListing?.lastSeenInListingAt || null,
         portal: 'Government e-Marketplace (GeM)'
       }
     });
@@ -568,25 +583,21 @@ import { adminAuth } from '../middleware/adminAuth.middleware.js';
  */
 router.post('/sync', adminAuth, async (req, res, next) => {
   try {
-    const { 
-      limit = 20, 
-      maxPages = 2, 
-      delay = 1200, 
-      state = 'JAMMU & KASHMIR' 
-    } = req.body || {};
-
-    const safeLimit = Math.min(50, Math.max(1, parseInt(String(limit), 10) || 20));
-    const safeMaxPages = Math.min(5, Math.max(1, parseInt(String(maxPages), 10) || 2));
+    const { pdfLimit = 50, delay = 1200, state = 'ALL' } = req.body || {};
+    const safeState = state === 'ALL' ? 'ALL' : canonicalRegionState(state);
+    if (!safeState) {
+      return res.status(400).json({ success: false, error: `state must be ALL or one of: ${GEM_REGION_STATES.join(', ')}` });
+    }
+    const safePdfLimit = Math.min(300, Math.max(0, parseInt(String(pdfLimit), 10) || 0));
     const safeDelay = Math.max(1000, parseInt(String(delay), 10) || 1200);
-    const safeState = typeof state === 'string' && state.trim() ? state.trim().slice(0, 50) : 'JAMMU & KASHMIR';
 
-    // Run crawl in background with regional state filter
-    gemAdapter.fetchList(1, { limit: safeLimit, maxPages: safeMaxPages, delay: safeDelay, state: safeState })
+    // Runs in the background: listing pass for the state(s), then up to pdfLimit PDFs.
+    gemAdapter.syncConsigneeStates({ states: safeState, pdfLimit: safePdfLimit, delay: safeDelay })
       .catch((err) => console.error(`[GeM Async Sync Error - ${safeState}]`, err.message));
 
     res.status(200).json({
       success: true,
-      message: `GeM crawl started in background for ${safeState} with rate limiting gap.`
+      message: `GeM consignee-state sync started in background for ${safeState} (PDF limit ${safePdfLimit}).`
     });
   } catch (err) {
     next(err);

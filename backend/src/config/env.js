@@ -11,8 +11,8 @@ const envVarsSchema = Joi.object({
   REDIS_URL: Joi.string().required().description('Redis Connection URL or Host'),
   JWT_ACCESS_SECRET: Joi.string().min(32).when('NODE_ENV', { is: 'production', then: Joi.required() }).description('JWT Access Token Secret'),
   JWT_REFRESH_SECRET: Joi.string().min(32).when('NODE_ENV', { is: 'production', then: Joi.required() }).description('JWT Refresh Token Secret'),
-  JWT_ACCESS_TTL: Joi.string().default('15m'),
-  JWT_REFRESH_TTL: Joi.string().default('7d'),
+  JWT_ACCESS_TTL: Joi.string().default('1d'),
+  JWT_REFRESH_TTL: Joi.string().default('30d'),
   OPENAI_API_KEY: Joi.string().allow('').optional(), // Make optional until AI is integrated
   GEMINI_API_KEY: Joi.string().allow('').optional(),
   GEMINI_MODEL: Joi.string().default('gemini-2.5-flash'),

@@ -76,6 +76,24 @@ async function readTenderIdsOnPage(page) {
   });
 }
 
+// The portal renders an organisation's whole list on one page and streams rows in (RDPR has 2,000+),
+// so wait until the advertised count is reached or the row count stops growing.
+async function waitForFullListing(page, expected, timeoutMs = 90000) {
+  const selector = 'table.list_table tr[id^="informal"]';
+  await page.waitForLoadState('load', { timeout: timeoutMs }).catch(() => {});
+  const deadline = Date.now() + timeoutMs;
+  let last = -1;
+  let stableTicks = 0;
+  while (Date.now() < deadline) {
+    const count = await page.locator(selector).count().catch(() => 0);
+    if (expected > 0 && count >= expected) return;
+    stableTicks = count > 0 && count === last ? stableTicks + 1 : 0;
+    if (stableTicks >= 3) return;
+    last = count;
+    await page.waitForTimeout(1000);
+  }
+}
+
 async function clickPageNumber(page, pageNumber) {
   const link = page.locator('a').filter({ hasText: new RegExp(`^\\s*${pageNumber}\\s*$`) }).first();
   if (await link.count().catch(() => 0) === 0) return false;
@@ -115,6 +133,7 @@ async function collectPortalIds(page, organisation) {
 
   while (true) {
     await waitForPortalTable(page, 'table.list_table', `the tender list for ${organisation}, page ${pageNumber}`);
+    await waitForFullListing(page, officialCount);
     const pageIds = await readTenderIdsOnPage(page);
     const fingerprint = pageIds.join('|');
     if (!pageIds.length || pageFingerprints.has(fingerprint)) {
@@ -144,17 +163,19 @@ async function collectPortalIds(page, organisation) {
   };
 }
 
-async function readDatabaseIds(organisation) {
+async function readDatabaseIds(organisation, portalIds = []) {
   const escaped = escapeRegex(organisation);
   const organisationPrefix = new RegExp(`^${escaped}(?:\\s*(?:\\|\\||>|$))`, 'i');
+  // Match by the portal's own IDs as well as by organisation name: stored department names do not
+  // always equal the portal's organisation label, which made name-only matching undercount.
   const records = await Tender.find({
     sourcePortal: 'JK_TENDERS',
-    state: 'Jammu & Kashmir',
     $or: [
+      { sourceTenderId: { $in: portalIds } },
       { departmentName: new RegExp(`^${escaped}$`, 'i') },
       { organisationChain: organisationPrefix },
     ],
-  }).select('sourceTenderId baseTenderId relatedTenderIds').lean();
+  }).select('sourceTenderId baseTenderId relatedTenderIds status isDelisted closingDate').lean();
 
   return records;
 }
@@ -209,7 +230,7 @@ async function run() {
   }
 
   try {
-    const databaseRecords = databaseConnected ? await readDatabaseIds(organisation) : [];
+    const databaseRecords = databaseConnected ? await readDatabaseIds(organisation, portalResult?.ids || []) : [];
     const databaseIds = [...new Set(databaseRecords.map((record) => normalizeId(record.sourceTenderId)).filter(Boolean))].sort();
     const portalIds = portalResult?.ids || [];
     const portalSet = new Set(portalIds);
@@ -232,6 +253,12 @@ async function run() {
       if (related?.size) relatedDatabaseMatches[id] = [...related].sort();
     }
     const confirmedMissingPortalIds = portalIdsNotInDatabase.filter((id) => !relatedDatabaseMatches[id]);
+    const now = new Date();
+    const hiddenFromActive = databaseRecords
+      .filter((record) => portalSet.has(normalizeId(record.sourceTenderId)))
+      .filter((record) => record.status !== 'ACTIVE' || record.isDelisted || !record.closingDate || record.closingDate < now)
+      .map((record) => normalizeId(record.sourceTenderId))
+      .sort();
 
     const report = {
       auditType: 'read-only organisation tender ID reconciliation',
@@ -256,6 +283,7 @@ async function run() {
       },
       comparison: {
         exactIdsInBoth: portalIds.filter((id) => databaseSet.has(id)).length,
+        portalIdsInDatabaseButNotActive: hiddenFromActive,
         portalIdsNotInDatabase,
         relatedDatabaseMatches,
         candidateMissingPortalIds: confirmedMissingPortalIds,
@@ -268,9 +296,10 @@ async function run() {
     reportPaths = await writeReport(report, path.resolve(process.cwd(), 'reports'));
     console.log(`Portal advertised count: ${report.portal.advertisedOrganisationCount ?? 'unavailable'}`);
     console.log(`Portal unique IDs collected: ${report.portal.uniqueIdsCollected}`);
-    console.log(`TenderHub matching IDs: ${report.database.recordsMatched}`);
+    console.log(`Portal IDs found in TenderHub: ${report.comparison.exactIdsInBoth}`);
     console.log(`Portal IDs not found exactly in TenderHub: ${report.comparison.portalIdsNotInDatabase.length}`);
-    console.log(`Confirmed missing IDs: ${report.comparison.missingIdsConfirmed ? report.comparison.confirmedMissingPortalIds.length : 'not confirmed; portal scan incomplete or count mismatch'}`);
+    console.log(`Portal IDs in TenderHub but hidden from Active (expired/closed/delisted): ${report.comparison.portalIdsInDatabaseButNotActive.length}`);
+    console.log(`Confirmed missing IDs: ${report.comparison.missingIdsConfirmed ? report.comparison.candidateMissingPortalIds.length : 'not confirmed; portal scan incomplete or count mismatch'}`);
     console.log(`JSON report: ${reportPaths.jsonPath}`);
     console.log(`CSV report: ${reportPaths.csvPath}`);
     if (failure) console.error(`Portal collection issue: ${failure.message}`);

@@ -93,14 +93,14 @@ export const verifyToken = async (req, res, next) => {
           };
           req.organizationId = orgId;
 
-          // Issue fresh 15-minute access token cookie automatically
+          // Issue fresh 1-day access token cookie automatically
           const newAccessToken = generateAccessToken({
             userId: user._id.toString(),
             email: user.email,
             organizationId: orgId,
             role: userRole,
           });
-          res.cookie('accessToken', newAccessToken, getCookieOpts(15 * 60));
+          res.cookie('accessToken', newAccessToken, getCookieOpts(24 * 60 * 60));
 
           return next();
         }

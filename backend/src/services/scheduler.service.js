@@ -116,7 +116,7 @@ export class SchedulerService {
     // 9. Automated Daily GeM (Government e-Marketplace) Sweep (20:30 / 08:30 PM IST, Mon-Sat)
     cron.schedule('30 20 * * 1-6', async () => {
       logger.info('[Scheduler] ⏰ Running scheduled 08:30 PM GeM Jammu & Kashmir Sweep...');
-      await this.triggerGeMSync(10, 100);
+      await this.triggerGeMSync(undefined, 150);
     }, {
       timezone: 'Asia/Kolkata'
     });
@@ -412,30 +412,18 @@ export class SchedulerService {
   /**
    * Automated Daily GeM (Government e-Marketplace) Multi-State Sweep
    */
-  async triggerGeMSync(maxPages = 3, limit = 50) {
+  async triggerGeMSync(_maxPages = 3, limit = 150) {
     try {
       logger.info(`[Scheduler] ⏰ Starting automated daily GeM multi-state sweep (JK, Ladakh, HP, Punjab)...`);
       const { gemAdapter } = await import('./adapters/GeMAdapter.js');
-      let totalSaved = 0;
-      for (const st of ['JAMMU & KASHMIR', 'LADAKH', 'HIMACHAL PRADESH', 'PUNJAB']) {
-        try {
-          const res = await gemAdapter.fetchList(1, {
-            limit,
-            maxPages,
-            delay: 1200,
-            headless: true,
-            state: st
-          });
-          totalSaved += (res?.totalSaved || 0);
-        } catch (stErr) {
-          logger.warn(`[Scheduler] GeM sweep notice for ${st}: ${stErr.message}`);
-        }
-      }
+      const report = await gemAdapter.syncConsigneeStates({ states: 'ALL', pdfLimit: limit, delay: 1200 });
+      const totalSaved = Object.values(report.states).reduce((sum, st) => sum + (st.listed || 0), 0);
+      if (report.errors.length) logger.warn({ errors: report.errors }, '[Scheduler] GeM sync finished with state errors');
       logger.info(`[Scheduler] Automated daily GeM sweep completed successfully: ${totalSaved} bids processed/saved.`);
       await SystemLog.create({
         level: 'INFO',
         source: 'CRON',
-        message: `Automated daily GeM sweep completed: ${totalSaved} bids processed across 4 northern states.`,
+        message: `Automated daily GeM sweep completed: ${totalSaved} listed bids across 4 northern states, ${report.pdf.completed} PDFs parsed, ${report.delisted} no longer listed.`,
       }).catch(() => {});
     } catch (err) {
       logger.error(`[Scheduler] Automated daily GeM sweep notice: ${err.message}`);

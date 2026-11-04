@@ -1,10 +1,12 @@
 /**
  * @file backend/src/scripts/fetchGeMBids.js
- * @description CLI script to crawl Government e-Marketplace (GeM) bids.
- * 
+ * @description CLI for the GeM consignee-state sync (J&K, Ladakh, HP, Punjab).
+ *
  * Usage:
- *   node src/scripts/fetchGeMBids.js --limit 50 --pages 5 --delay 1200
- *   npm run scrape:gem
+ *   node src/scripts/fetchGeMBids.js                       # all 4 states, up to 250 PDFs
+ *   node src/scripts/fetchGeMBids.js --state=PUNJAB --pdf-limit 50
+ *   node src/scripts/fetchGeMBids.js --dry-run             # listing only, writes nothing, prints counts
+ *   node src/scripts/fetchGeMBids.js --pdf-limit 0         # listing pass only (also the backfill for old records)
  */
 
 import { connectDB } from '../config/db.js';
@@ -26,14 +28,15 @@ const getArg = (flag, defaultValue) => {
 };
 const hasFlag = (flag) => args.some(a => a === flag || a.startsWith(`${flag}=`));
 
-const limitArg = getArg('--limit', null);
-const pagesArg = getArg('--pages', null);
-const limit = limitArg ? parseInt(limitArg, 10) : 120;
-const maxPages = pagesArg ? parseInt(pagesArg, 10) : Math.max(5, Math.ceil(limit / 10));
+// --pdf-limit caps PDF downloads per run (legacy --limit is accepted as an alias).
+// --max-requests caps GeM listing requests per state; a capped state is
+// incomplete, so none of its bids are marked NOT_LISTED.
+const pdfLimit = parseInt(getArg('--pdf-limit', getArg('--limit', '250')), 10);
+const maxRequests = parseInt(getArg('--max-requests', '2500'), 10);
 const delay = parseInt(getArg('--delay', '1200'), 10);
-const isHeadless = getArg('--headless', 'true') !== 'false';
 const isMock = hasFlag('--mock') || hasFlag('--seed');
-const targetStateArg = getArg('--state', 'JAMMU & KASHMIR');
+const isDryRun = hasFlag('--dry-run');
+const targetStateArg = getArg('--state', 'ALL');
 
 /**
  * Synthetic local demo records. These are never a fallback for failed live scraping
@@ -436,14 +439,18 @@ async function seedSyntheticDemoBids(filterState = null) {
   let datasetsToSeed = [];
   const stateUpper = (filterState || targetStateArg).toUpperCase();
 
+  const tag = (bids, state) => bids.map((bid) => ({ ...bid, consigneeStates: [state] }));
+  const jk = tag(VERIFIED_GEM_JK_BIDS, 'Jammu & Kashmir');
+  const hp = tag(VERIFIED_GEM_HP_BIDS, 'Himachal Pradesh');
+  const pb = tag(VERIFIED_GEM_PUNJAB_BIDS, 'Punjab');
   if (stateUpper === 'ALL') {
-    datasetsToSeed = [...VERIFIED_GEM_JK_BIDS, ...VERIFIED_GEM_HP_BIDS, ...VERIFIED_GEM_PUNJAB_BIDS];
+    datasetsToSeed = [...jk, ...hp, ...pb];
   } else if (stateUpper.includes('HIMACHAL') || stateUpper === 'HP') {
-    datasetsToSeed = VERIFIED_GEM_HP_BIDS;
+    datasetsToSeed = hp;
   } else if (stateUpper.includes('PUNJAB') || stateUpper === 'PB') {
-    datasetsToSeed = VERIFIED_GEM_PUNJAB_BIDS;
+    datasetsToSeed = pb;
   } else {
-    datasetsToSeed = VERIFIED_GEM_JK_BIDS;
+    datasetsToSeed = jk;
   }
 
   logger.info(`[GeM Seeder] Seeding ${datasetsToSeed.length} synthetic demo records; none are source-verified...`);
@@ -468,35 +475,12 @@ async function seedSyntheticDemoBids(filterState = null) {
   logger.info(`[GeM Seeder] Successfully seeded ${count} synthetic demo rows.`);
 }
 
-async function scrapeSingleState(stateName) {
-  logger.info('----------------------------------------------------');
-  logger.info(`   GeM Regional Crawl: [${stateName}]`);
-  logger.info('----------------------------------------------------');
-  logger.info(`Configuration: Limit=${limit}, MaxPages=${maxPages}, Delay=${delay}ms, Headless=${isHeadless}, State=${stateName}`);
-
-  try {
-    const result = await gemAdapter.fetchList(1, {
-      limit,
-      maxPages,
-      delay,
-      headless: isHeadless,
-      state: stateName
-    });
-    logger.info(`[GeM] Scrape completed for [${stateName}]: ${result.totalSaved} processed.`);
-    return result;
-  } catch (crawlErr) {
-    logger.error(`[GeM] Live portal crawl notice for [${stateName}]: ${crawlErr.message}`);
-    throw crawlErr;
-  }
-}
-
 async function run() {
   try {
     logger.info('====================================================');
-    logger.info('   GeM (Government e-Marketplace) Multi-State Crawl');
+    logger.info('   GeM consignee-state sync (J&K, Ladakh, HP, Punjab)');
     logger.info('====================================================');
 
-    // Connect to MongoDB
     await connectDB();
 
     if (isMock) {
@@ -505,18 +489,24 @@ async function run() {
       process.exit(0);
     }
 
-    const stateArgUpper = targetStateArg.toUpperCase().trim();
-    if (stateArgUpper === 'ALL') {
-      logger.info('[GeM] Starting full multi-state scan: Jammu & Kashmir -> Himachal Pradesh -> Punjab -> Ladakh');
-      await scrapeSingleState('JAMMU & KASHMIR');
-      await scrapeSingleState('HIMACHAL PRADESH');
-      await scrapeSingleState('PUNJAB');
-      await scrapeSingleState('LADAKH');
-    } else {
-      await scrapeSingleState(targetStateArg);
-    }
+    const report = await gemAdapter.syncConsigneeStates({
+      states: targetStateArg,
+      pdfLimit: isDryRun ? 0 : pdfLimit,
+      delay,
+      maxRequests,
+      dryRun: isDryRun,
+    });
 
-    logger.info('[GeM] All requested states completed successfully.');
+    // Compact, log-friendly summary (the CI job prints the tail of this log).
+    for (const [state, st] of Object.entries(report.states)) {
+      logger.info(`[GeM] ${state}: ${st.error ? `FAILED - ${st.error}` : `${st.listed}/${st.numFound} listed, complete=${st.complete}, requests=${st.requests}${st.removed !== undefined ? `, removed=${st.removed}` : ''}${st.wouldRemove !== undefined ? `, wouldRemove=${st.wouldRemove}` : ''}${st.delistingSkipped ? `, delisting skipped (${st.delistingSkipped})` : ''}`}`);
+    }
+    logger.info(`[GeM] listing: inserted=${report.listing.inserted} updated=${report.listing.updated} | not listed: ${report.delisted} | PDFs: ${report.pdf.completed} parsed, ${report.pdf.failed} failed, ${report.pdf.remainingDue} still due${isDryRun ? ' | DRY RUN, nothing written' : ''}`);
+
+    if (report.errors.length) {
+      logger.error(`[GeM] Finished with errors: ${report.errors.join(' | ')}`);
+      process.exit(1);
+    }
     process.exit(0);
   } catch (err) {
     logger.error(`[GeM] Execution error: ${err.message}`);

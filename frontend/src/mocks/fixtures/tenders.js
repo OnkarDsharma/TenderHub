@@ -269,6 +269,11 @@ function buildGem(spec) {
     emdPayableTo: 'Buyer (as per GeM GTC)',
     emdPayableAt: state,
     location,
+    consigneeStates: [state],
+    deliveryStations: location ? location.split(', ') : [],
+    locationVerificationStatus: 'VERIFIED',
+    pdfParseStatus: 'COMPLETED',
+    gemStatus: closingInDays >= 0 ? 'ACTIVE' : 'CLOSED_BY_DATE',
     publishedDate: published.toISOString(),
     publishedDateStr: gemStr(published),
     closingDate: closing.toISOString(),
@@ -327,6 +332,7 @@ const LIST_FIELDS = [
   'bidSubmissionEndDateStr', 'bidSubmissionEndTime', 'estimatedValue', 'location', 'pincode', 'tenderCategory', 'productCategory', 'contractType',
   'status', 'isMultiTender', 'relatedTenderIds', 'isDocumentAvailable', 'tenderReferenceNumber', 'state', 'emdAmount', 'emdExemptionAllowed',
   'sourcePortal', 'tenderFee', 'tenderFeeExemptionAllowed', 'tenderType', 'pdfUrls', 'nitDocuments', 'detailsUrl', 'tendererClass',
+  'consigneeStates', 'pdfParseStatus', 'gemStatus',
 ];
 export const toSummary = (t) => Object.fromEntries(LIST_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
 

@@ -10,6 +10,14 @@ import { connectDB, closeDB } from '../config/db.js';
 import Tender from '../models/Tender.js';
 import { canonicalizeGeMState, extractTextFromPdfBuffer, parseGeMBidPdfText, GEM_PARSER_VERSION } from '../utils/gemPdfParser.js';
 
+// Superseded by the consignee-state sync: geography now comes from GeM's
+// consignee search, and a parser version bump re-queues stored PDFs. Running
+// this would reapply the old Ministry/State-based state logic.
+if (!process.argv.includes('--legacy')) {
+  console.error('repairGeMHistoricalData is superseded. Use:\n  npm run scrape:gem:dry-run   (report)\n  node src/scripts/fetchGeMBids.js --pdf-limit 0   (re-tag existing records from GeM listings)\nPass --legacy to run the old repair anyway.');
+  process.exit(1);
+}
+
 const args = new Set(process.argv.slice(2));
 const argValue = (key, fallback) => process.argv.find((value) => value.startsWith(`${key}=`))?.slice(key.length + 1) || fallback;
 const apply = args.has('--apply');

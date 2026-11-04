@@ -149,7 +149,7 @@ export default function GeMTenders() {
 
   // Filters & Pagination State
   const [selectedState, setSelectedState] = useState('');
-  const [verificationStatus, setVerificationStatus] = useState('');
+  const [pdfStatus, setPdfStatus] = useState('');
   const [tenderStatusFilter, setTenderStatusFilter] = useState('active');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -197,7 +197,7 @@ export default function GeMTenders() {
     let cancelled = false;
     const fetchStats = async () => {
       try {
-        const data = await gemApi.getStats({ state: selectedState || undefined, verificationStatus: verificationStatus || undefined });
+        const data = await gemApi.getStats({ state: selectedState || undefined, pdfStatus: pdfStatus || undefined });
         if (!cancelled && data) setStats(data);
       } catch {
         // Non-blocking
@@ -205,7 +205,7 @@ export default function GeMTenders() {
     };
     fetchStats();
     return () => { cancelled = true; };
-  }, [selectedState, verificationStatus]);
+  }, [selectedState, pdfStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -217,7 +217,7 @@ export default function GeMTenders() {
           page: currentPage,
           limit: 12,
           state: selectedState || undefined,
-          verificationStatus: verificationStatus || undefined,
+          pdfStatus: pdfStatus || undefined,
           status: tenderStatusFilter,
           search: appliedSearch,
           location: selectedLocation,
@@ -258,7 +258,7 @@ export default function GeMTenders() {
     };
     fetchTenders();
     return () => { cancelled = true; };
-  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, verificationStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo, advancedFilters]);
+  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, pdfStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo, advancedFilters]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -283,7 +283,7 @@ export default function GeMTenders() {
 
   const handleResetFilters = () => {
     setSelectedState('');
-    setVerificationStatus('');
+    setPdfStatus('');
     setTenderStatusFilter('active');
     setSearch('');
     setAppliedSearch('');
@@ -325,13 +325,13 @@ export default function GeMTenders() {
           <div className="space-y-1.5 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
               <Landmark className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
-              <span>Government e-Marketplace (GeM) • Official state: {selectedState || 'All'}</span>
+              <span>Government e-Marketplace (GeM) • Delivery state: {selectedState || 'All northern states'}</span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
               Government e-Marketplace (GeM) tenders
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Bids found through regional GeM searches. Official state comes from the GeM document; delivery location is shown only when supported by its consignee or delivery section.
+              Open GeM bids delivering to Jammu & Kashmir, Ladakh, Himachal Pradesh and Punjab, taken from GeM's own search by consignee state. Delivery city is shown when the bid document states it.
             </p>
           </div>
 
@@ -374,7 +374,7 @@ export default function GeMTenders() {
           {/* State Filter Navigation Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-dalBlue" /> Official state:
+              <MapPin className="w-3.5 h-3.5 text-dalBlue" /> Delivery state:
             </span>
             {STATE_TABS.map((tab) => (
               <button
@@ -393,15 +393,15 @@ export default function GeMTenders() {
           </div>
 
           <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Official state verification:
-            <select value={verificationStatus} onChange={(event) => { setVerificationStatus(event.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5">
-              <option value="">All confidence levels</option><option value="verified">Verified</option><option value="partial">Partial</option><option value="unverified">Unverified</option><option value="unknown">Unknown</option>
+            Bid document:
+            <select value={pdfStatus} onChange={(event) => { setPdfStatus(event.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5">
+              <option value="">Any</option><option value="parsed">Details read</option><option value="pending">Not read yet</option><option value="failed">Could not be read</option>
             </select>
           </label>
           <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Status evidence:
+            Status:
             <select value={tenderStatusFilter} onChange={(event) => { setTenderStatusFilter(event.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5">
-              <option value="active">Confirmed active (fresh)</option><option value="all">All stored records</option>
+              <option value="active">Open on GeM now</option><option value="all">All stored records</option>
             </select>
           </label>
 
@@ -724,12 +724,12 @@ export default function GeMTenders() {
               const cleanTitle = cleanDisplayText(item.title, 'Untitled GeM bid');
               const cleanDepartment = cleanDisplayText(item.departmentName || item.organisationChain);
               const fullOrganisation = cleanDisplayText(item.organisationChain, cleanDepartment);
-              const stateLabel = item.officialState
-                ? (item.state && item.state !== 'Other' ? item.state : `Ministry/State: ${item.officialState}`)
-                : (item.state && item.state !== 'Other' ? `${item.state} (unverified)` : 'State unverified');
+              // Delivery state(s) come from GeM's consignee-state search; the
+              // city only from the PDF's consignee section.
+              const stateLabel = item.consigneeStates?.length ? item.consigneeStates.join(' · ') : null;
               const locationLabel = item.location
-                ? `${cleanDisplayText(item.location)}${item.locationVerificationStatus === 'VERIFIED' ? '' : ' (unverified)'}`
-                : 'Location not specified';
+                ? `Delivery: ${cleanDisplayText(item.location)}`
+                : (item.pdfParseStatus === 'COMPLETED' ? 'Delivery city not stated in bid document' : 'Delivery city: bid document not read yet');
               const bookmarked = isBookmarked(item._id || item.sourceTenderId);
               const rawDocUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
               const docUrl = gemApi.getPdfDownloadUrl(item.sourceTenderId || item._id, rawDocUrl);

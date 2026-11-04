@@ -5,7 +5,7 @@
 
 import { PDFParse } from 'pdf-parse';
 
-export const GEM_PARSER_VERSION = '2.0.0';
+export const GEM_PARSER_VERSION = '2.1.0';
 
 const INDIAN_STATES_AND_UTS = [
   'Andaman & Nicobar Islands', 'Dadra & Nagar Haveli and Daman & Diu', 'Jammu & Kashmir',
@@ -88,7 +88,10 @@ export function parseGeMBidPdfText(rawText) {
 
   // 2. Critical Dates
   const bidEndDateStr = findMatch(/(?:Bid\s*End\s*Date\/Time|RA\s*End\s*Date\/Time|बड\s*बंद\s*होने\s*क\s*तार\s*ख\/समय)\s*[:\-]?\s*(\d{2}[\-\/]\d{2}[\-\/]\d{4}\s+\d{2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)/i);
-  const bidOpeningDateStr = findMatch(/(?:Bid\s*Opening\s*Date\/Time|RA\s*Start\s*Date\/Time|बड\s*खुलने\s*क\s*तार\s*ख\/समय)\s*[:\-]?\s*(\d{2}[\-\/]\d{2}[\-\/]\d{4}\s+\d{2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)/i);
+  // A bid is opened after it closes; an RA starts before it ends. Keep the two
+  // separate so the date-order check below is correct for each document type.
+  const bidOpeningDateStr = findMatch(/(?:Bid\s*Opening\s*Date\/Time|बड\s*खुलने\s*क\s*तार\s*ख\/समय)\s*[:\-]?\s*(\d{2}[\-\/]\d{2}[\-\/]\d{4}\s+\d{2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)/i);
+  const raStartDateStr = findMatch(/RA\s*Start\s*Date\/Time\s*[:\-]?\s*(\d{2}[\-\/]\d{2}[\-\/]\d{4}\s+\d{2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)/i);
   const bidValidityDaysRaw = findMatch(/(?:Bid\s*Offer\s*Validity|बड\s*पेशकश\s*वैधता)[^\n]*?(\d+)\s*\(Days\)/i);
   const bidValidityDays = bidValidityDaysRaw ? parseInt(bidValidityDaysRaw, 10) : null;
 
@@ -188,20 +191,24 @@ export function parseGeMBidPdfText(rawText) {
   else if (!canonicalState) flags.push('STATE_NOT_RECOGNIZED');
   if (!deliveryAddressBlock) flags.push('DELIVERY_SECTION_NOT_FOUND');
   if (!bidEndDateStr) flags.push('CLOSING_DATE_MISSING');
-  if (!bidOpeningDateStr) flags.push('START_DATE_MISSING');
+  if (!bidOpeningDateStr && !raStartDateStr) flags.push('START_DATE_MISSING');
   const parsedClosingDate = parseDateString(bidEndDateStr);
   const parsedOpeningDate = parseDateString(bidOpeningDateStr);
+  const parsedRaStartDate = parseDateString(raStartDateStr);
   const parsedPublishedDate = parseDateString(datedStr);
-  if ((bidEndDateStr && !parsedClosingDate) || (bidOpeningDateStr && !parsedOpeningDate) || (datedStr && !parsedPublishedDate)) flags.push('DATE_PARSE_INVALID');
-  if (parsedClosingDate && parsedOpeningDate && parsedClosingDate <= parsedOpeningDate) flags.push('DATE_ORDER_INVALID');
+  if ((bidEndDateStr && !parsedClosingDate) || (bidOpeningDateStr && !parsedOpeningDate) || (raStartDateStr && !parsedRaStartDate) || (datedStr && !parsedPublishedDate)) flags.push('DATE_PARSE_INVALID');
+  if (parsedClosingDate && parsedOpeningDate && parsedOpeningDate < parsedClosingDate) flags.push('DATE_ORDER_INVALID');
+  if (parsedClosingDate && parsedRaStartDate && parsedClosingDate <= parsedRaStartDate) flags.push('DATE_ORDER_INVALID');
   if (parsedClosingDate && parsedPublishedDate && parsedClosingDate <= parsedPublishedDate) flags.push('DATE_ORDER_INVALID');
   return {
     bidNumber: bidNumber || null,
     dated: datedStr || null,
     bidEndDate: parseDateString(bidEndDateStr),
     bidEndDateStr: bidEndDateStr || null,
-    bidOpeningDate: parseDateString(bidOpeningDateStr),
+    bidOpeningDate: parsedOpeningDate,
     bidOpeningDateStr: bidOpeningDateStr || null,
+    raStartDate: parsedRaStartDate,
+    raStartDateStr: raStartDateStr || null,
     bidValidityDays,
     ministryName: cleanField(rawMinistry),
     ministryStateName: cleanField(rawMinistry),
@@ -225,9 +232,9 @@ export function parseGeMBidPdfText(rawText) {
     consigneeAddress: deliveryAddressBlock,
     deliveryLocations: detectedLocations,
     deliveryAddressDetails: deliveryAddressBlock,
-    location: detectedLocations.length > 0
-      ? detectedLocations.join(', ')
-      : (deliveryAddressBlock ? deliveryAddressBlock.slice(0, 300) : null),
+    // Only recognised delivery cities; the raw section is kept separately so a
+    // fragment of table headers is never shown as a location.
+    location: detectedLocations.length > 0 ? detectedLocations.join(', ') : null,
     state: canonicalState,
     documentType,
     parserVersion: GEM_PARSER_VERSION,
@@ -238,7 +245,7 @@ export function parseGeMBidPdfText(rawText) {
       organisation: rawOrg ? 'verified' : 'unknown',
       deliveryLocation: detectedLocations.length ? 'verified' : (deliveryAddressBlock ? 'partial' : 'unknown'),
       closingDate: bidEndDateStr && parseDateString(bidEndDateStr) ? 'verified' : 'unknown',
-      startDate: bidOpeningDateStr && parseDateString(bidOpeningDateStr) ? 'verified' : 'unknown',
+      startDate: parsedOpeningDate || parsedRaStartDate ? 'verified' : 'unknown',
       emdAmount: emdAmount === null ? 'unknown' : 'verified',
     },
     validationFlags: flags,

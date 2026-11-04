@@ -10,6 +10,8 @@
 
 import { connectDB } from '../config/db.js';
 import Tender from '../models/Tender.js';
+import { GEM_REGION_STATES } from '../services/adapters/GeMAdapter.js';
+import { GEM_FRESHNESS_HOURS } from '../routes/gem.routes.js';
 
 async function checkGeMStatus() {
   try {
@@ -54,6 +56,27 @@ async function checkGeMStatus() {
     console.log(`  • Expired / Closed           : ${expiredGeMBids.toLocaleString('en-IN')}`);
     console.log(`  • Closing in < 48 Hours      : ${closingIn48h.toLocaleString('en-IN')}`);
     console.log(`  • Technical Specs Parsed     : ${parsedPdfSpecs.toLocaleString('en-IN')} (${totalGeMBids > 0 ? Math.round((parsedPdfSpecs / totalGeMBids) * 100) : 0}%)\n`);
+
+    // Per-state coverage from the consignee-state listing.
+    const freshSince = new Date(now.getTime() - GEM_FRESHNESS_HOURS * 3600000);
+    console.log('🗺️  DELIVERY-STATE COVERAGE (GeM consignee search):');
+    for (const st of GEM_REGION_STATES) {
+      const base = { sourcePortal: 'GEM', consigneeStates: st };
+      const [listedActive, fresh, parsed, pdfFailed, pdfDue] = await Promise.all([
+        Tender.countDocuments({ ...base, gemStatus: 'ACTIVE', closingDate: { $gte: now } }),
+        Tender.countDocuments({ ...base, gemStatus: 'ACTIVE', closingDate: { $gte: now }, lastSeenInListingAt: { $gte: freshSince } }),
+        Tender.countDocuments({ ...base, gemStatus: 'ACTIVE', pdfParseStatus: 'COMPLETED' }),
+        Tender.countDocuments({ ...base, gemStatus: 'ACTIVE', $or: [{ pdfFetchStatus: 'FAILED' }, { pdfParseStatus: 'FAILED' }] }),
+        Tender.countDocuments({ ...base, gemStatus: 'ACTIVE', gemPdfRefreshDue: true }),
+      ]);
+      console.log(`  • ${st.padEnd(17)}: ${listedActive} open, ${fresh} seen in last ${GEM_FRESHNESS_HOURS}h, ${parsed} PDFs parsed, ${pdfDue} PDFs queued, ${pdfFailed} PDF failures`);
+    }
+    const outOfRegion = await Tender.countDocuments({ sourcePortal: 'GEM', $or: [{ consigneeStates: { $exists: false } }, { consigneeStates: { $size: 0 } }] });
+    const notListed = await Tender.countDocuments({ sourcePortal: 'GEM', gemStatus: 'NOT_LISTED' });
+    const lastListing = await Tender.findOne({ sourcePortal: 'GEM', lastSeenInListingAt: { $exists: true } }).sort({ lastSeenInListingAt: -1 }).select('lastSeenInListingAt').lean();
+    console.log(`  • Hidden (no delivery state)   : ${outOfRegion.toLocaleString('en-IN')} (out of region, or older records not seen in any list)`);
+    console.log(`  • No longer listed on GeM      : ${notListed.toLocaleString('en-IN')}`);
+    console.log(`  • Last listing pass            : ${lastListing ? `${new Date(lastListing.lastSeenInListingAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST` : 'never'}\n`);
 
     if (totalGeMBids === 0) {
       console.log('⚠️  No GeM bids found in the database. Run `npm run scrape:gem` to ingest bids.\n');

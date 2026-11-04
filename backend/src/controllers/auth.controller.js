@@ -25,8 +25,8 @@ import { redis } from '../config/redis.js';
 import { env } from '../config/env.js';
 import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 
-const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes in seconds
-const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
+const ACCESS_TOKEN_EXPIRY = 24 * 60 * 60; // 1 day in seconds
+const REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60; // 30 days in seconds
 
 /**
  * Cookie security options helper:
