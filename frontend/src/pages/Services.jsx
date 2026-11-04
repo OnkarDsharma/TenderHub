@@ -157,6 +157,8 @@ export default function Services() {
 
   // Contractor Profile Edit Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState('');
   const [showScopeAdvisory, setShowScopeAdvisory] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const profilePopoverRef = useRef(null);
@@ -337,6 +339,10 @@ export default function Services() {
     }
   }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileReady]);
 
+  useEffect(() => {
+    if (showProfileModal) setProfileSaveError('');
+  }, [showProfileModal]);
+
   // Load the account profile.
   useEffect(() => {
     loadPlansAndProfile();
@@ -395,17 +401,33 @@ export default function Services() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (savingProfile) return;
+    setProfileSaveError('');
+    setSavingProfile(true);
     try {
       const updated = await servicesApi.updateContractorProfile(editProfile);
+      if (!updated) {
+        throw new Error('The server did not return the saved profile. Please try again.');
+      }
       setProfile(updated);
       setShowProfileModal(false);
+      setError('');
       setStatusMsg('Contractor baseline updated. Re-evaluating bid capacity...');
       if (dossierData) {
         handleAnalyze(dossierData.tenderId);
       }
     } catch (err) {
+      // Shown inside the modal: the page-level error sits behind the overlay,
+      // which made failed saves look like the button did nothing.
+      const status = err.response?.status;
       const responseError = err.response?.data?.message || err.response?.data?.error;
-      setError(responseError || err.message || 'Failed to update contractor memory profile.');
+      setProfileSaveError(
+        status === 401
+          ? 'Your session has expired. Please sign in again, then save your baseline.'
+          : responseError || err.message || 'Failed to update contractor profile.'
+      );
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -1117,6 +1139,13 @@ export default function Services() {
                   </div>
                 </div>
 
+                {profileSaveError && (
+                  <p role="alert" className="flex items-start gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-3 py-2 text-red-700 dark:text-red-300">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>{profileSaveError}</span>
+                  </p>
+                )}
+
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
                   <Button
                     type="button"
@@ -1130,8 +1159,9 @@ export default function Services() {
                     type="submit"
                     variant="default"
                     size="sm"
+                    disabled={savingProfile}
                   >
-                    Save Baseline
+                    {savingProfile ? 'Saving…' : 'Save Baseline'}
                   </Button>
                 </div>
               </form>

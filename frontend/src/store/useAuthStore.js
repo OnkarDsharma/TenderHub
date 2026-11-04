@@ -45,10 +45,19 @@ export const extractTokenFromUrl = () => {
     const token = url.searchParams.get('token');
     if (token && token.split('.').length === 3) {
       localStorage.setItem('token', token);
+      // The OAuth callback puts the refresh token in the fragment so it never
+      // reaches server logs or Referer headers.
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+      const refreshToken = hashParams.get('rt');
+      if (refreshToken && refreshToken.split('.').length === 3) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      hashParams.delete('rt');
       url.searchParams.delete('token');
       url.searchParams.delete('auth');
       const newQuery = url.searchParams.toString() ? `?${url.searchParams.toString()}` : '';
-      window.history.replaceState({}, document.title, url.pathname + newQuery + url.hash);
+      const newHash = hashParams.toString() ? `#${hashParams.toString()}` : '';
+      window.history.replaceState({}, document.title, url.pathname + newQuery + newHash);
       return token;
     }
   } catch {}
@@ -203,6 +212,9 @@ export const useAuthStore = create((set, get) => ({
         if (res.data.accessToken) {
           localStorage.setItem('token', res.data.accessToken);
         }
+        if (res.data.refreshToken) {
+          localStorage.setItem('refreshToken', res.data.refreshToken);
+        }
         const user = res.data.user;
         const isPro = isProUser(user);
         try {
@@ -253,15 +265,19 @@ export const useAuthStore = create((set, get) => ({
    * Terminate the session and clear cookies.
    */
   logout: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
     try {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('tenderhub_user');
       lastCheckAuthTime = 0;
-      await api.post('/auth/logout');
+      // Body copy lets the server revoke the session when cookies are blocked.
+      await api.post('/auth/logout', refreshToken ? { refreshToken } : {});
     } catch (err) {
       console.warn('Logout request failed:', err);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('tenderhub_user');
       lastCheckAuthTime = 0;
       // Clear contractor-scoped bookmarks from local memory

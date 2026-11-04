@@ -101,7 +101,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await api.post('/auth/refresh');
+        // Send the stored refresh token too: browsers that block third-party
+        // cookies never send the API's refreshToken cookie cross-site.
+        const storedRefresh = localStorage.getItem('refreshToken');
+        const res = await api.post('/auth/refresh', storedRefresh ? { refreshToken: storedRefresh } : {});
         const newToken = res.data?.accessToken;
         if (newToken) {
           localStorage.setItem('token', newToken);
@@ -112,6 +115,7 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         return Promise.reject(error);
       } finally {
         isRefreshing = false;

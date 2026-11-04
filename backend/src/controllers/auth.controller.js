@@ -288,6 +288,9 @@ export const verifyOtp = async (req, res, next) => {
       success: true,
       message: type === 'signup' ? 'Contractor account created successfully' : 'Signed in successfully',
       accessToken,
+      // Returned in the body as well as the cookie: browsers that block
+      // third-party cookies (Brave, Safari) cannot send the cookie cross-site.
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
@@ -649,7 +652,7 @@ export const googleCallback = async (req, res, next) => {
 
     const targetPath = isValidRelativePath ? rawTargetPath : '/profile';
     const glue = targetPath.includes('?') ? '&' : '?';
-    return res.redirect(`${frontendRedirect}${targetPath}${glue}token=${encodeURIComponent(appAccessToken)}&auth=success`);
+    return res.redirect(`${frontendRedirect}${targetPath}${glue}token=${encodeURIComponent(appAccessToken)}&auth=success#rt=${encodeURIComponent(appRefreshToken)}`);
   } catch (error) {
     next(error);
   }
@@ -812,6 +815,7 @@ export const login = async (req, res, next) => {
     res.status(200).json({
       message: 'Login successful',
       accessToken,
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
