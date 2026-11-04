@@ -58,7 +58,9 @@ const tenderAiDossierSchema = new mongoose.Schema({
       boqLineItems: [{
         itemNo: { type: String },
         description: { type: String },
-        quantity: { type: Number },
+        // Number when the NIT publishes it; otherwise the AI's text, such as
+        // "As per BOQ", which the UI shows as-is.
+        quantity: { type: mongoose.Schema.Types.Mixed },
         unit: { type: String },
         // AI may return a numeric estimate or a bidder-entered note such as
         // "To be quoted by bidder" when the tender does not publish rates.

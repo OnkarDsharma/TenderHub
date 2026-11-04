@@ -8,6 +8,52 @@ import AiAgentChatSession from '../models/AiAgentChatSession.js';
 import Tender from '../models/Tender.js';
 import pino from 'pino';
 
+/**
+ * AI output often puts text in numeric fields ("As per BOQ", "30 days",
+ * "1,250 cum"). Mongoose rejects the whole dossier if any Number field
+ * cannot be cast, so coerce number-like text and drop the rest.
+ */
+const NUMBER_LIKE = /^[₹\s]*(-?\d+(?:\.\d+)?)\s*[a-zA-Z.%/\s]*$/;
+const toNumberOrNull = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string') return null;
+  const match = value.replace(/,/g, '').trim().match(NUMBER_LIKE);
+  return match ? Number(match[1]) : null;
+};
+const coerceNumber = (value) => toNumberOrNull(value) ?? undefined;
+// Quantity keeps the AI's text (e.g. "As per BOQ") when no number is present.
+const coerceQuantity = (value) => {
+  const num = toNumberOrNull(value);
+  if (num !== null) return num;
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+};
+const mapArray = (value, fn) => (Array.isArray(value) ? value.map((item) => (item && typeof item === 'object' ? fn(item) : item)) : value);
+
+export const sanitizePreBidAnalysis = (analysis) => {
+  if (!analysis || typeof analysis !== 'object') return analysis;
+  const breakdown = analysis.boqMaterialBreakdown;
+  return {
+    ...analysis,
+    mandatoryDocumentChecklist: mapArray(analysis.mandatoryDocumentChecklist, (doc) => ({ ...doc, sNo: coerceNumber(doc.sNo) })),
+    boqMaterialBreakdown: breakdown && typeof breakdown === 'object'
+      ? { ...breakdown, boqLineItems: mapArray(breakdown.boqLineItems, (item) => ({ ...item, quantity: coerceQuantity(item.quantity) })) }
+      : breakdown,
+  };
+};
+
+export const sanitizePostAwardAnalysis = (analysis) => {
+  if (!analysis || typeof analysis !== 'object') return analysis;
+  return {
+    ...analysis,
+    milestones: mapArray(analysis.milestones, (m) => ({
+      ...m,
+      milestoneNo: coerceNumber(m.milestoneNo),
+      targetDays: coerceNumber(m.targetDays),
+      financialProgressPct: coerceNumber(m.financialProgressPct),
+    })),
+  };
+};
+
 const logger = pino();
 
 class QuotaError extends Error {
@@ -169,8 +215,8 @@ export class ContractorAgentService {
         contractType: tender.contractType || (domain === 'CIVIL_WORKS' ? 'Item Rate Contract' : 'GeM Goods Supply Contract'),
         completionPeriodDays: tender.periodOfWorkDays || (domain === 'CIVIL_WORKS' ? 90 : 45),
       };
-      dossier.preBidAnalysis = aiResult.preBidAnalysis;
-      dossier.postAwardAnalysis = aiResult.postAwardAnalysis;
+      dossier.preBidAnalysis = sanitizePreBidAnalysis(aiResult.preBidAnalysis);
+      dossier.postAwardAnalysis = sanitizePostAwardAnalysis(aiResult.postAwardAnalysis);
       dossier.aiEngine = {
         model: env.GEMINI_MODEL || 'gemini-1.5-flash',
         promptTokens: aiResult.tokens?.promptTokens || 12500,
@@ -420,7 +466,7 @@ Analyze the following tender details thoroughly and generate a complete, high-fi
 ${tenderContext}
 
 Return strictly valid JSON with this exact schema:
-For BOQ line items, use numeric values for estimatedRate and estimatedAmount when an estimate is available. If the tender requires the bidder to quote a price and no estimate is available, use the string "To be quoted by bidder" for those fields instead of inventing an amount.
+For BOQ line items, use numeric values for estimatedRate and estimatedAmount when an estimate is available. If the tender requires the bidder to quote a price and no estimate is available, use the string "To be quoted by bidder" for those fields instead of inventing an amount. Use a plain number for quantity (no units or commas); if the tender does not publish the quantity, use the string "As per BOQ". Use plain numbers for sNo, milestoneNo, targetDays and financialProgressPct.
 {
   "summary": "Pointwise executive briefing (3-4 concise bullet points, each starting on a new line with '• ') highlighting: 1) Project Scope & Dept, 2) Budget & Execution Timeline, 3) Minimum Contractor Class & Solvency, 4) Strategic Recommendation",
   "preBidAnalysis": {

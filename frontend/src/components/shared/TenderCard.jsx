@@ -3,6 +3,7 @@
  * @description Modern tender notice card modeled after GeM tender bids layout,
  * featuring View bid, AI analysis, and Download PDF options at one place.
  */
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
@@ -11,7 +12,8 @@ import {
   Clock, 
   Heart, 
   Sparkles, 
-  Download 
+  Download,
+  Check
 } from 'lucide-react';
 
 import { formatCurrencyINR, formatDateDisplay, extractFamousLocation } from '@/utils/formatters';
@@ -22,10 +24,58 @@ import { gemApi } from '@/services/gemApi';
 const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
 
+// Each state's NIC eProcurement portal. The Advanced Search page takes the
+// Tender ID directly, so users can paste the copied bid number there.
+const NIC_SEARCH_PATH = '/nicgep/app?page=FrontEndAdvancedSearch&service=page';
+const STATE_PORTALS = {
+  JK_TENDERS: `https://jktenders.gov.in${NIC_SEARCH_PATH}`,
+  HP_TENDERS: `https://hptenders.gov.in${NIC_SEARCH_PATH}`,
+  PB_TENDERS: `https://eproc.punjab.gov.in${NIC_SEARCH_PATH}`,
+  LADAKH_TENDERS: `https://tenders.ladakh.gov.in${NIC_SEARCH_PATH}`,
+  GEM: 'https://bidplus.gem.gov.in/all-bids',
+};
+
+const resolvePortalUrl = (tender, isGeM) => {
+  if (isGeM) return STATE_PORTALS.GEM;
+  if (STATE_PORTALS[tender.sourcePortal]) return STATE_PORTALS[tender.sourcePortal];
+  const state = String(tender.state || '').toLowerCase();
+  if (state.includes('ladakh')) return STATE_PORTALS.LADAKH_TENDERS;
+  if (state.includes('punjab')) return STATE_PORTALS.PB_TENDERS;
+  if (state.includes('himachal')) return STATE_PORTALS.HP_TENDERS;
+  return STATE_PORTALS.JK_TENDERS;
+};
+
+// Synchronous copy so it completes before window.open moves focus away
+// (navigator.clipboard rejects once the document loses focus).
+const copyText = (text) => {
+  let copied = false;
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    copied = document.execCommand('copy');
+    document.body.removeChild(el);
+  } catch {
+    // Fall through to the async Clipboard API below.
+  }
+  if (!copied && navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    copied = true;
+  }
+  return copied;
+};
+
 export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
+  const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(copiedTimerRef.current), []);
   
   const tenderId = tender._id || tender.sourceTenderId;
   const bookmarked = isBookmarked(tenderId);
@@ -72,6 +122,21 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const docUrl = isGeM
     ? gemApi.getPdfDownloadUrl(tender.sourceTenderId || tenderId, rawDocUrl)
     : rawDocUrl;
+
+  const bidNumber = tender.sourceTenderId || tender.tenderReferenceNumber || '';
+  const portalUrl = resolvePortalUrl(tender, isGeM);
+  const portalName = isGeM ? 'GeM' : (tender.state || 'state');
+
+  const handleBidNumberClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (bidNumber && copyText(bidNumber)) {
+      setCopied(true);
+      clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2500);
+    }
+    window.open(portalUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handlePdfClick = (e) => {
     e.stopPropagation();
@@ -140,21 +205,22 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
             Bid Number
           </span>
           <a
-            href={docUrl || `/tenders/${tenderId}`}
-            target={docUrl ? "_blank" : undefined}
+            href={portalUrl}
+            target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => {
-              if (!docUrl) {
-                e.preventDefault();
-                handleCardClick();
-              }
-            }}
+            onClick={handleBidNumberClick}
             className="text-sm font-mono font-black text-dalBlue dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-            title="Click to view tender"
+            title={`Copy bid number and open the ${portalName} tender portal`}
           >
-            <span>{tender.sourceTenderId || tender.tenderReferenceNumber || 'NIT-ACTIVE'}</span>
+            <span>{bidNumber || 'NIT-ACTIVE'}</span>
             <ExternalLink className="w-3 h-3 shrink-0" />
           </a>
+          <span
+            aria-live="polite"
+            className={`ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}
+          >
+            {copied && (<><Check className="w-3 h-3" /> Copied</>)}
+          </span>
         </div>
 
         {/* Title / Item Category */}
