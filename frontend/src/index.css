@@ -3025,3 +3025,10 @@ body { background-color: #f7faff; }
 .dark .ai-quick-chip { background: rgba(255, 255, 255, .05); color: #cbd5e1; }
 .dark .ai-quick-chip:hover:not(:disabled) { color: #fff; border-color: #64748b; background: rgba(255, 255, 255, .1); }
 .dark .ai-quick-chip.is-picked { color: #0b1630; background: #e2e8f0; border-color: #e2e8f0; }
+
+/* GeM bid details: consignee / delivery table parsed from the bid PDF */
+.gem-consignee-table-wrap { margin-top: .35rem; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.gem-consignee-table { width: 100%; border-collapse: collapse; font-size: .8125rem; overflow-wrap: normal; }
+.gem-consignee-table th { padding: .5rem .75rem; text-align: left; font-size: .6875rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: rgba(255, 255, 255, .08); white-space: nowrap; }
+.gem-consignee-table td { padding: .55rem .75rem; border-top: 1px solid var(--line); color: var(--ink); vertical-align: top; }
+.gem-consignee-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

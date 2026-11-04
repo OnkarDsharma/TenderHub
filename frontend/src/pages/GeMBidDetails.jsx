@@ -19,6 +19,7 @@ import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
+import { cleanGemText, parseConsigneeRows } from '@/utils/gemDelivery';
 
 const display = (value, fallback = 'Not specified') => {
   const cleaned = String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -90,6 +91,9 @@ export default function GeMBidDetails() {
   const downloadUrl = gemApi.getPdfDownloadUrl(bidId || bid._id, officialDocumentUrl);
   const parsed = parseGemDescription(bid.workDescription);
   const itemCategories = parsed.categories.length ? parsed.categories : [bid.productCategory].filter(Boolean);
+  const rawConsignee = bid.rawDeliverySection || parsed.consignee;
+  const consigneeRows = parseConsigneeRows(rawConsignee);
+  const cleanedConsignee = cleanGemText(rawConsignee);
   const documentLinks = [...new Set([
     ...(bid.nitDocuments || []).map((document) => document.fileUrl),
     ...(bid.pdfUrls || []),
@@ -204,7 +208,27 @@ export default function GeMBidDetails() {
               )}
               {(bid.rawDeliverySection || parsed.consignee || parsed.stations) && (
                 <dl className="ai-fields">
-                  {(bid.rawDeliverySection || parsed.consignee) && <Field label="Raw consignee / delivery text">{display(bid.rawDeliverySection || parsed.consignee)}</Field>}
+                  {consigneeRows.length > 0 ? (
+                    <Field label="Consignees & delivery" wide>
+                      <div className="gem-consignee-table-wrap">
+                        <table className="gem-consignee-table">
+                          <thead>
+                            <tr><th>Item</th><th>Delivery address</th><th className="num">Qty</th><th className="num">Delivery days</th></tr>
+                          </thead>
+                          <tbody>
+                            {consigneeRows.map((row, index) => (
+                              <tr key={`${row.serial}-${row.address}-${index}`}>
+                                <td>{row.item || (index === 0 && itemCategories[0]) || `Item ${index + 1}`}</td>
+                                <td>{row.address}</td>
+                                <td className="num">{row.quantity}</td>
+                                <td className="num">{row.days}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Field>
+                  ) : (cleanedConsignee && <Field label="Consignee / delivery details" wide>{cleanedConsignee}</Field>)}
                   {(bid.deliveryStations?.length || parsed.stations) && <Field label="Recognized delivery stations">{display(bid.deliveryStations?.join(', ') || parsed.stations)}</Field>}
                 </dl>
               )}

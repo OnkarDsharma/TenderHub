@@ -90,6 +90,8 @@ Only the J&K / Punjab / HP / Ladakh scrape step changed:
 +   run: node src/scripts/fetchTendersByDate.js --state ${{ matrix.state }} --sweep --max-new 150 --max-minutes 80
 ```
 
+Also added `GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}` to the workflow-level `env:` block. Without it, CI captcha solving fell back to local Tesseract OCR, which is slower and less accurate. **This needs a repository secret named `GEMINI_API_KEY`** (Settings → Secrets and variables → Actions). If the secret is missing, the value is empty and the scraper behaves as before (Tesseract only).
+
 The schedule (6 runs/day), the job timeout (100 min), the guard job and the GeM job are unchanged by this work. This file also contains earlier, separate GeM edits that are not part of this change.
 
 ### `backend/src/scripts/auditOrganisationCoverage.js`
