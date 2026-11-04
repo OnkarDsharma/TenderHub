@@ -876,8 +876,8 @@ export default function TenderDetails() {
 
                     {/* Main ZIP Download & Action Card */}
                     <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-400 transition-all space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start gap-2.5 overflow-hidden min-w-0">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0 w-full">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800 mt-0.5 sm:mt-0">
                             <FolderArchive className="w-4 h-4" />
                           </div>
@@ -904,7 +904,7 @@ export default function TenderDetails() {
                         </div>
 
                         {/* Action Buttons: Direct ZIP Download + Unzip in Browser */}
-                        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+                        <div className="flex items-center gap-2 self-start flex-wrap max-w-full">
                           <button
                             type="button"
                             onClick={handleDownloadZip}
@@ -983,12 +983,12 @@ export default function TenderDetails() {
                       {/* Extracted Files Explorer List */}
                       {extractedFiles && extractedFiles.length > 0 && (
                         <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-900/50 space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            <span className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            <span className="flex items-center gap-1.5 min-w-0">
                               <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                               <span>Extracted Files Available for Download ({extractedFiles.length})</span>
                             </span>
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold uppercase">Ready in Browser</span>
+                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold uppercase shrink-0">Ready in Browser</span>
                           </div>
 
                           <div className="space-y-1.5">
