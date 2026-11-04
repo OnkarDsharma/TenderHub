@@ -140,7 +140,6 @@ export default function Services() {
   // State Management
   const [profile, setProfile] = useState(null);
   const [profileReady, setProfileReady] = useState(false);
-  const [exampleTender, setExampleTender] = useState(null);
   const [inputTenderId, setInputTenderId] = useState(initialTenderId);
   const [activeTab, setActiveTab] = useState('preBid'); // 'preBid' | 'boq' | 'execution' | 'copilot'
   const [analyzing, setAnalyzing] = useState(false);
@@ -338,15 +337,9 @@ export default function Services() {
     }
   }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileReady]);
 
-  // Load the account profile and one real tender as the optional example.
+  // Load the account profile.
   useEffect(() => {
     loadPlansAndProfile();
-    api.get('/tenders', { params: { limit: 1, status: 'active' } })
-      .then((response) => {
-        const payload = response.data?.data?.tenders || response.data?.data || response.data?.tenders || [];
-        setExampleTender(Array.isArray(payload) ? payload[0] || null : null);
-      })
-      .catch((err) => console.error('Failed to load a tender example:', err));
   }, [loadPlansAndProfile]);
 
   // A GeM "AI analysis" action navigates here with a tender ID; run that
@@ -601,16 +594,6 @@ export default function Services() {
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                   <span>{statusMsg}</span>
                 </p>
-              ) : (!dossierData && exampleTender) ? (
-                <button
-                  type="button"
-                  className="ai-hero-example"
-                  onClick={() => setInputTenderId(exampleTender.sourceTenderId || exampleTender._id)}
-                >
-                  Try an example
-                  <span aria-hidden="true"> · </span>
-                  <span className="font-mono">{exampleTender.sourceTenderId || exampleTender._id}</span>
-                </button>
               ) : null}
             </div>
             </motion.div>

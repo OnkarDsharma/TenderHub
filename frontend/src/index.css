@@ -1983,14 +1983,6 @@ body { background-color: #f7faff; }
   color: #fff;
 }
 .ai-hero-feedback-error { color: #fde68a; }
-.ai-hero-example {
-  color: rgba(255, 255, 255, .78);
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, .35);
-  text-underline-offset: 3px;
-  transition: color .15s ease;
-}
-.ai-hero-example:hover { color: #fff; text-decoration-color: #fff; }
 .ai-hero-ghost-btn {
   padding: .4rem 1rem;
   border-radius: 999px;
