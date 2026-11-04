@@ -456,7 +456,7 @@ export default function Services() {
     <div className="estimator-page min-h-screen bg-paper dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors pb-20">
       
       {/* 1. HERO: HEADING, TENDER INPUT, PROFILE CHIP, ADVISORY */}
-      <section className={`ai-hero ${dossierData ? 'ai-hero--compact' : ''}`}>
+      <section className={`ai-hero ${dossierData ? 'ai-hero--compact' : ''} ${showProfilePopover ? 'ai-hero--profile-open' : ''}`}>
         <div className="ai-hero-inner max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
 
           {/* Top row: label + contractor profile chip */}

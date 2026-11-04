@@ -1855,6 +1855,9 @@ body { background-color: #f7faff; }
   min-height: 0;
   border-radius: 0 0 24px 24px;
 }
+.ai-hero--compact.ai-hero--profile-open {
+  min-height: 27rem;
+}
 .ai-hero--compact::before { top: 70%; height: 60%; }
 .ai-hero--compact::after { bottom: -120%; }
 
@@ -2170,6 +2173,7 @@ body { background-color: #f7faff; }
 }
 @media (max-width: 640px) {
   .ai-hero { min-height: 560px; border-radius: 0 0 22px 22px; }
+  .ai-hero--compact.ai-hero--profile-open { min-height: 30rem; }
   .ai-hero-top { justify-content: stretch; }
   .ai-hero-chip-wrap { width: 100%; }
   .ai-hero-chip { width: 100%; max-width: none; justify-content: center; }
