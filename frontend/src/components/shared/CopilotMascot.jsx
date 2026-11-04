@@ -9,12 +9,12 @@ import { Link } from 'react-router-dom';
 export function CopilotMascot() {
   return (
     <Link to="/services" className="ai-mascot" aria-label="Open the AI tender copilot">
-      <span className="ai-mascot-bubble">Ask the tender copilot</span>
+      <span className="ai-mascot-pulse" aria-hidden="true" />
       <span className="ai-mascot-body" aria-hidden="true">
         <svg
           viewBox="0 0 64 64"
-          width="56"
-          height="56"
+          width="44"
+          height="44"
           role="presentation"
           fill="none"
           stroke="#0b1630"
@@ -49,6 +49,11 @@ export function CopilotMascot() {
           <path d="M14 20v6M11 23h6" stroke="#2563eb" />
           <path d="M20 12v3M18.5 13.5h3" stroke="#2563eb" />
         </svg>
+        <span className="ai-mascot-status" />
+      </span>
+      <span className="ai-mascot-text">
+        <strong>Ask Tender Copilot</strong>
+        <small>AI · find &amp; analyse bids</small>
       </span>
     </Link>
   );

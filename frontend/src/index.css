@@ -2461,17 +2461,24 @@ body { background-color: #f7faff; }
 /* ------------------------------------------------------------------ */
 /* Home page mascot                                                     */
 /* ------------------------------------------------------------------ */
-.ai-mascot { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 45; display: flex; align-items: center; gap: .6rem; text-decoration: none; }
-.ai-mascot-bubble { padding: .45rem .85rem; border-radius: 999px; background: #0b1630; color: #fff; font-size: .8125rem; font-weight: 600; white-space: nowrap; box-shadow: 0 10px 30px rgba(11, 22, 48, .25); opacity: 0; transform: translateX(8px); transition: opacity .25s ease, transform .3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.ai-mascot:hover .ai-mascot-bubble, .ai-mascot:focus-visible .ai-mascot-bubble { opacity: 1; transform: translateX(0); }
-.ai-mascot-body { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 22px; background: #fff; border: 1px solid #dce5f0; box-shadow: 0 12px 34px rgba(11, 22, 48, .22); animation: ai-mascot-bob 3.2s ease-in-out infinite; transition: transform .25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.dark .ai-mascot-body { background: #0f1b33; border-color: #263b60; }
-.ai-mascot:hover .ai-mascot-body { transform: translateY(-3px) scale(1.04); animation-play-state: paused; }
+.ai-mascot { position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 45; display: flex; align-items: center; gap: .75rem; padding: .4rem 1.25rem .4rem .4rem; border-radius: 999px; text-decoration: none; color: #fff; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #4338ca 100%); box-shadow: 0 0 0 3px rgba(255, 255, 255, .85), 0 14px 36px rgba(37, 99, 235, .45), 0 2px 6px rgba(11, 22, 48, .18), inset 0 1px 0 rgba(255, 255, 255, .25); animation: ai-mascot-enter .6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards, ai-mascot-bob 3.2s ease-in-out .8s infinite; transition: transform .25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow .25s ease; }
+.ai-mascot:hover, .ai-mascot:focus-visible { transform: translateY(-3px) scale(1.03); box-shadow: 0 0 0 3px #fff, 0 20px 44px rgba(37, 99, 235, .55), 0 2px 6px rgba(11, 22, 48, .2), inset 0 1px 0 rgba(255, 255, 255, .3); animation-play-state: paused; }
+.ai-mascot:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+.ai-mascot-pulse { position: absolute; inset: 0; border-radius: inherit; border: 2px solid rgba(37, 99, 235, .55); pointer-events: none; animation: ai-mascot-pulse 2.4s ease-out 1s infinite; }
+.ai-mascot-body { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 54px; height: 54px; border-radius: 999px; background: #fff; box-shadow: 0 4px 12px rgba(11, 22, 48, .2); transition: transform .3s ease; }
+.ai-mascot:hover .ai-mascot-body { transform: rotate(-8deg); }
+.ai-mascot-status { position: absolute; right: 1px; bottom: 2px; width: 13px; height: 13px; border-radius: 999px; background: #22c55e; border: 2px solid #fff; }
+.ai-mascot-text { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
+.ai-mascot-text strong { font-size: .9375rem; font-weight: 700; letter-spacing: -.01em; }
+.ai-mascot-text small { margin-top: .15rem; font-size: .75rem; font-weight: 500; color: rgba(255, 255, 255, .8); }
 .ai-mascot-eyes { transform-origin: 46px 30px; animation: ai-mascot-blink 4.5s infinite; }
-@keyframes ai-mascot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes ai-mascot-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@keyframes ai-mascot-enter { from { opacity: 0; transform: translateY(24px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes ai-mascot-pulse { 0% { opacity: .9; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(1.18, 1.45); } }
 @keyframes ai-mascot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
-@media (max-width: 640px) { .ai-mascot { right: .85rem; bottom: .85rem; } .ai-mascot-bubble { display: none; } .ai-mascot-body { width: 56px; height: 56px; border-radius: 18px; } }
-@media (prefers-reduced-motion: reduce) { .ai-mascot-body, .ai-mascot-eyes { animation: none; } }
+@media (max-width: 640px) { .ai-mascot { right: 1rem; bottom: 1rem; padding: .35rem; } .ai-mascot-text { display: none; } .ai-mascot-pulse { animation-name: ai-mascot-pulse-round; } }
+@keyframes ai-mascot-pulse-round { 0% { opacity: .9; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(1.4); } }
+@media (prefers-reduced-motion: reduce) { .ai-mascot, .ai-mascot-eyes, .ai-mascot-pulse { animation: none; } }
 
 /* ------------------------------------------------------------------ */
 /* Hero collapse: animate the band instead of snapping                 */
@@ -2931,8 +2938,6 @@ body { background-color: #f7faff; }
 
 /* Line-art mascot: navy strokes, light fill behind the body */
 .ai-mascot-art { color: #0b1630; }
-.dark .ai-mascot-art { stroke: #e2e8f0; }
-.dark .ai-mascot-art circle { fill: #e2e8f0; }
 
 /* Home hero: trim the gap between the navbar and the headline */
 .home-hero > div.home-hero-main { padding-top: clamp(2.75rem, 5vw, 4rem); min-height: 0; }
