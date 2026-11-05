@@ -509,7 +509,9 @@ async function run() {
     }
     process.exit(0);
   } catch (err) {
-    logger.error(`[GeM] Execution error: ${err.message}`);
+    // Node's fetch reports every network failure as "fetch failed"; the real reason (timeout, reset, DNS) is in err.cause.
+    const cause = err.cause ? ` (${[err.cause.code, err.cause.message].filter(Boolean).join(': ')})` : '';
+    logger.error(`[GeM] Execution error: ${err.message}${cause}`);
     process.exit(1);
   }
 }
