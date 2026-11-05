@@ -212,6 +212,8 @@ jobs:
       - name: Scrape Latest GeM Bids
         id: run-gem
         run: |
+          # Without pipefail, `| tee` hides the script's exit code and a failed sync shows as green.
+          set -o pipefail
           cd backend
           # Full consignee-state listing for all 4 states + up to 150 new/changed PDFs.
           node src/scripts/fetchGeMBids.js --state=ALL --pdf-limit 150 --delay 800 2>&1 | tee ../scraper_gem.log
@@ -220,10 +222,16 @@ jobs:
         if: always()
         run: |
           echo "### 📦 GeM Multi-State Bids Report" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.run-gem.outcome }}" = "failure" ]; then
+            echo "**❌ GeM sync failed.** Per-state results and errors:" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f "scraper_gem.log" ]; then
-            TAIL_LOG=$(tail -n 15 "scraper_gem.log" || true)
+            # The log is pino JSON; pull out the readable [GeM] result lines (per-state counts or
+            # "FAILED - <reason>", listing totals, execution errors). Fall back to the raw tail.
+            RESULTS=$(jq -rR 'fromjson? | select((.msg // "") | test("\\[GeM\\]|\\[Scheduler\\]")) | "\(if .level >= 50 then "ERROR" elif .level >= 40 then "WARN " else "INFO " end) \(.msg) \(if .err then "(" + (.err | tostring) + ")" else "" end)"' scraper_gem.log 2>/dev/null | tail -n 25 || true)
+            [ -z "$RESULTS" ] && RESULTS=$(tail -n 15 "scraper_gem.log" || true)
             echo '```text' >> "$GITHUB_STEP_SUMMARY"
-            echo "$TAIL_LOG" >> "$GITHUB_STEP_SUMMARY"
+            echo "$RESULTS" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No GeM log generated." >> "$GITHUB_STEP_SUMMARY"
