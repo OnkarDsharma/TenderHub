@@ -92,6 +92,16 @@ Only the J&K / Punjab / HP / Ladakh scrape step changed:
 
 Also added `GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}` to the workflow-level `env:` block. Without it, CI captcha solving fell back to local Tesseract OCR, which is slower and less accurate. **This needs a repository secret named `GEMINI_API_KEY`** (Settings → Secrets and variables → Actions). If the secret is missing, the value is empty and the scraper behaves as before (Tesseract only).
 
+**J&K split into two parallel jobs.** Rural Development & Panchayati Raj (RDPR) holds more than half of J&K's tenders (2,322 of ~4,250), so it now has its own matrix job, and the main J&K job skips it. Each matrix entry gained a `key` (unique log and artifact names, since two jobs now share `state: jk`) and `extra` (the organisation filter):
+
+| Job (`key`) | Extra arguments | Covers |
+|---|---|---|
+| `jk` | `--exclude-org 'Rural Development'` | 31 J&K organisations |
+| `jk-rdpr` | `--org 'Rural Development'` | RDPR only |
+| `punjab`, `hp`, `ladakh` | none | unchanged |
+
+The filters are case-insensitive substring matches on the organisation name, and "Rural Development" matches only RDPR on the J&K portal, so the two jobs never touch the same tenders. Checked with dry runs: 31 + 1 organisations, 1,927 + 2,322 tenders, 167 + 326 = 493 missing, matching the full J&K sweep. This doubles J&K's capacity to about 240 tenders per run.
+
 The schedule (6 runs/day), the job timeout (100 min), the guard job and the GeM job are unchanged by this work. This file also contains earlier, separate GeM edits that are not part of this change.
 
 ### `backend/src/scripts/auditOrganisationCoverage.js`

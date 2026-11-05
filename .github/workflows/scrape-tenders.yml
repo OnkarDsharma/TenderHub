@@ -88,15 +88,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # J&K is split in two parallel jobs: Rural Development & Panchayati Raj (RDPR) alone holds more than
+        # half of J&K's tenders, so it gets its own job and the main J&K job skips it. `key` keeps log and
+        # artifact names unique; `extra` carries each job's organisation filter.
         include:
-          - state: jk
-            name: "🏛️ Jammu & Kashmir"
-          - state: punjab
+          - key: jk
+            state: jk
+            name: "🏛️ Jammu & Kashmir (excl. RDPR)"
+            extra: "--exclude-org 'Rural Development'"
+          - key: jk-rdpr
+            state: jk
+            name: "🏛️ Jammu & Kashmir (RDPR)"
+            extra: "--org 'Rural Development'"
+          - key: punjab
+            state: punjab
             name: "🌾 Punjab"
-          - state: hp
+            extra: ""
+          - key: hp
+            state: hp
             name: "🏔️ Himachal Pradesh"
-          - state: ladakh
+            extra: ""
+          - key: ladakh
+            state: ladakh
             name: "🏔️ Ladakh"
+            extra: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -131,14 +146,14 @@ jobs:
           cd backend
           # Reads every organisation's full listing, corrects corrigendum-extended dates, then ingests
           # tenders live on the portal but missing from the DB (newest first, incl. today's), capped per run.
-          node src/scripts/fetchTendersByDate.js --state ${{ matrix.state }} --sweep --max-new 150 --max-minutes 80 2>&1 | tee ../scraper_${{ matrix.state }}.log
+          node src/scripts/fetchTendersByDate.js --state ${{ matrix.state }} --sweep --max-new 150 --max-minutes 80 ${{ matrix.extra }} 2>&1 | tee ../scraper_${{ matrix.key }}.log
 
       - name: Generate Job Summary
         if: always()
         run: |
           echo "### ${{ matrix.name }} Ingestion Report" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f "scraper_${{ matrix.state }}.log" ]; then
-            METRICS=$(grep -A 10 "INGESTION & DOCUMENT METRICS" "scraper_${{ matrix.state }}.log" || true)
+          if [ -f "scraper_${{ matrix.key }}.log" ]; then
+            METRICS=$(grep -A 10 "INGESTION & DOCUMENT METRICS" "scraper_${{ matrix.key }}.log" || true)
             if [ -n "$METRICS" ]; then
               echo '```text' >> "$GITHUB_STEP_SUMMARY"
               echo "$METRICS" >> "$GITHUB_STEP_SUMMARY"
@@ -154,9 +169,9 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: failure-logs-${{ matrix.state }}
+          name: failure-logs-${{ matrix.key }}
           path: |
-            scraper_${{ matrix.state }}.log
+            scraper_${{ matrix.key }}.log
             backend/logs/
           retention-days: 3
 
