@@ -51,7 +51,7 @@ export default function Contact() {
               <Mail className="w-4 h-4 text-blue-300 shrink-0 mt-0.5" />
               <div>
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Inquiries</span>
-                <span className="font-mono font-semibold text-white">support@tenderhub.in</span>
+                <span className="font-mono font-semibold text-white">info@tndrr.in</span>
               </div>
             </div>
 

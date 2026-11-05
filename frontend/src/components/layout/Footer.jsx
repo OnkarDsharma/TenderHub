@@ -131,7 +131,7 @@ export function Footer() {
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <Mail className="w-4 h-4 text-slate-500 shrink-0" />
-              <span>support@tenderhub.in</span>
+              <span>info@tndrr.in</span>
             </div>
           </div>
         </div>
