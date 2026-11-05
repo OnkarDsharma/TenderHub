@@ -3037,3 +3037,12 @@ body { background-color: #f7faff; }
 .gem-consignee-table th { padding: .5rem .75rem; text-align: left; font-size: .6875rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: rgba(255, 255, 255, .08); white-space: nowrap; }
 .gem-consignee-table td { padding: .55rem .75rem; border-top: 1px solid var(--line); color: var(--ink); vertical-align: top; }
 .gem-consignee-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Execution tab: phases column (left) + milestones column (right), each in chronological order */
+.ai-bento--split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1023px) {
+  .ai-bento--split .ai-bento-col { display: flex; }
+}
+@media (max-width: 639px) {
+  .ai-bento--split { grid-template-columns: minmax(0, 1fr); }
+}

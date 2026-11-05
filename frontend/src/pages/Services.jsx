@@ -853,7 +853,6 @@ export default function Services() {
               {activeTab === 'execution' && (() => {
                 const phases = dossierData.postAwardAnalysis?.procurementSchedule || [];
                 const milestones = dossierData.postAwardAnalysis?.milestones || [];
-                const half = Math.ceil(phases.length / 2);
                 const renderPhase = (phase, idx, tone, size) => (
                   <Tile key={idx} tone={tone} size={size} order={idx}>
                     <p className="ai-tile-kicker">{phase.timeframe}</p>
@@ -867,22 +866,19 @@ export default function Services() {
                   </Tile>
                 );
                 return (
-                  <div className="ai-bento" key="execution">
+                  <div className="ai-bento ai-bento--split" key="execution">
                     <div className="ai-bento-col">
-                      {phases.slice(0, half).map((p, i) => renderPhase(p, i, i === 0 ? 'light' : 'blue', i === 0 ? 'tall' : 'short'))}
+                      {phases.map((p, i) => renderPhase(p, i, i % 2 === 0 ? 'light' : 'blue'))}
                     </div>
                     <div className="ai-bento-col">
                       {milestones.map((m, idx) => (
-                        <Tile key={m.milestoneNo} tone="dark" order={half + idx}>
+                        <Tile key={m.milestoneNo} tone="dark" order={idx}>
                           <p className="ai-tile-meta"><span>Milestone {m.milestoneNo}</span><span className="font-mono">Day {m.targetDays}</span></p>
                           <p className="ai-tile-title">{m.description}</p>
                           <p className="ai-tile-big ai-tile-big--sm">{m.financialProgressPct}<span>% billing</span></p>
                           {m.penaltyIfDelayed && <p className="ai-tile-note"><span>If delayed</span>{m.penaltyIfDelayed}</p>}
                         </Tile>
                       ))}
-                    </div>
-                    <div className="ai-bento-col">
-                      {phases.slice(half).map((p, i) => renderPhase(p, half + i, i === 0 && phases.length - half > 1 ? 'blue' : 'light', i === 0 && phases.length - half > 1 ? 'short' : 'tall'))}
                     </div>
                   </div>
                 );
