@@ -303,14 +303,25 @@ router.get('/tenders', async (req, res, next) => {
       sortOptions = { publishedDate: -1, createdAt: -1, _id: -1 };
     }
 
-    const [tenders, totalCount] = await Promise.all([
-      Tender.find(query)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
+    // GeM documents carry large PDF text blocks, so sorting whole documents in memory hits
+    // MongoDB's 32MB sort limit beyond ~1,500 results. Sort a slim projection (sort keys only)
+    // to find the page's ids, then load just those documents and restore the sorted order.
+    const sortFields = Object.fromEntries(Object.keys(sortOptions).map((field) => [field, 1]));
+    const [pageIds, totalCount] = await Promise.all([
+      Tender.aggregate([
+        { $match: query },
+        { $project: sortFields },
+        { $sort: { ...sortOptions, ...(sortOptions._id ? {} : { _id: -1 }) } },
+        { $skip: skip },
+        { $limit: limitNum },
+        { $project: { _id: 1 } },
+      ]),
       Tender.countDocuments(query)
     ]);
+    const ids = pageIds.map((doc) => doc._id);
+    const docs = ids.length ? await Tender.find({ _id: { $in: ids } }).lean() : [];
+    const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
+    const tenders = ids.map((id) => byId.get(String(id))).filter(Boolean);
 
     res.status(200).json({
       success: true,
