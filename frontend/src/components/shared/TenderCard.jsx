@@ -20,6 +20,7 @@ import { formatCurrencyINR, formatDateDisplay, extractFamousLocation } from '@/u
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { gemApi } from '@/services/gemApi';
+import { API_BASE_URL } from '@/services/api';
 
 const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
@@ -118,9 +119,18 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 2;
 
   const rawDocUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl;
+  const isArchivedR2Document = !isGeM && (() => {
+    try {
+      return new URL(rawDocUrl).hostname.endsWith('.r2.dev');
+    } catch {
+      return false;
+    }
+  })();
   const docUrl = isGeM
     ? gemApi.getPdfDownloadUrl(tender.sourceTenderId || tenderId, rawDocUrl)
-    : rawDocUrl;
+    : isArchivedR2Document && tender._id
+      ? `${API_BASE_URL}/tenders/${tender._id}/documents/notice/0?download=1`
+      : rawDocUrl;
 
   const bidNumber = tender.sourceTenderId || tender.tenderReferenceNumber || '';
   const portalUrl = resolvePortalUrl(tender, isGeM);
@@ -291,8 +301,8 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
         </button>
         <a
           href={docUrl || `/tenders/${tenderId}`}
-          target={isGeM ? undefined : (docUrl ? "_blank" : undefined)}
-          download={isGeM ? true : undefined}
+          target={isGeM || !isArchivedR2Document ? (docUrl ? "_blank" : undefined) : undefined}
+          download={isGeM || isArchivedR2Document ? true : undefined}
           rel="noopener noreferrer"
           onClick={handlePdfClick}
           className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
