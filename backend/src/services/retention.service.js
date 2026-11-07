@@ -1,8 +1,9 @@
 /**
  * @file backend/src/services/retention.service.js
- * @description Automatic Purging Service for Expired Tenders.
- * Purges expired tenders from both MongoDB Atlas, Primary Cloudflare R2,
- * and Secondary Backup Cloudflare R2 simultaneously with zero retention delay (no 14-day stay).
+ * @description Retention Service for Expired Tenders.
+ * Marks expired tenders as EXPIRED in MongoDB but retains all data (no deletion).
+ * Status transitions (ACTIVE → EXPIRED) continue to work normally.
+ * R2 storage data is also preserved.
  */
 import Tender from '../models/Tender.js';
 import SystemLog from '../models/SystemLog.js';
@@ -103,6 +104,7 @@ export class RetentionService {
       departmentCode: 1,
       organisationChain: 1,
       title: 1,
+      status: 1,
     });
 
     const totalFound = expiredTenders.length;
@@ -115,63 +117,47 @@ export class RetentionService {
 
     for (const tender of expiredTenders) {
       try {
-        // 1. Delete associated folder from Cloudflare R2 (Primary AND Backup Server)
-        const storageKey = tender.r2StorageKey || tender.sourceTenderId;
-        const dept = tender.departmentCode || tender.organisationChain;
-        const r2Result = await deleteTenderFolderFromR2(storageKey, tender.publishedDate, dept);
-
-        totalPrimaryFilesDeleted += (r2Result?.deletedCount || 0);
-        totalBackupFilesDeleted += (r2Result?.backupDeletedCount || 0);
-
-        // 2. Delete document from MongoDB
-        await Tender.deleteOne({ _id: tender._id });
+        // Ensure the tender is marked as EXPIRED in MongoDB (no deletion)
+        if (tender.status !== 'EXPIRED') {
+          await Tender.updateOne({ _id: tender._id }, { $set: { status: 'EXPIRED' } });
+        }
         purgedMongoCount++;
 
-        logger.info(`[RetentionService] Purged expired tender ${tender.sourceTenderId} (Files removed -> Primary R2: ${r2Result?.deletedCount || 0}, Backup R2: ${r2Result?.backupDeletedCount || 0})`);
+        logger.info(`[RetentionService] Marked tender ${tender.sourceTenderId} as EXPIRED (data retained in database & R2).`);
       } catch (err) {
-        logger.error(`[RetentionService] Error purging tender ${tender.sourceTenderId}: ${err.message}`);
+        logger.error(`[RetentionService] Error marking tender ${tender.sourceTenderId}: ${err.message}`);
         errors.push({ tenderId: tender.sourceTenderId, error: err.message });
       }
     }
 
-    // 3. Backup Server Sweep: Clean any orphaned or expired tender data directly on the backup server
-    let backupSweepResult = { sweptFoldersCount: 0, sweptFilesCount: 0 };
-    try {
-      backupSweepResult = await this.purgeExpiredFromBackupServer(now);
-      totalBackupFilesDeleted += backupSweepResult.sweptFilesCount;
-      if (backupSweepResult.sweptFoldersCount > 0) {
-        logger.info(`[RetentionService] Backup server sweep purged ${backupSweepResult.sweptFoldersCount} expired folder(s) (${backupSweepResult.sweptFilesCount} files).`);
-      }
-    } catch (sweepErr) {
-      logger.warn(`[RetentionService] Backup server sweep warning: ${sweepErr.message}`);
-    }
-
-    const totalR2FilesDeleted = totalPrimaryFilesDeleted + totalBackupFilesDeleted;
+    // --- DISABLED: Backup server sweep skipped to preserve all tender data ---
+    // let backupSweepResult = { sweptFoldersCount: 0, sweptFilesCount: 0 };
+    // try {
+    //   backupSweepResult = await this.purgeExpiredFromBackupServer(now);
+    //   ...
+    // }
 
     // 4. Log audit entry to SystemLog
     await SystemLog.create({
       level: 'INFO',
       source: 'DATABASE',
-      message: `Expired Tenders Purge: Removed ${purgedMongoCount} tender(s) from MongoDB, ${totalPrimaryFilesDeleted} file(s) from Primary R2, and ${totalBackupFilesDeleted} file(s) from Secondary Backup R2. Triggered by ${triggeredBy}. (Zero retention delay).`,
+      message: `Expired Tenders Retention: Marked ${purgedMongoCount} tender(s) as EXPIRED in MongoDB (no data deleted). Triggered by ${triggeredBy}.`,
       metadata: {
-        purgedMongoCount,
-        totalPrimaryFilesDeleted,
-        totalBackupFilesDeleted,
-        backupSweptFolders: backupSweepResult.sweptFoldersCount,
+        markedExpiredCount: purgedMongoCount,
         triggeredBy,
       },
     }).catch(() => {});
 
-    logger.info(`✅ [RetentionService] Purge complete! Removed ${purgedMongoCount}/${totalFound} tenders from MongoDB, ${totalPrimaryFilesDeleted} files from Primary R2, and ${totalBackupFilesDeleted} files from Secondary Backup R2.`);
+    logger.info(`✅ [RetentionService] Retention pass complete! Marked ${purgedMongoCount}/${totalFound} tenders as EXPIRED (data preserved in MongoDB & R2).`);
 
     return {
       success: true,
       totalFound,
       purgedCount: purgedMongoCount,
-      primaryFilesDeleted: totalPrimaryFilesDeleted,
-      backupFilesDeleted: totalBackupFilesDeleted,
-      totalR2FilesDeleted,
-      backupSweptFolders: backupSweepResult.sweptFoldersCount,
+      primaryFilesDeleted: 0,
+      backupFilesDeleted: 0,
+      totalR2FilesDeleted: 0,
+      backupSweptFolders: 0,
       errors,
     };
   }

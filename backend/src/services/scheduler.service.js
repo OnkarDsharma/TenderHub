@@ -56,13 +56,16 @@ export class SchedulerService {
       timezone: 'Asia/Kolkata'
     });
 
-    // 5. Automated Expired Tenders Purge, Portal Reconciliation & Daily DB Backup (Runs daily at 03:00 AM IST)
+    // 5. Portal Reconciliation & Daily DB Backup (Runs daily at 03:00 AM IST)
+    // NOTE: Expired/archived tender purge has been disabled to preserve all tender data in the database.
+    // Status transitions (ACTIVE → EXPIRED) still happen via the 15-minute markExpiredTenders cron below.
     cron.schedule('0 3 * * *', async () => {
-      logger.info('[Scheduler] ⏰ Running scheduled 03:00 AM expired tenders purge from MongoDB & Cloudflare R2...');
-      await retentionService.purgeExpiredTenders('CRON_SCHEDULE_03AM').catch(err => {
-        logger.error(`[Scheduler] Purge failed: ${err.message}`);
-      });
-      await this.purgeExpiredArchivedTenders('CRON_SCHEDULE_03AM');
+      // --- DISABLED: Tender data is now retained permanently in the database ---
+      // logger.info('[Scheduler] ⏰ Running scheduled 03:00 AM expired tenders purge from MongoDB & Cloudflare R2...');
+      // await retentionService.purgeExpiredTenders('CRON_SCHEDULE_03AM').catch(err => {
+      //   logger.error(`[Scheduler] Purge failed: ${err.message}`);
+      // });
+      // await this.purgeExpiredArchivedTenders('CRON_SCHEDULE_03AM');
 
       logger.info('[Scheduler] ⏰ Running scheduled 03:00 AM Portal Parity Reconciliation...');
       await reconciliationService.reconcileActiveTenders('CRON_SCHEDULE_03AM').catch(err => {
@@ -259,15 +262,14 @@ export class SchedulerService {
   }
 
   /**
-   * Automatically deletes tenders in ARCHIVE status where closingDate was > 30 days ago
+   * Previously deleted tenders in ARCHIVE status where closingDate was > 30 days ago.
+   * Now disabled: only counts and logs, no data is deleted from MongoDB.
    */
   async purgeExpiredArchivedTenders(invokedBy = 'ADMIN_MANUAL') {
     const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    logger.info(`[Scheduler] Purging archived tenders expired prior to ${cutoffDate.toISOString()}...`);
+    logger.info(`[Scheduler] Archive retention check (read-only) — cutoff: ${cutoffDate.toISOString()}...`);
 
     try {
-      // Find tenders that are ARCHIVED and have closingDate older than 30 days
-      // Or tenders marked ARCHIVED whose archivedAt date is older than 30 days
       const filter = {
         status: 'ARCHIVED',
         $or: [
@@ -276,11 +278,9 @@ export class SchedulerService {
         ]
       };
 
-      const countBefore = await Tender.countDocuments(filter);
-      const deleteResult = await Tender.deleteMany(filter);
-      const deletedCount = deleteResult.deletedCount || 0;
+      const countEligible = await Tender.countDocuments(filter);
 
-      logger.info(`✅ [Scheduler] Purge complete. Deleted ${deletedCount} expired archived tender(s).`);
+      logger.info(`✅ [Scheduler] Archive retention check complete. ${countEligible} archived tender(s) older than 30 days found (retained — no deletion).`);
 
       // Update CronConfig audit fields
       await CronConfig.findOneAndUpdate(
@@ -288,7 +288,7 @@ export class SchedulerService {
         {
           $set: {
             lastPurgedAt: new Date(),
-            lastPurgedCount: deletedCount,
+            lastPurgedCount: 0,
           }
         },
         { upsert: true }
@@ -297,21 +297,22 @@ export class SchedulerService {
       await SystemLog.create({
         level: 'INFO',
         source: 'DATABASE',
-        message: `Archived tender retention cleanup (${invokedBy}): purged ${deletedCount} record(s) older than 30 days.`,
-        metadata: { cutoffDate, deletedCount, countBefore }
+        message: `Archived tender retention check (${invokedBy}): ${countEligible} record(s) older than 30 days found and retained (no deletion).`,
+        metadata: { cutoffDate, countEligible }
       }).catch(() => {});
 
       return {
         success: true,
-        deletedCount,
+        deletedCount: 0,
+        retainedCount: countEligible,
         cutoffDate,
       };
     } catch (err) {
-      logger.error(`[Scheduler] Error during archive purge: ${err.message}`);
+      logger.error(`[Scheduler] Error during archive retention check: ${err.message}`);
       await SystemLog.create({
         level: 'ERROR',
         source: 'DATABASE',
-        message: `Failed to purge expired archived tenders: ${err.message}`,
+        message: `Failed archive retention check: ${err.message}`,
         stack: err.stack
       }).catch(() => {});
       throw err;
