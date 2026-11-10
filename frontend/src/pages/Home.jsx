@@ -216,7 +216,7 @@ export default function Home() {
           className="home-hero-art absolute inset-0 pointer-events-none"
           style={{ backgroundImage: "url('/images/TenderHUB1.jpg')" }}
         />
-        <div className="home-hero-main max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <div className="home-hero-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <div className="relative z-10 max-w-2xl">
             
             {/* Official Procurement Badge */}
@@ -226,7 +226,7 @@ export default function Home() {
             </div>
 
             {/* Primary Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.04] font-display">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-[-0.035em] leading-[1.04] font-display">
               Government tenders across J&amp;K, Ladakh, Punjab &amp; Himachal
             </h1>
 
@@ -327,7 +327,7 @@ export default function Home() {
 
         {/* Bottom Hero Stats Bar */}
         <div className="home-statbar relative z-10 bg-white dark:bg-[#18191E] border-t border-slate-200 dark:border-slate-800 w-full">
-          <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             
             {/* Real Procurement Counters */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">
@@ -389,17 +389,14 @@ export default function Home() {
           SECTION 2: "ACTIVE PROCUREMENT SECTORS & DEPARTMENTS" (User Image 1)
           Styled in the clean Techbyte card format with badges and arrows
           ========================================================================= */}
-      <section className="home-pipeline py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#141519]">
-        <div className="max-w-[90rem] mx-auto">
+      <section className="home-pipeline py-16 sm:py-24 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#141519]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Heading & Link */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-2 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
-                <span>ACTIVE PIPELINE</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl font-black font-display text-slate-900 dark:text-white">
+              <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-2">Active pipeline</p>
+              <h2 className="text-xl sm:text-3xl font-bold tracking-[-0.025em] font-display text-slate-900 dark:text-white">
                 Live opportunities by authority
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -409,7 +406,7 @@ export default function Home() {
 
             <Link
               to="/tenders"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-techCoral hover:underline uppercase tracking-wider shrink-0"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-techCoral hover:underline underline-offset-4 shrink-0"
             >
                 <span>Explore more</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -437,20 +434,20 @@ export default function Home() {
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-3">
-                          <span className="text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate">
+                          <span className="text-xs font-medium text-dalBlue dark:text-blue-400 whitespace-nowrap shrink-0">
                             {item.count}
                           </span>
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug" title={item.subtitle}>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug truncate min-w-0" title={item.subtitle}>
                             {item.subtitle}
                           </span>
                         </div>
-                        <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
+                        <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
                           {item.title}
                         </h3>
                       </div>
                       <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                         <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-medium">Estimated Value</span>
+                          <span className="block text-[11px] text-slate-400">Estimated value</span>
                           <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{item.value}</span>
                         </div>
                         <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-1" />
@@ -469,18 +466,14 @@ export default function Home() {
           SECTION 3: "BROWSE TENDERS BY WORK DOMAIN" (User Image 3)
           Styled in the Techbyte "WHAT WE DO" aesthetic with peach corner indicators
           ========================================================================= */}
-      <section className="home-domains relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#121316] border-b border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="max-w-[90rem] mx-auto relative z-10">
+      <section className="home-domains relative py-20 sm:py-28 bg-white dark:bg-[#121316] border-b border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Centered Pill Badge & Heading */}
           <Reveal className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-4 bg-white dark:bg-slate-800 shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
-              <span>CLASSIFIED SECTORS</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
-            </div>
+            <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-3">Classified sectors</p>
 
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white font-display tracking-tight leading-tight">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-[-0.025em] text-slate-900 dark:text-white font-display tracking-tight leading-tight">
               Browse by work domain
             </h2>
             <p className="mt-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
@@ -519,8 +512,8 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-techCoral group-hover:underline uppercase">
-                    <span>Explore Notices</span>
+                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-sm font-semibold text-techCoral">
+                    <span className="group-hover:underline underline-offset-4">Explore notices</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
@@ -535,8 +528,8 @@ export default function Home() {
           SECTION 4: "PROCUREMENT INTEGRITY & VERIFICATION" (User Image 4)
           Styled using Techbyte 2-column layout with TenderHub2.jpg on the left!
           ========================================================================= */}
-      <section className="home-integrity py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-slate-50/70 dark:bg-[#141519] border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-[90rem] mx-auto">
+      <section className="home-integrity py-20 sm:py-28 bg-slate-50/70 dark:bg-[#141519] border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* Left Column: Image TenderHub2.jpg in elegant rounded frame */}
@@ -555,14 +548,10 @@ export default function Home() {
             <Reveal className="lg:col-span-7 space-y-6">
               
               {/* Top Badge: Circle icon + Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-techCoral"></span>
-                <span>VERIFIED PUBLIC PROCUREMENT</span>
-                <span className="w-2 h-2 rounded-full bg-techCoral"></span>
-              </div>
+              <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400">Verified public procurement</p>
 
               {/* Section Headline */}
-              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white font-display tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-[-0.025em] text-slate-900 dark:text-white font-display tracking-tight leading-tight">
                 Official data. Permanent archives. Clear locations.
               </h2>
 
@@ -625,9 +614,9 @@ export default function Home() {
               <div className="pt-2">
                 <Link
                   to="/tenders"
-                  className="inline-flex items-center justify-center px-7 py-3.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm tracking-wide rounded-full shadow-md transition-all uppercase cursor-pointer"
+                  className="inline-flex items-center justify-center h-11 px-6 bg-techCoral hover:bg-techCoral-dark text-white font-semibold text-sm rounded-lg active:scale-[0.98] transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  Explore All Tenders
+                  Browse all tenders
                 </Link>
               </div>
 
@@ -642,16 +631,13 @@ export default function Home() {
           Exact live cards with source ID, title, department, date, and values
           ========================================================================= */}
       {stats?.latestTenders && stats.latestTenders.length > 0 && (
-        <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-[90rem] mx-auto">
+        <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           
           <Reveal className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-bold tracking-widest text-slate-700 dark:text-slate-300 uppercase mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-techCoral"></span>
-                <span>LATEST NOTICES</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl font-black font-display text-slate-900 dark:text-white">
-                Recent Tender Announcements
+              <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-2">Latest notices</p>
+              <h2 className="text-xl sm:text-3xl font-bold tracking-[-0.025em] font-display text-slate-900 dark:text-white">
+                Recent tender announcements
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Latest procurement notices published by public engineering divisions and municipal authorities.
@@ -660,7 +646,7 @@ export default function Home() {
 
             <Link
               to="/tenders"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-techCoral hover:underline uppercase tracking-wider"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-techCoral hover:underline underline-offset-4"
             >
               <span>View All {stats?.activeTendersCount ?? 1288} Tenders</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -723,13 +709,13 @@ export default function Home() {
 
                   <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                     <div>
-                      <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-medium">Estimated Value</span>
+                      <span className="block text-[11px] text-slate-400">Estimated value</span>
                       <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                         {formatCurrencyINR(tender.estimatedValue)}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-medium">Closing Date</span>
+                      <span className="block text-[11px] text-slate-400">Closing date</span>
                       <span className="font-mono text-xs text-slate-600 dark:text-slate-300">
                         {formatDateDisplay(tender.closingDate)}
                       </span>

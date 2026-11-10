@@ -159,162 +159,163 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
     }
   };
 
+  const closingText = daysLeft === null
+    ? null
+    : daysLeft < 0 ? 'Closed' : daysLeft === 0 ? 'Closes today' : daysLeft === 1 ? '1 day left' : `${daysLeft} days left`;
+  const valueLabel = tender.estimatedValue ? 'Estimated value' : 'EMD';
+  const valueText = tender.estimatedValue
+    ? formatCurrencyINR(tender.estimatedValue)
+    : (tender.emdAmount > 0 ? formatCurrencyINR(tender.emdAmount) : 'Exempted');
+
+  const metaItems = [stateLabel, tender.productCategory].filter(Boolean);
+  const secondaryBtn = 'inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 hover:border-slate-300 dark:hover:bg-slate-800 dark:hover:border-slate-600 active:scale-[0.98] transition-[background-color,border-color,transform] duration-150 cursor-pointer';
+
   return (
     <article
-      className={`gem-bid-row bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors group ${
+      className={`gem-bid-row tender-card group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 ${
         isBlurred ? 'filter blur-[4px] select-none pointer-events-none opacity-45' : ''
       }`}
     >
-      <div className="gem-bid-content">
-        {/* Top Badges & Actions */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {stateLabel && (
-              <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
-                <span>{stateLabel}</span>
-              </div>
-            )}
-            {tender.productCategory && (
-              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded text-[10px] font-medium truncate max-w-[170px]">
-                {tender.productCategory}
-              </span>
-            )}
-            {tender.isMultiTender && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
-                Multi-Work NIT
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {isUrgent && (
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold">
-                <Clock className="w-3 h-3" />
-                <span>Closing Soon</span>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleBookmark(tender);
-              }}
-              className={`p-1.5 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                bookmarked
-                  ? 'bg-red-50 border-red-200 text-chinarRed dark:bg-red-950/40 dark:border-red-800 shadow-xs'
-                  : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-chinarRed hover:border-red-200 hover:bg-red-50/50 dark:hover:bg-red-950/20 bg-white dark:bg-slate-800'
-              }`}
-              title={bookmarked ? 'Remove from Saved' : 'Save this Tender'}
-              aria-label="Bookmark Tender"
-            >
-              <Heart className={`w-3.5 h-3.5 transition-transform active:scale-125 ${bookmarked ? 'fill-current text-chinarRed' : ''}`} />
-            </button>
-          </div>
+      {/* Meta line: state, category, deadline urgency, save */}
+      <div className="flex items-center justify-between gap-3 min-h-[28px]">
+        <div className="flex items-center gap-2 min-w-0 text-xs text-slate-500 dark:text-slate-400">
+          {metaItems.map((item, i) => (
+            <span key={item} className={`flex items-center gap-2 min-w-0 ${i === 0 ? 'font-medium text-dalBlue dark:text-blue-400 shrink-0' : 'truncate'}`}>
+              {i > 0 && <span aria-hidden="true" className="w-0.5 h-0.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />}
+              <span className="truncate">{item}</span>
+            </span>
+          ))}
+          {tender.isMultiTender && (
+            <span className="shrink-0 px-1.5 py-px rounded text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10">
+              Multi-work NIT
+            </span>
+          )}
         </div>
 
-        {/* Bid / NIT Number */}
-        <div>
-          <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-tight block">
-            Bid Number
-          </span>
-          <a
-            href={portalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleBidNumberClick}
-            className="text-sm font-mono font-black text-dalBlue dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-            title={`Copy bid number and open the ${portalName} tender portal`}
+        <div className="flex items-center gap-2 shrink-0">
+          {isUrgent && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400">
+              <Clock className="w-3.5 h-3.5" />
+              {closingText}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBookmark(tender);
+            }}
+            className={`grid place-items-center w-8 h-8 rounded-lg transition-colors cursor-pointer active:scale-95 ${
+              bookmarked
+                ? 'text-chinarRed bg-red-50 dark:bg-red-950/40'
+                : 'text-slate-400 hover:text-chinarRed hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            title={bookmarked ? 'Remove from saved' : 'Save this tender'}
+            aria-label={bookmarked ? 'Remove from saved' : 'Save this tender'}
+            aria-pressed={bookmarked}
           >
-            <span>{bidNumber || 'NIT-ACTIVE'}</span>
-            <ExternalLink className="w-3 h-3 shrink-0" />
-          </a>
-          <span
-            aria-live="polite"
-            className={`ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}
-          >
-            {copied && (<><Check className="w-3 h-3" /> Copied</>)}
-          </span>
-        </div>
-
-        {/* Title / Item Category */}
-        <h2
-          onClick={handleCardClick}
-          className="text-sm font-semibold text-slate-900 dark:text-white leading-snug group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors break-words cursor-pointer"
-        >
-          {cleanTitle}
-        </h2>
-
-        {/* Ministry / Organisation & Location */}
-        <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-          <div className="flex items-start gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-            <span className="break-words" title={fullOrganisation}>{cleanDepartment}</span>
-          </div>
-          <div className="flex items-start gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0 mt-0.5" />
-            <span className="font-semibold text-slate-700 dark:text-slate-200 break-words">
-              {locationText}
-            </span>
-          </div>
-        </div>
-
-        {/* Financials & Dates */}
-        <div className="gem-bid-financials grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-          <div className="p-2">
-            <span className="text-slate-400 block font-medium">
-              {tender.estimatedValue ? 'Estimated Value' : 'EMD Amount'}
-            </span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-              {tender.estimatedValue 
-                ? formatCurrencyINR(tender.estimatedValue) 
-                : (tender.emdAmount > 0 ? formatCurrencyINR(tender.emdAmount) : 'Exempted / Zero')}
-            </span>
-          </div>
-          <div className="p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/25">
-            <span className="text-blue-700 dark:text-blue-300 block font-semibold">Published</span>
-            <span className="font-mono font-bold text-blue-900 dark:text-blue-100">
-              {formatDateDisplay(tender.publishedDateStr || tender.publishedDate || tender.publishedDateOnly)}
-            </span>
-          </div>
-          <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 ring-1 ring-inset ring-rose-100 dark:ring-rose-900/50">
-            <span className="text-rose-600 dark:text-rose-300 block font-semibold">Bid Closing</span>
-            <span className="font-mono font-bold text-rose-700 dark:text-rose-200">
-              {formatDateDisplay(tender.closingDateStr || tender.bidSubmissionEndDateStr || tender.closingDate)}
-            </span>
-          </div>
+            <Heart className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Actions Bar: View bid, AI analysis, Download PDF all at one place */}
-      <div className="gem-bid-actions flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={handleCardClick}
-          className="py-2 px-3 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
-        >
-          View bid
-        </button>
-        <button
-          type="button"
-          onClick={handleAiAnalysis}
-          className="inline-flex items-center gap-1 py-1.5 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Analyze with AI Estimator"
-        >
-          <Sparkles className="w-3 h-3 text-dalBlue dark:text-blue-400" />
-          <span>AI analysis</span>
-        </button>
-        <a
-          href={docUrl || `/tenders/${tenderId}`}
-          target={isGeM || !isArchivedR2Document ? (docUrl ? "_blank" : undefined) : undefined}
-          download={isGeM || isArchivedR2Document ? true : undefined}
-          rel="noopener noreferrer"
-          onClick={handlePdfClick}
-          className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-          title="Download Tender PDF"
-        >
-          <Download className="w-3 h-3" />
-          <span>PDF</span>
-        </a>
+      {/* Title */}
+      <h2
+        onClick={handleCardClick}
+        className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-slate-900 dark:text-white line-clamp-2 break-words cursor-pointer group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors"
+        title={cleanTitle}
+      >
+        {cleanTitle}
+      </h2>
+
+      {/* Department and location */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-500 dark:text-slate-400">
+        <span className="inline-flex items-center gap-1.5 min-w-0" title={fullOrganisation}>
+          <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+          <span className="truncate">{cleanDepartment}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 min-w-0 text-slate-700 dark:text-slate-200">
+          <MapPin className="w-3.5 h-3.5 shrink-0 text-dalBlue dark:text-blue-400" />
+          <span className="truncate">{locationText}</span>
+        </span>
+      </div>
+
+      {/* Facts and actions */}
+      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-end gap-4">
+        <dl className="grid grid-cols-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-3 flex-1 min-w-0">
+          <div className="min-w-0 col-span-2 sm:col-span-1">
+            <dt className="text-[11px] text-slate-400 dark:text-slate-500">Bid number</dt>
+            <dd className="mt-0.5 flex items-center gap-1.5 min-w-0">
+              <a
+                href={portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleBidNumberClick}
+                className="inline-flex items-center gap-1 min-w-0 font-mono text-[13px] font-medium text-dalBlue dark:text-blue-400 hover:underline underline-offset-2"
+                title={`Copy bid number and open the ${portalName} tender portal`}
+              >
+                <span className="truncate">{bidNumber || 'NIT-ACTIVE'}</span>
+                <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />
+              </a>
+              <span
+                aria-live="polite"
+                className={`inline-flex items-center gap-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}
+              >
+                {copied && (<><Check className="w-3 h-3" /> Copied</>)}
+              </span>
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-[11px] text-slate-400 dark:text-slate-500">{valueLabel}</dt>
+            <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-slate-900 dark:text-slate-100">{valueText}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-[11px] text-slate-400 dark:text-slate-500">Published</dt>
+            <dd className="mt-0.5 text-[13px] tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-200">
+              {formatDateDisplay(tender.publishedDateStr || tender.publishedDate || tender.publishedDateOnly)}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-[11px] text-slate-400 dark:text-slate-500">Bid closing</dt>
+            <dd className={`mt-0.5 text-[13px] tabular-nums whitespace-nowrap ${isUrgent ? 'font-semibold text-rose-600 dark:text-rose-400' : 'font-medium text-slate-900 dark:text-slate-100'}`}>
+              {formatDateDisplay(tender.closingDateStr || tender.bidSubmissionEndDateStr || tender.closingDate)}
+              {closingText && !isUrgent && daysLeft > 0 && (
+                <span className="block text-[11px] font-normal text-slate-400 dark:text-slate-500">{closingText}</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleCardClick}
+            className="inline-flex items-center justify-center h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-dalBlue hover:bg-dalBlue-700 active:scale-[0.98] transition-[background-color,transform] duration-150 cursor-pointer"
+          >
+            View bid
+          </button>
+          <button
+            type="button"
+            onClick={handleAiAnalysis}
+            className={secondaryBtn}
+            title="Analyse with AI Estimator"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
+            AI analysis
+          </button>
+          <a
+            href={docUrl || `/tenders/${tenderId}`}
+            target={isGeM || !isArchivedR2Document ? (docUrl ? "_blank" : undefined) : undefined}
+            download={isGeM || isArchivedR2Document ? true : undefined}
+            rel="noopener noreferrer"
+            onClick={handlePdfClick}
+            className={secondaryBtn}
+            title="Download tender PDF"
+          >
+            <Download className="w-3.5 h-3.5" />
+            PDF
+          </a>
+        </div>
       </div>
     </article>
   );
