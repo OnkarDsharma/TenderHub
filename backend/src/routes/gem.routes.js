@@ -1,7 +1,7 @@
 /**
  * @file backend/src/routes/gem.routes.js
  * @description API endpoints for Government e-Marketplace (GeM) bids delivered
- * to Jammu & Kashmir, Ladakh, Himachal Pradesh and Punjab.
+ * to Jammu & Kashmir, Ladakh, Himachal Pradesh, Punjab, Haryana and Delhi.
  *
  * Geography is `consigneeStates`: the states whose official GeM consignee
  * search lists the bid. Records without it (out-of-region, or from the old

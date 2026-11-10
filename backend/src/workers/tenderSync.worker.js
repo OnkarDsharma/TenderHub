@@ -5,7 +5,10 @@ import { JKTenderDateAdapter } from '../services/adapters/JKTenderDateAdapter.js
 import { JKTenderAdapter } from '../services/adapters/JKTenderAdapter.js';
 import { punjabTenderAdapter } from '../services/adapters/PunjabTenderAdapter.js';
 import { hpTenderAdapter } from '../services/adapters/HPTenderAdapter.js';
+import { HARYANA_PORTAL, HARYANA_BASE_URL, HARYANA_STATE } from '../services/adapters/HaryanaTenderAdapter.js';
+import { DELHI_PORTAL, DELHI_BASE_URL, DELHI_STATE } from '../services/adapters/DelhiTenderAdapter.js';
 import { gemAdapter } from '../services/adapters/GeMAdapter.js';
+import { NIC_PORTALS } from '../config/nicPortals.js';
 import SyncJob from '../models/SyncJob.js';
 import Tender from '../models/Tender.js';
 import SystemLog from '../models/SystemLog.js';
@@ -36,7 +39,6 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
 
   // Dedicated Job: Retry Missing Documents Only
   if (job.name === 'retry-missing-pdfs') {
-    const dateAdapter = new JKTenderDateAdapter();
     try {
       logger.info(`[Worker] Running pending documents recovery job...`);
       await telegramService.sendCrawlStarted({
@@ -45,7 +47,19 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
         slotLabel: slotLabel || 'Document Recovery Sweep'
       }).catch(() => {});
 
-      const result = await dateAdapter.fetchPendingDocuments({ limit: 50, headless: true });
+      // Each pending record belongs to one portal; recover it on that portal.
+      const result = { recoveredCount: 0, totalPdfsSecured: 0, totalChecked: 0 };
+      for (const { portalName, baseUrl, state } of NIC_PORTALS) {
+        try {
+          const dateAdapter = new JKTenderDateAdapter(portalName, baseUrl, state);
+          const res = await dateAdapter.fetchPendingDocuments({ limit: 50, headless: true });
+          result.recoveredCount += res.recoveredCount || 0;
+          result.totalPdfsSecured += res.totalPdfsSecured || 0;
+          result.totalChecked += res.totalChecked || 0;
+        } catch (portalErr) {
+          logger.error(`[Worker] ⚠️ ${portalName} pending documents recovery error: ${portalErr.message}`);
+        }
+      }
 
       syncRecord.status = 'completed';
       syncRecord.pdfsDownloaded = result.totalPdfsSecured || 0;
@@ -70,13 +84,13 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
     }
   }
 
-  // Standard Job: Multi-Region Sequential Ingestion (JK, Punjab, HP, GeM)
+  // Standard Job: Multi-Region Sequential Ingestion (JK, Punjab, HP, Ladakh, Haryana, Delhi, GeM)
   try {
     logger.info(`[Worker] 🚀 Starting 6-slot automated ingestion (${slotLabel || 'Ad-hoc'})...`);
 
     await telegramService.sendCrawlStarted({
       mode: 'DAILY',
-      targetLimit: 'Sequential Regional Sweep (JK, Punjab, HP, GeM)',
+      targetLimit: 'Sequential Regional Sweep (JK, Punjab, HP, Ladakh, Haryana, Delhi, GeM)',
       slotLabel: slotLabel || 'Automated Ingestion'
     }).catch(() => {});
 
@@ -161,7 +175,35 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
       logger.error(`[Worker] ⚠️ Ladakh Tenders ingestion error: ${ladakhErr.message}`);
     }
 
-    // 5. GeM sweep: consignee-state listing for J&K, Ladakh, HP, Punjab + capped PDF pass
+    // 5. Haryana (Deep department-by-department date sweep)
+    try {
+      logger.info('[Worker] 🌻 Ingesting Today\'s Haryana Tenders across all organisations...');
+      const hrDateAdapter = new JKTenderDateAdapter(HARYANA_PORTAL, HARYANA_BASE_URL, HARYANA_STATE);
+      const res = await hrDateAdapter.fetchTendersByDate({ targetDate: 'today', headless: true });
+      totalIngested += res.totalIngested || 0;
+      totalSkipped += res.totalSkippedAlreadyComplete || 0;
+      totalPdfs += res.totalPdfsSecured || 0;
+      totalBoqs += res.totalBoqsSecured || 0;
+      logger.info(`[Worker] ✅ Haryana complete (New: ${res.totalIngested || 0}, Skipped: ${res.totalSkippedAlreadyComplete || 0}, PDFs: ${res.totalPdfsSecured || 0})`);
+    } catch (hrErr) {
+      logger.error(`[Worker] ⚠️ Haryana Tenders ingestion error: ${hrErr.message}`);
+    }
+
+    // 6. Delhi (Deep department-by-department date sweep)
+    try {
+      logger.info('[Worker] 🏙️ Ingesting Today\'s Delhi Tenders across all organisations...');
+      const dlDateAdapter = new JKTenderDateAdapter(DELHI_PORTAL, DELHI_BASE_URL, DELHI_STATE);
+      const res = await dlDateAdapter.fetchTendersByDate({ targetDate: 'today', headless: true });
+      totalIngested += res.totalIngested || 0;
+      totalSkipped += res.totalSkippedAlreadyComplete || 0;
+      totalPdfs += res.totalPdfsSecured || 0;
+      totalBoqs += res.totalBoqsSecured || 0;
+      logger.info(`[Worker] ✅ Delhi complete (New: ${res.totalIngested || 0}, Skipped: ${res.totalSkippedAlreadyComplete || 0}, PDFs: ${res.totalPdfsSecured || 0})`);
+    } catch (dlErr) {
+      logger.error(`[Worker] ⚠️ Delhi Tenders ingestion error: ${dlErr.message}`);
+    }
+
+    // 7. GeM sweep: consignee-state listing for J&K, Ladakh, HP, Punjab, Haryana, Delhi + capped PDF pass
     try {
       logger.info('[Worker] 📦 Syncing GeM bids by consignee state...');
       const gemReport = await gemAdapter.syncConsigneeStates({ states: 'ALL', pdfLimit: 150, delay: 1200 });

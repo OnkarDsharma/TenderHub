@@ -415,7 +415,7 @@ export class SchedulerService {
    */
   async triggerGeMSync(_maxPages = 3, limit = 150) {
     try {
-      logger.info(`[Scheduler] ⏰ Starting automated daily GeM multi-state sweep (JK, Ladakh, HP, Punjab)...`);
+      logger.info(`[Scheduler] ⏰ Starting automated daily GeM multi-state sweep (JK, Ladakh, HP, Punjab, Haryana, Delhi)...`);
       const { gemAdapter } = await import('./adapters/GeMAdapter.js');
       const report = await gemAdapter.syncConsigneeStates({ states: 'ALL', pdfLimit: limit, delay: 1200 });
       const totalSaved = Object.values(report.states).reduce((sum, st) => sum + (st.listed || 0), 0);
@@ -424,7 +424,7 @@ export class SchedulerService {
       await SystemLog.create({
         level: 'INFO',
         source: 'CRON',
-        message: `Automated daily GeM sweep completed: ${totalSaved} listed bids across 4 northern states, ${report.pdf.completed} PDFs parsed, ${report.delisted} no longer listed.`,
+        message: `Automated daily GeM sweep completed: ${totalSaved} listed bids across 6 northern states, ${report.pdf.completed} PDFs parsed, ${report.delisted} no longer listed.`,
       }).catch(() => {});
     } catch (err) {
       logger.error(`[Scheduler] Automated daily GeM sweep notice: ${err.message}`);

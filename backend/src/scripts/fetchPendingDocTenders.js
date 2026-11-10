@@ -13,13 +13,17 @@
  *   # Check a specific tender:
  *   node src/scripts/fetchPendingDocTenders.js --id "2026_SWCD_325683_1"
  * 
- *   # Limit batch size:
+ *   # Limit batch size (per portal):
  *   node src/scripts/fetchPendingDocTenders.js --limit 20
+ *
+ *   # Only one portal (default: all portals):
+ *   node src/scripts/fetchPendingDocTenders.js --state haryana
  */
 
 import 'dotenv/config';
 import { connectDB, closeDB } from '../config/db.js';
 import { JKTenderDateAdapter } from '../services/adapters/JKTenderDateAdapter.js';
+import { resolveNicPortals } from '../config/nicPortals.js';
 import { telegramService } from '../services/telegram.service.js';
 
 async function main() {
@@ -29,6 +33,7 @@ async function main() {
   let forceAll = false;
   let specificId = null;
   let isHeadless = true;
+  let stateArg = 'ALL';
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -39,6 +44,9 @@ async function main() {
       forceAll = true;
     } else if ((a === '--id' || a === '-t') && args[i + 1]) {
       specificId = args[i + 1];
+      i++;
+    } else if ((a === '--state' || a === '--portal') && args[i + 1]) {
+      stateArg = args[i + 1];
       i++;
     } else if (a === '--headed') {
       isHeadless = false;
@@ -51,7 +59,9 @@ async function main() {
   const startTime = Date.now();
 
   console.log(`\n======================================================================`);
-  console.log(`🚀 JKTENDERS PENDING DOCUMENTS RECOVERY RUNNER`);
+  const portals = resolveNicPortals(stateArg);
+  console.log(`🚀 NIC PORTALS PENDING DOCUMENTS RECOVERY RUNNER`);
+  console.log(`🏛️ Portals:           ${portals.map((p) => p.portalName).join(', ')}`);
   console.log(`======================================================================`);
   console.log(`🎯 Mode:              ${forceAll ? 'CHECK ALL PENDING' : 'READY TO DOWNLOAD ONLY'}`);
   console.log(`📋 Max Limit:         ${limit}`);
@@ -68,11 +78,11 @@ async function main() {
     });
   } catch {}
 
-  const adapter = new JKTenderDateAdapter();
+  let adapter = null;
 
   const handleInterrupt = async (signal) => {
     console.log(`\n🛑 Received ${signal}. Closing browser and cleaning up...`);
-    await adapter.closeBrowser().catch(() => {});
+    await adapter?.closeBrowser().catch(() => {});
     await closeDB();
     process.exit(0);
   };
@@ -80,12 +90,25 @@ async function main() {
   process.once('SIGTERM', () => handleInterrupt('SIGTERM'));
 
   try {
-    const summary = await adapter.fetchPendingDocuments({
-      limit,
-      headless: isHeadless,
-      all: forceAll,
-      id: specificId
-    });
+    const summary = {
+      totalChecked: 0, recoveredCount: 0, stillPendingCount: 0,
+      totalPdfsSecured: 0, totalBoqsSecured: 0, totalCaptchaAttempts: 0, totalCaptchaSuccess: 0
+    };
+    for (const { portalName, baseUrl, state } of portals) {
+      console.log(`\n🏛️ ${state} (${portalName})`);
+      adapter = new JKTenderDateAdapter(portalName, baseUrl, state);
+      try {
+        const res = await adapter.fetchPendingDocuments({
+          limit,
+          headless: isHeadless,
+          all: forceAll,
+          id: specificId
+        });
+        for (const key of Object.keys(summary)) summary[key] += res?.[key] || 0;
+      } catch (portalErr) {
+        console.error(`❌ ${portalName} recovery failed: ${portalErr.message}`);
+      }
+    }
 
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const elapsedMinutes = (elapsedSeconds / 60).toFixed(1);

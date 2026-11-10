@@ -77,7 +77,7 @@ export const getTenders = async (req, res, next) => {
     // 2. Build array of base filter conditions (Category, Search, Department, Location, Portal, etc.)
     const baseConditions = [];
 
-    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
+    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana, Delhi)
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {
       baseConditions.push({ state: { $regex: `^${escapeRegex(state)}$`, $options: 'i' } });
     }
@@ -95,6 +95,10 @@ export const getTenders = async (req, res, next) => {
         baseConditions.push({ sourcePortal: { $regex: /hp_?tenders?/i } });
       } else if (/^punjab_?tenders?$/i.test(cleanPortal)) {
         baseConditions.push({ sourcePortal: { $regex: /punjab/i } });
+      } else if (/^(hr|haryana)_?tenders?$/i.test(cleanPortal)) {
+        baseConditions.push({ sourcePortal: 'HR_TENDERS' });
+      } else if (/^(dl|delhi)_?tenders?$/i.test(cleanPortal)) {
+        baseConditions.push({ sourcePortal: 'DL_TENDERS' });
       } else {
         baseConditions.push({ sourcePortal: { $regex: `^${escapeRegex(cleanPortal)}$`, $options: 'i' } });
       }
@@ -708,7 +712,7 @@ export const getTenderStats = async (req, res, next) => {
     const { portal, state } = req.query;
     const portalFilter = (typeof portal === 'string' && portal.trim()) ? { sourcePortal: portal.trim().slice(0, 50) } : { sourcePortal: { $ne: 'GEM' } };
 
-    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh)
+    // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana, Delhi)
     const stateFilter = (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL')
       ? { state: { $regex: `^${state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
       : {};

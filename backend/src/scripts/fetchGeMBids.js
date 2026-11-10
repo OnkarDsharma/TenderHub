@@ -1,6 +1,6 @@
 /**
  * @file backend/src/scripts/fetchGeMBids.js
- * @description CLI for the GeM consignee-state sync (J&K, Ladakh, HP, Punjab).
+ * @description CLI for the GeM consignee-state sync (J&K, Ladakh, HP, Punjab, Haryana, Delhi).
  *
  * Usage:
  *   node src/scripts/fetchGeMBids.js                       # all 4 states, up to 250 PDFs
@@ -478,7 +478,7 @@ async function seedSyntheticDemoBids(filterState = null) {
 async function run() {
   try {
     logger.info('====================================================');
-    logger.info('   GeM consignee-state sync (J&K, Ladakh, HP, Punjab)');
+    logger.info('   GeM consignee-state sync (J&K, Ladakh, HP, Punjab, Haryana, Delhi)');
     logger.info('====================================================');
 
     await connectDB();

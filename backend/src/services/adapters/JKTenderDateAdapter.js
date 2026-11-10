@@ -325,7 +325,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
               // Check if already in MongoDB with documents completed (with resilient network retry)
               const existing = await withDbRetry(() =>
                 Tender.findOne({
-                  sourcePortal: 'JK_TENDERS',
+                  sourcePortal: this.portalName || 'JK_TENDERS',
                   sourceTenderId: rowSummary.sourceTenderId
                 }).lean()
               ).catch((dbErr) => {
@@ -899,7 +899,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
                 { sourceTenderId: saved.sourceTenderId },
                 {
                 $set: {
-                  sourcePortal: 'JK_TENDERS',
+                  sourcePortal: this.portalName || 'JK_TENDERS',
                   sourceTenderId: saved.sourceTenderId,
                   tenderReferenceNumber: saved.tenderReferenceNumber || '',
                   title: saved.title,
@@ -990,7 +990,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
               { sourceTenderId: saved.sourceTenderId },
               {
               $set: {
-                sourcePortal: 'JK_TENDERS',
+                sourcePortal: this.portalName || 'JK_TENDERS',
                 sourceTenderId: saved.sourceTenderId,
                 tenderReferenceNumber: saved.tenderReferenceNumber || '',
                 title: saved.title,
@@ -1952,7 +1952,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
     const specificId = options.id || null;
 
     console.log(`\n======================================================================`);
-    console.log(`🚀 JKTENDERS PENDING DOCUMENTS RECOVERY WORKER`);
+    console.log(`🚀 ${this.portalName || 'JK_TENDERS'} PENDING DOCUMENTS RECOVERY WORKER`);
     console.log(`======================================================================`);
     console.log(`🎯 Mode:              ${forceAll ? 'CHECK ALL PENDING' : 'READY TO DOWNLOAD ONLY'}`);
     console.log(`📋 Max Limit:         ${limit}`);
@@ -1962,6 +1962,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
 
     const now = new Date();
     const query = {
+      sourcePortal: this.portalName || 'JK_TENDERS',
       status: { $in: ['AWAITING_DOWNLOAD_DATE', 'READY_TO_DOWNLOAD'] }
     };
 

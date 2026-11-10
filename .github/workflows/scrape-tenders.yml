@@ -112,6 +112,14 @@ jobs:
             state: ladakh
             name: "🏔️ Ladakh"
             extra: ""
+          - key: haryana
+            state: haryana
+            name: "🌻 Haryana"
+            extra: ""
+          - key: delhi
+            state: delhi
+            name: "🏙️ Delhi"
+            extra: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -180,7 +188,7 @@ jobs:
     needs: guard
     if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -215,7 +223,7 @@ jobs:
           # Without pipefail, `| tee` hides the script's exit code and a failed sync shows as green.
           set -o pipefail
           cd backend
-          # Full consignee-state listing for all 4 states + up to 150 new/changed PDFs.
+          # Full consignee-state listing for all 6 states (J&K, Ladakh, HP, Punjab, Haryana, Delhi) + up to 150 new/changed PDFs.
           node src/scripts/fetchGeMBids.js --state=ALL --pdf-limit 150 --delay 800 2>&1 | tee ../scraper_gem.log
 
       - name: Generate Job Summary

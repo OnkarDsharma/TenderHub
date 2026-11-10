@@ -149,7 +149,14 @@ export function parseGeMBidPdfText(rawText) {
     'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'SAS Nagar',
     'Hoshiarpur', 'Pathankot', 'Moga', 'Batala', 'Abohar', 'Malerkotla', 'Khanna',
     'Phagwara', 'Muktsar', 'Barnala', 'Firozpur', 'Kapurthala', 'Faridkot', 'Sangrur',
-    'Fazilka', 'Gurdaspur', 'Rupnagar', 'Ropar', 'Tarn Taran', 'Fatehgarh Sahib', 'Nawanshahr'
+    'Fazilka', 'Gurdaspur', 'Rupnagar', 'Ropar', 'Tarn Taran', 'Fatehgarh Sahib', 'Nawanshahr',
+    // Haryana
+    'Gurugram', 'Gurgaon', 'Faridabad', 'Panipat', 'Ambala', 'Karnal', 'Hisar', 'Rohtak',
+    'Sonipat', 'Panchkula', 'Yamunanagar', 'Kurukshetra', 'Sirsa', 'Bhiwani', 'Jind',
+    'Kaithal', 'Rewari', 'Palwal', 'Jhajjar', 'Fatehabad', 'Mahendragarh', 'Narnaul', 'Nuh',
+    'Charkhi Dadri', 'Bahadurgarh', 'Hansi', 'Manesar',
+    // Delhi
+    'New Delhi', 'Delhi', 'Dwarka', 'Rohini', 'Narela', 'Shahdara', 'Najafgarh', 'Okhla'
   ];
 
   const detectedLocations = [];
@@ -158,6 +165,10 @@ export function parseGeMBidPdfText(rawText) {
     if (deliveryAddressBlock && regex.test(deliveryAddressBlock)) {
       detectedLocations.push(loc);
     }
+  }
+  // "New Delhi" also matches the bare "Delhi" entry; keep only the specific one.
+  if (detectedLocations.includes('New Delhi')) {
+    detectedLocations.splice(detectedLocations.indexOf('Delhi'), detectedLocations.includes('Delhi') ? 1 : 0);
   }
 
   // Parse dates into JS Date objects

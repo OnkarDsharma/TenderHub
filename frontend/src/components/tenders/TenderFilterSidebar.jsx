@@ -27,6 +27,8 @@ export const PORTAL_OPTIONS = [
   { value: 'CPPP', label: 'Central PPP (CPPP)', description: 'eprocure.gov.in (Central Public Procurement)' },
   { value: 'HP_TENDERS', label: 'Himachal Pradesh Tenders', description: 'hptenders.gov.in' },
   { value: 'PUNJAB_TENDERS', label: 'Punjab Tenders', description: 'eproc.punjab.gov.in' },
+  { value: 'HR_TENDERS', label: 'Haryana Tenders', description: 'etenders.hry.nic.in' },
+  { value: 'DL_TENDERS', label: 'Delhi Tenders', description: 'govtprocurement.delhi.gov.in' },
 ];
 
 // State Options
@@ -36,6 +38,8 @@ export const STATE_OPTIONS = [
   { value: 'Himachal Pradesh', label: 'Himachal Pradesh' },
   { value: 'Punjab', label: 'Punjab' },
   { value: 'Ladakh', label: 'Ladakh' },
+  { value: 'Haryana', label: 'Haryana' },
+  { value: 'Delhi', label: 'Delhi' },
 ];
 
 // Districts per State
@@ -95,6 +99,28 @@ export const DISTRICTS_BY_STATE = {
     { value: 'Leh', label: 'Leh' },
     { value: 'Kargil', label: 'Kargil' },
   ],
+  'Haryana': [
+    { value: '', label: 'All Haryana Locations' },
+    { value: 'Gurugram', label: 'Gurugram' },
+    { value: 'Faridabad', label: 'Faridabad' },
+    { value: 'Panipat', label: 'Panipat' },
+    { value: 'Ambala', label: 'Ambala' },
+    { value: 'Karnal', label: 'Karnal' },
+    { value: 'Hisar', label: 'Hisar' },
+    { value: 'Rohtak', label: 'Rohtak' },
+    { value: 'Sonipat', label: 'Sonipat' },
+    { value: 'Panchkula', label: 'Panchkula' },
+    { value: 'Yamunanagar', label: 'Yamunanagar' },
+    { value: 'Kurukshetra', label: 'Kurukshetra' },
+  ],
+  'Delhi': [
+    { value: '', label: 'All Delhi Locations' },
+    { value: 'New Delhi', label: 'New Delhi' },
+    { value: 'Dwarka', label: 'Dwarka' },
+    { value: 'Rohini', label: 'Rohini' },
+    { value: 'Narela', label: 'Narela' },
+    { value: 'Shahdara', label: 'Shahdara' },
+  ],
 };
 
 export const ALL_DISTRICTS = [
@@ -115,6 +141,13 @@ export const ALL_DISTRICTS = [
   { value: 'Mohali', label: 'Mohali' },
   { value: 'Leh', label: 'Leh' },
   { value: 'Kargil', label: 'Kargil' },
+  { value: 'Gurugram', label: 'Gurugram' },
+  { value: 'Faridabad', label: 'Faridabad' },
+  { value: 'Panipat', label: 'Panipat' },
+  { value: 'Ambala', label: 'Ambala' },
+  { value: 'Karnal', label: 'Karnal' },
+  { value: 'Hisar', label: 'Hisar' },
+  { value: 'New Delhi', label: 'New Delhi' },
 ];
 
 // Procurement Type Options

@@ -41,8 +41,11 @@ test('listing timestamps are IST wall-clock despite the Z suffix', () => {
   assert.equal(parseGeMListingDate('garbage'), null);
 });
 
-test('state inputs resolve to the four supported consignee states only', () => {
-  assert.deepEqual(resolveConsigneeStates('ALL').map((s) => s.key), ['JAMMU & KASHMIR', 'HIMACHAL PRADESH', 'PUNJAB', 'LADAKH']);
+test('state inputs resolve to the six supported consignee states only', () => {
+  assert.deepEqual(resolveConsigneeStates('ALL').map((s) => s.key), ['JAMMU & KASHMIR', 'HIMACHAL PRADESH', 'PUNJAB', 'LADAKH', 'HARYANA', 'DELHI']);
+  assert.equal(resolveConsigneeStates('HR')[0].key, 'HARYANA');
+  assert.equal(resolveConsigneeStates('nct of delhi')[0].key, 'DELHI');
+  assert.equal(canonicalRegionState('DL'), 'Delhi');
   assert.equal(resolveConsigneeStates('J&K')[0].canonical, 'Jammu & Kashmir');
   assert.equal(resolveConsigneeStates('punjab')[0].key, 'PUNJAB');
   assert.throws(() => resolveConsigneeStates('Gujarat'), /Unsupported GeM state/);
@@ -342,7 +345,7 @@ test('dry run writes nothing', async () => {
 
 test('API scope filters by delivery state and never by Ministry/State', () => {
   const all = buildGeMScopeConditions({}, NOW);
-  assert.deepEqual(all[1], { consigneeStates: { $in: ['Jammu & Kashmir', 'Himachal Pradesh', 'Punjab', 'Ladakh'] } });
+  assert.deepEqual(all[1], { consigneeStates: { $in: ['Jammu & Kashmir', 'Himachal Pradesh', 'Punjab', 'Ladakh', 'Haryana', 'Delhi'] } });
   assert.deepEqual(buildGeMScopeConditions({ state: 'Punjab' }, NOW)[1], { consigneeStates: 'Punjab' });
   assert.deepEqual(buildGeMScopeConditions({ state: 'Gujarat' }, NOW)[1], { _id: null });
   assert.equal(JSON.stringify(all).includes('officialState'), false);

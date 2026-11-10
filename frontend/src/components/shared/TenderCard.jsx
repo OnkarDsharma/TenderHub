@@ -33,6 +33,8 @@ const STATE_PORTALS = {
   HP_TENDERS: `https://hptenders.gov.in${NIC_SEARCH_PATH}`,
   PB_TENDERS: `https://eproc.punjab.gov.in${NIC_SEARCH_PATH}`,
   LADAKH_TENDERS: `https://tenders.ladakh.gov.in${NIC_SEARCH_PATH}`,
+  HR_TENDERS: `https://etenders.hry.nic.in${NIC_SEARCH_PATH}`,
+  DL_TENDERS: `https://govtprocurement.delhi.gov.in${NIC_SEARCH_PATH}`,
   GEM: 'https://bidplus.gem.gov.in/all-bids',
 };
 
@@ -43,6 +45,8 @@ const resolvePortalUrl = (tender, isGeM) => {
   if (state.includes('ladakh')) return STATE_PORTALS.LADAKH_TENDERS;
   if (state.includes('punjab')) return STATE_PORTALS.PB_TENDERS;
   if (state.includes('himachal')) return STATE_PORTALS.HP_TENDERS;
+  if (state.includes('haryana')) return STATE_PORTALS.HR_TENDERS;
+  if (state.includes('delhi')) return STATE_PORTALS.DL_TENDERS;
   return STATE_PORTALS.JK_TENDERS;
 };
 

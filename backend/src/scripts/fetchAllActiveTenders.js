@@ -80,6 +80,14 @@ async function run() {
     portalName = 'HP_TENDERS';
     baseUrl = 'https://hptenders.gov.in';
     stateName = 'Himachal Pradesh';
+  } else if (cleanState === 'hr' || cleanState.includes('haryana')) {
+    portalName = 'HR_TENDERS';
+    baseUrl = 'https://etenders.hry.nic.in';
+    stateName = 'Haryana';
+  } else if (cleanState === 'dl' || cleanState.includes('delhi')) {
+    portalName = 'DL_TENDERS';
+    baseUrl = 'https://govtprocurement.delhi.gov.in';
+    stateName = 'Delhi';
   }
 
   setCheckpointPortal(portalName);

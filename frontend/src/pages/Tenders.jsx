@@ -39,6 +39,8 @@ const STATE_OPTIONS = [
   { label: 'Himachal Pradesh', value: 'Himachal Pradesh' },
   { label: 'Punjab', value: 'Punjab' },
   { label: 'Ladakh', value: 'Ladakh' },
+  { label: 'Haryana', value: 'Haryana' },
+  { label: 'Delhi', value: 'Delhi' },
 ];
 
 // District Options by State
@@ -98,6 +100,28 @@ const DISTRICTS_BY_STATE = {
     { label: 'Leh', value: 'Leh' },
     { label: 'Kargil', value: 'Kargil' },
   ],
+  'Haryana': [
+    { label: 'All Haryana Locations', value: '' },
+    { label: 'Gurugram', value: 'Gurugram' },
+    { label: 'Faridabad', value: 'Faridabad' },
+    { label: 'Panipat', value: 'Panipat' },
+    { label: 'Ambala', value: 'Ambala' },
+    { label: 'Karnal', value: 'Karnal' },
+    { label: 'Hisar', value: 'Hisar' },
+    { label: 'Rohtak', value: 'Rohtak' },
+    { label: 'Sonipat', value: 'Sonipat' },
+    { label: 'Panchkula', value: 'Panchkula' },
+    { label: 'Yamunanagar', value: 'Yamunanagar' },
+    { label: 'Kurukshetra', value: 'Kurukshetra' },
+  ],
+  'Delhi': [
+    { label: 'All Delhi Locations', value: '' },
+    { label: 'New Delhi', value: 'New Delhi' },
+    { label: 'Dwarka', value: 'Dwarka' },
+    { label: 'Rohini', value: 'Rohini' },
+    { label: 'Narela', value: 'Narela' },
+    { label: 'Shahdara', value: 'Shahdara' },
+  ],
 };
 
 const ALL_LOCATION_OPTIONS = [
@@ -114,6 +138,13 @@ const ALL_LOCATION_OPTIONS = [
   { label: 'Mohali', value: 'Mohali' },
   { label: 'Leh', value: 'Leh' },
   { label: 'Kargil', value: 'Kargil' },
+  { label: 'Gurugram', value: 'Gurugram' },
+  { label: 'Faridabad', value: 'Faridabad' },
+  { label: 'Panipat', value: 'Panipat' },
+  { label: 'Ambala', value: 'Ambala' },
+  { label: 'Karnal', value: 'Karnal' },
+  { label: 'Hisar', value: 'Hisar' },
+  { label: 'New Delhi', value: 'New Delhi' },
 ];
 
 const CATEGORY_OPTIONS = [
@@ -358,7 +389,7 @@ export default function Tenders() {
               Public procurement &amp; tender notices
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs, with delivery locations across {state || 'Jammu & Kashmir, Himachal Pradesh, Punjab and Ladakh'}.
+              Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs, with delivery locations across {state || 'Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana and Delhi'}.
             </p>
           </div>
 

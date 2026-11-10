@@ -1,7 +1,7 @@
 /**
  * @file backend/src/services/adapters/GeMAdapter.js
  * @description Government e-Marketplace (bidplus.gem.gov.in) adapter for the
- * four northern regions: Jammu & Kashmir, Ladakh, Himachal Pradesh, Punjab.
+ * northern regions: Jammu & Kashmir, Ladakh, Himachal Pradesh, Punjab, Haryana, Delhi.
  *
  * Geography comes from GeM's own "Search by Consignee Location"
  * (search-bids, searchType "con"): a bid belongs to a state when GeM lists it
@@ -39,6 +39,8 @@ export const GEM_CONSIGNEE_STATES = [
   { key: 'HIMACHAL PRADESH', canonical: 'Himachal Pradesh', aliases: ['HP', 'HIMACHAL'] },
   { key: 'PUNJAB', canonical: 'Punjab', aliases: ['PB'] },
   { key: 'LADAKH', canonical: 'Ladakh', aliases: [] },
+  { key: 'HARYANA', canonical: 'Haryana', aliases: ['HR'] },
+  { key: 'DELHI', canonical: 'Delhi', aliases: ['DL', 'NCT OF DELHI', 'NEW DELHI', 'NCT DELHI'] },
 ];
 export const GEM_REGION_STATES = GEM_CONSIGNEE_STATES.map((s) => s.canonical);
 

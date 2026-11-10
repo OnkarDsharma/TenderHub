@@ -85,6 +85,16 @@ const OFFICIAL_TENDER_PORTALS = {
     host: 'tenders.ladakh.gov.in',
     government: 'Administration of Ladakh',
   },
+  Haryana: {
+    name: 'Haryana eProcurement',
+    host: 'etenders.hry.nic.in',
+    government: 'Government of Haryana',
+  },
+  Delhi: {
+    name: 'Delhi eProcurement',
+    host: 'govtprocurement.delhi.gov.in',
+    government: 'Government of NCT of Delhi',
+  },
 };
 
 const PORTAL_STATE_BY_SOURCE = {
@@ -92,6 +102,8 @@ const PORTAL_STATE_BY_SOURCE = {
   PB_TENDERS: 'Punjab',
   HP_TENDERS: 'Himachal Pradesh',
   LADAKH_TENDERS: 'Ladakh',
+  HR_TENDERS: 'Haryana',
+  DL_TENDERS: 'Delhi',
 };
 
 const getOfficialPortal = (tender) => {

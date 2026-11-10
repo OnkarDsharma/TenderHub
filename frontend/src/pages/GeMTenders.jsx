@@ -37,6 +37,8 @@ const STATE_TABS = [
   { label: 'Himachal Pradesh', value: 'Himachal Pradesh' },
   { label: 'Punjab', value: 'Punjab' },
   { label: 'Ladakh', value: 'Ladakh' },
+  { label: 'Haryana', value: 'Haryana' },
+  { label: 'Delhi', value: 'Delhi' },
 ];
 
 const DISTRICTS_BY_STATE = {
@@ -88,6 +90,28 @@ const DISTRICTS_BY_STATE = {
     { label: 'All Ladakh Locations', value: '' },
     { label: 'Leh', value: 'Leh' },
     { label: 'Kargil', value: 'Kargil' }
+  ],
+  'Haryana': [
+    { label: 'All Haryana Locations', value: '' },
+    { label: 'Gurugram', value: 'Gurugram' },
+    { label: 'Faridabad', value: 'Faridabad' },
+    { label: 'Panipat', value: 'Panipat' },
+    { label: 'Ambala', value: 'Ambala' },
+    { label: 'Karnal', value: 'Karnal' },
+    { label: 'Hisar', value: 'Hisar' },
+    { label: 'Rohtak', value: 'Rohtak' },
+    { label: 'Sonipat', value: 'Sonipat' },
+    { label: 'Panchkula', value: 'Panchkula' },
+    { label: 'Yamunanagar', value: 'Yamunanagar' },
+    { label: 'Kurukshetra', value: 'Kurukshetra' }
+  ],
+  'Delhi': [
+    { label: 'All Delhi Locations', value: '' },
+    { label: 'New Delhi', value: 'New Delhi' },
+    { label: 'Dwarka', value: 'Dwarka' },
+    { label: 'Rohini', value: 'Rohini' },
+    { label: 'Narela', value: 'Narela' },
+    { label: 'Shahdara', value: 'Shahdara' }
   ]
 };
 
@@ -104,7 +128,14 @@ const ALL_LOCATION_OPTIONS = [
   { label: 'Amritsar', value: 'Amritsar' },
   { label: 'Mohali', value: 'Mohali' },
   { label: 'Leh', value: 'Leh' },
-  { label: 'Kargil', value: 'Kargil' }
+  { label: 'Kargil', value: 'Kargil' },
+  { label: 'Gurugram', value: 'Gurugram' },
+  { label: 'Faridabad', value: 'Faridabad' },
+  { label: 'Panipat', value: 'Panipat' },
+  { label: 'Ambala', value: 'Ambala' },
+  { label: 'Karnal', value: 'Karnal' },
+  { label: 'Hisar', value: 'Hisar' },
+  { label: 'New Delhi', value: 'New Delhi' }
 ];
 
 const PROCUREMENT_TYPE_OPTIONS = [
@@ -331,7 +362,7 @@ export default function GeMTenders() {
               Government e-Marketplace (GeM) tenders
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Open GeM bids delivering to Jammu & Kashmir, Ladakh, Himachal Pradesh and Punjab, taken from GeM's own search by consignee state. Delivery city is shown when the bid document states it.
+              Open GeM bids delivering to Jammu & Kashmir, Ladakh, Himachal Pradesh, Punjab, Haryana and Delhi, taken from GeM's own search by consignee state. Delivery city is shown when the bid document states it.
             </p>
           </div>
 
