@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useTender } from '@/hooks/useTenders';
 import { gemApi } from '@/services/gemApi';
-import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
+import { formatCurrencyINR, formatDateTimeDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -54,15 +54,10 @@ const Field = ({ label, children, big = false, wide = false }) => (
   </div>
 );
 
-const DateRow = ({ label, value, tone = '' }) => (
-  <div className={tone || undefined}>
-    <dt>{label}</dt>
-    <dd>{formatDateDisplay(value) || 'Not specified'}</dd>
-  </div>
-);
 
 export default function GeMBidDetails() {
   const { id } = useParams();
+  const [nowMs] = useState(() => Date.now());
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [reportField, setReportField] = useState('officialState');
@@ -102,7 +97,7 @@ export default function GeMBidDetails() {
   const bookmarked = isBookmarked(bid._id || bid.sourceTenderId);
   const checkedAt = bid.lastCheckedAt ? new Date(bid.lastCheckedAt) : null;
   // Matches the API's 26h listing freshness window.
-  const isStale = !checkedAt || Date.now() - checkedAt.getTime() > 26 * 3600000;
+  const isStale = !checkedAt || nowMs - checkedAt.getTime() > 26 * 3600000;
   const stateLabel = bid.consigneeStates?.length ? bid.consigneeStates.join(', ') : 'Not in a northern-state GeM list';
   const locationLabel = bid.location
     ? display(bid.location)
@@ -178,6 +173,36 @@ export default function GeMBidDetails() {
             </div>
           </div>
         </section>
+
+        {/* Important dates — horizontal timeline */}
+        <Tile tone="light" order={0} className="ai-tile--full mb-2">
+          <p className="ai-tile-kicker">Important dates</p>
+          <ol className="ai-timeline filter-scrollbar">
+            {[
+              { label: 'Published', raw: bid.publishedDate || bid.publishedDateOnly, str: bid.publishedDateStr },
+              { label: 'Download Start', raw: bid.documentDownloadStartDate, str: bid.documentDownloadStartDateStr, optional: true },
+              { label: 'Download End', raw: bid.documentDownloadEndDate, str: bid.documentDownloadEndDateStr, optional: true },
+              { label: 'Bid Closing', raw: bid.closingDate, str: bid.closingDateStr, tone: 'is-end' },
+              { label: 'Bid Opening', raw: bid.bidOpeningDate, str: bid.bidOpeningDateStr, tone: 'is-open' },
+            ]
+              .filter((d) => !d.optional || d.str || d.raw)
+              .map((d) => {
+                const value = d.str || d.raw;
+                const formatted = value ? formatDateTimeDisplay(value) : 'N/A';
+                const [datePart, timePart] = formatted === 'N/A' ? ['Not specified'] : formatted.split(', ');
+                const when = d.raw ? new Date(d.raw?.$date || d.raw) : null;
+                const passed = when && !isNaN(when.getTime()) && when.getTime() <= nowMs;
+                return (
+                  <li key={d.label} className={`ai-timeline-item ${d.tone || ''} ${passed ? 'is-passed' : ''}`}>
+                    <span className="ai-timeline-label">{d.label}</span>
+                    <span className="ai-timeline-dot" aria-hidden="true" />
+                    <span className="ai-timeline-date">{datePart}</span>
+                    {timePart && <span className="ai-timeline-time">{timePart}</span>}
+                  </li>
+                );
+              })}
+          </ol>
+        </Tile>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           <div className="lg:col-span-2 space-y-2">
@@ -260,17 +285,6 @@ export default function GeMBidDetails() {
                 <Field label="Fee Payable At">{display(bid.feePayableAt)}</Field>
                 <Field label="EMD Payable To">{display(bid.emdPayableTo)}</Field>
                 <Field label="EMD Payable At">{display(bid.emdPayableAt)}</Field>
-              </dl>
-            </Tile>
-
-            <Tile tone="light" order={4}>
-              <p className="ai-tile-kicker">Important dates</p>
-              <dl className="ai-dates">
-                <DateRow label="Published" value={bid.publishedDateStr || bid.publishedDate || bid.publishedDateOnly} />
-                <DateRow label="Bid Closing" value={bid.closingDateStr || bid.closingDate} tone="is-end" />
-                <DateRow label="Bid Opening" value={bid.bidOpeningDateStr || bid.bidOpeningDate} tone="is-open" />
-                {(bid.documentDownloadStartDate || bid.documentDownloadStartDateStr) && <DateRow label="Document Download Starts" value={bid.documentDownloadStartDateStr || bid.documentDownloadStartDate} />}
-                {(bid.documentDownloadEndDate || bid.documentDownloadEndDateStr) && <DateRow label="Document Download Ends" value={bid.documentDownloadEndDateStr || bid.documentDownloadEndDate} />}
               </dl>
             </Tile>
 
