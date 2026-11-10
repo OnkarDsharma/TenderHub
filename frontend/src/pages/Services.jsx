@@ -128,6 +128,50 @@ function renderSummaryBullets(summaryText, listClassName = 'space-y-2.5') {
   );
 }
 
+const FIT_STATUS = {
+  PASS: { label: 'Meets requirement', tone: 'is-good' },
+  FAIL: { label: 'Not met', tone: 'is-high' },
+  CONFIRM: { label: 'Confirm before bidding', tone: 'is-warn' },
+  NOT_REQUIRED: { label: 'Not required by this tender', tone: 'is-low' },
+  NOT_ASSESSED: { label: 'Not assessed', tone: 'is-low' },
+};
+const crore = (n) => `₹${(n / 1e7).toFixed(2)} Cr`;
+
+/** Rows for the eligibility tile, from the fit computed against the tender's own thresholds. */
+function eligibilityRows(fit) {
+  if (!fit) return [];
+  const money = (check, label) => check && ({
+    label,
+    status: check.status || (check.passed ? 'PASS' : 'FAIL'),
+    value: check.contractor ? crore(check.contractor) : 'Not in profile',
+    requirement: check.required ? `Required ${crore(check.required)}` : null,
+  });
+  const rows = [
+    fit.classCheck && {
+      label: 'Registration',
+      status: fit.classCheck.status || (fit.classCheck.passed ? 'PASS' : 'FAIL'),
+      value: fit.registrationClass || 'Not in profile',
+      requirement: fit.classCheck.required ? `Required: ${fit.classCheck.required}` : null,
+    },
+    money(fit.turnoverCheck, 'Average annual turnover'),
+    money(fit.solvencyCheck, 'Bank solvency'),
+    money(fit.experienceCheck, 'Largest similar work'),
+    fit.yearsCheck && fit.yearsCheck.status !== 'NOT_REQUIRED' && fit.yearsCheck.status !== 'NOT_ASSESSED' && {
+      label: 'Years of experience',
+      status: fit.yearsCheck.status,
+      value: `${fit.yearsCheck.required} years required`,
+      requirement: null,
+    },
+    ...(fit.licenceChecks || []).map((c) => ({
+      label: c.label,
+      status: c.status,
+      value: c.passed ? 'In your profile' : 'Not in your profile',
+      requirement: 'Mandatory',
+    })),
+  ].filter(Boolean);
+  return rows;
+}
+
 const SOURCE_METHOD_LABEL = { text: 'read', 'scanned-pdf': 'scanned, read by AI', skipped: 'not read' };
 
 /** Shows which tender documents the dossier was built from, and what was missed. */
@@ -258,6 +302,7 @@ export default function Services() {
     avgAnnualTurnoverInr: '',
     solvencyLimitInr: '',
     largestSingleWorkDoneInr: '',
+    licences: '',
   });
 
   const loadPlansAndProfile = useCallback(async () => {
@@ -271,6 +316,7 @@ export default function Services() {
           avgAnnualTurnoverInr: fetchedProfile.avgAnnualTurnoverInr ?? '',
           solvencyLimitInr: fetchedProfile.solvencyLimitInr ?? '',
           largestSingleWorkDoneInr: fetchedProfile.largestSingleWorkDoneInr ?? '',
+          licences: (fetchedProfile.licences || []).join(', '),
         });
       }
     } catch (err) {
@@ -458,14 +504,17 @@ export default function Services() {
     setProfileSaveError('');
     setSavingProfile(true);
     try {
-      const updated = await servicesApi.updateContractorProfile(editProfile);
+      const updated = await servicesApi.updateContractorProfile({
+        ...editProfile,
+        licences: String(editProfile.licences || '').split(',').map((l) => l.trim()).filter(Boolean),
+      });
       if (!updated) {
         throw new Error('The server did not return the saved profile. Please try again.');
       }
       setProfile(updated);
       setShowProfileModal(false);
       setError('');
-      setStatusMsg('Contractor baseline updated. Re-evaluating bid capacity...');
+      setStatusMsg('Contractor baseline updated. Re-checking eligibility...');
       if (dossierData) {
         handleAnalyze(dossierData.tenderId);
       }
@@ -713,8 +762,10 @@ export default function Services() {
               {personalizedFit && (
                 <aside className="ai-fit" aria-label="Contractor fit rating">
                   <p className="ai-label">Contractor fit</p>
-                  <p className="ai-fit-score">{personalizedFit.matchScore}<span>%</span></p>
-                  <p className={`ai-fit-verdict ${personalizedFit.matchScore >= 80 ? 'is-good' : 'is-warn'}`}>
+                  {personalizedFit.matchScore === null || personalizedFit.matchScore === undefined
+                    ? <p className="ai-fit-score ai-fit-score--na">Not assessed</p>
+                    : <p className="ai-fit-score">{personalizedFit.matchScore}<span>%</span></p>}
+                  <p className={`ai-fit-verdict ${personalizedFit.matchScore >= 80 ? 'is-good' : personalizedFit.matchScore === null || personalizedFit.matchScore === undefined ? 'is-low' : personalizedFit.matchScore <= 30 ? 'is-high' : 'is-warn'}`}>
                     <span className="ai-dot" aria-hidden="true" />
                     {personalizedFit.verdict}
                   </p>
@@ -759,17 +810,13 @@ export default function Services() {
                         <p className="ai-tile-kicker">Eligibility fit</p>
                         <p className="ai-tile-sub">Against {personalizedFit.contractorName}</p>
                         <dl className="ai-tile-stats">
-                          {[
-                            { label: 'Three-year average turnover', check: personalizedFit.turnoverCheck, ok: 'Compliant', warn: 'Joint venture needed' },
-                            { label: 'Bank solvency', check: personalizedFit.solvencyCheck, ok: 'Sufficient', warn: 'Enhance solvency' },
-                            { label: 'Largest single work', check: personalizedFit.experienceCheck, ok: 'Eligible', warn: 'Check similar work' },
-                          ].map((s) => (
-                            <div key={s.label}>
-                              <dt>{s.label}</dt>
-                              <dd className="ai-tile-stat-value">₹{(s.check.contractor / 1e7).toFixed(2)} Cr</dd>
-                              <dd className="ai-tile-stat-req">Required ₹{(s.check.required / 1e7).toFixed(2)} Cr</dd>
-                              <dd className={`ai-tile-stat-status ${s.check.passed ? 'is-good' : 'is-warn'}`}>
-                                <span className="ai-dot" aria-hidden="true" />{s.check.passed ? s.ok : s.warn}
+                          {eligibilityRows(personalizedFit).map((row) => (
+                            <div key={row.label}>
+                              <dt>{row.label}</dt>
+                              <dd className="ai-tile-stat-value">{row.value}</dd>
+                              {row.requirement && <dd className="ai-tile-stat-req">{row.requirement}</dd>}
+                              <dd className={`ai-tile-stat-status ${FIT_STATUS[row.status]?.tone || 'is-low'}`}>
+                                <span className="ai-dot" aria-hidden="true" />{FIT_STATUS[row.status]?.label || row.status}
                               </dd>
                             </div>
                           ))}
@@ -798,7 +845,7 @@ export default function Services() {
                   <div className="ai-bento-col">
                     {personalizedFit?.identifiedGaps?.length > 0 && (
                       <Tile tone="blue" size="short" order={3}>
-                        <p className="ai-tile-kicker">Capacity gaps</p>
+                        <p className="ai-tile-kicker">Eligibility gaps</p>
                         <ul className="ai-tile-list">
                           {personalizedFit.identifiedGaps.map((gap, idx) => (
                             <li key={idx}>
@@ -841,7 +888,7 @@ export default function Services() {
                     <div className="ai-bento-col">
                       <Tile tone="light" size="tall" order={0}>
                         <p className="ai-tile-kicker">Material schedule</p>
-                        <p className="ai-tile-sub">Normative quantities and Schedule of Rates estimates</p>
+                        <p className="ai-tile-sub">From the tender BOQ. Figures marked ≈ are AI estimates.</p>
                         {dossierData.preBidAnalysis?.boqMaterialBreakdown?.summary && (
                           <div className="ai-tile-summary">{renderSummaryBullets(dossierData.preBidAnalysis.boqMaterialBreakdown.summary, 'space-y-2')}</div>
                         )}
@@ -927,9 +974,11 @@ export default function Services() {
                     <div className="ai-bento-col">
                       {milestones.map((m, idx) => (
                         <Tile key={m.milestoneNo} tone="dark" order={idx}>
-                          <p className="ai-tile-meta"><span>Milestone {m.milestoneNo}</span><span className="font-mono">Day {m.targetDays}</span></p>
+                          <p className="ai-tile-meta"><span>Milestone {m.milestoneNo}</span>{m.targetDays ? <span className="font-mono">Day {m.targetDays}</span> : null}</p>
                           <p className="ai-tile-title">{m.description}</p>
-                          <p className="ai-tile-big ai-tile-big--sm">{m.financialProgressPct}<span>% billing</span></p>
+                          {typeof m.financialProgressPct === 'number' && (
+                            <p className="ai-tile-big ai-tile-big--sm">{m.financialProgressPct}<span>% billing</span></p>
+                          )}
                           {m.penaltyIfDelayed && <p className="ai-tile-note"><span>If delayed</span>{m.penaltyIfDelayed}</p>}
                         </Tile>
                       ))}
@@ -1187,6 +1236,20 @@ export default function Services() {
                       onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: Number(e.target.value) })}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="profile-licences" className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    Licences and registrations held
+                  </label>
+                  <Input
+                    id="profile-licences"
+                    type="text"
+                    placeholder="e.g. Drug License, Electrical Contractor Licence A-Grade, BIS"
+                    value={editProfile.licences}
+                    onChange={(e) => setEditProfile({ ...editProfile, licences: e.target.value })}
+                  />
+                  <p className="mt-1 text-slate-500 dark:text-slate-400">Separate with commas. Tenders that make a licence mandatory are checked against this list.</p>
                 </div>
 
                 {profileSaveError && (

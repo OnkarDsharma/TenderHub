@@ -10,6 +10,7 @@ import Tender from '../models/Tender.js';
 import pino from 'pino';
 import { collectTenderDocuments } from './tenderDocuments.service.js';
 import { buildDossierPrompt } from './dossierPrompt.js';
+import { computeContractorFit } from './contractorFit.js';
 
 // About 100k tokens: what gpt-4o-mini's 128k context can take with room for output.
 const OPENAI_PROMPT_CHARS = 300000;
@@ -47,10 +48,19 @@ export const sanitizePreBidAnalysis = (analysis) => {
   };
 };
 
+// The model sometimes fills an array with "Not stated" rows instead of leaving
+// it empty; such rows would show as empty tiles.
+const NOT_STATED_TEXT = /^\s*(not stated|n\/a|none|-)?[^a-z0-9]*$|not stated in the tender documents/i;
+const isPlaceholderRow = (row) => row && typeof row === 'object'
+  && Object.values(row).filter((v) => typeof v === 'string').every((v) => NOT_STATED_TEXT.test(v));
+const dropPlaceholders = (value) => (Array.isArray(value) ? value.filter((row) => !isPlaceholderRow(row)) : value);
+
 export const sanitizePostAwardAnalysis = (analysis) => {
   if (!analysis || typeof analysis !== 'object') return analysis;
   return {
     ...analysis,
+    qualityAndSafetyCompliance: dropPlaceholders(analysis.qualityAndSafetyCompliance),
+    penaltyClauses: dropPlaceholders(analysis.penaltyClauses),
     milestones: mapArray(analysis.milestones, (m) => ({
       ...m,
       milestoneNo: coerceNumber(m.milestoneNo),
@@ -278,186 +288,12 @@ export class ContractorAgentService {
   }
 
   /**
-   * Calculates specific gap analysis and eligibility fit tailored for this contractor
-   */
-  /**
-   * Calculates specific gap analysis and eligibility fit tailored for this contractor
-   * Grounded in standard J&K PWD / CPWD / GeM tendering evaluation benchmarks
-   */
-  /**
-   * Calculates specific gap analysis and eligibility fit tailored for this contractor
-   * Grounded in standard J&K PWD / CPWD / GeM tendering evaluation benchmarks
+   * Compares the contractor's profile with the eligibility the dossier read
+   * from the tender documents (see contractorFit.js).
    */
   async calculateContractorPersonalizedFit(tender, userId, dossier) {
     const profile = await this.getOrCreateContractorProfile(userId);
-    const domain = this.detectTenderDomain(tender);
-    const tenderValue = tender.estimatedValue || dossier?.executiveOverview?.estimatedValue || 4500000;
-    
-    // 1. Registration Class / Seller Category Check
-    const classLimits = {
-      'Class D Works': 2500000,
-      'Class C Works': 10000000,
-      'Class B Works': 30000000,
-      'Class A Works': 100000000,
-      'Special Class': Infinity
-    };
-    const contractorClass = profile.registrationClass || 'Class A Works';
-    const classLimit = classLimits[contractorClass] || 100000000;
-    
-    // For GeM Goods / IT tenders, any registered seller / OEM / reseller is eligible without PWD class limits
-    const isGoodsOrIT = domain === 'IT_HARDWARE' || domain === 'MEDICAL_SUPPLIES' || domain === 'VEHICLE_LOGISTICS' || domain === 'SERVICES_MANPOWER' || tender.sourcePortal === 'GEM';
-    const classPass = isGoodsOrIT ? true : (tenderValue <= classLimit);
-
-    // 2. Turnover Check (GeM Goods: 30% to 50%, Civil Works: 100%)
-    const turnoverMultiplier = isGoodsOrIT ? 0.5 : 1.0;
-    const requiredTurnover = tenderValue * turnoverMultiplier;
-    const turnoverPass = profile.avgAnnualTurnoverInr >= requiredTurnover;
-    const turnoverRatio = Math.min(200, Math.round((profile.avgAnnualTurnoverInr / requiredTurnover) * 100));
-
-    // 3. Solvency Check (GeM Goods: 30%, Civil Works: 40%)
-    const solvencyMultiplier = isGoodsOrIT ? 0.3 : 0.4;
-    const requiredSolvency = tenderValue * solvencyMultiplier;
-    const solvencyPass = profile.solvencyLimitInr >= requiredSolvency;
-
-    // 4. Experience / Largest Work Check (GeM: 40% single work, Civil: 50% to 80%)
-    const expMultiplier = isGoodsOrIT ? 0.4 : 0.5;
-    const requiredSingleWork = tenderValue * expMultiplier;
-    const experiencePass = profile.largestSingleWorkDoneInr >= requiredSingleWork;
-
-    // 5. Available Bid Capacity Check (Standard J&K SBD Formula: [A * N * 2] - B for civil works)
-    const durationYears = Math.max(0.25, (tender.periodOfWorkDays || (isGoodsOrIT ? 45 : 90)) / 365);
-    const availableBidCapacity = (profile.avgAnnualTurnoverInr * durationYears * 2) - (profile.ongoingCommitmentsInr || 0);
-    const bidCapacityPass = isGoodsOrIT ? true : (availableBidCapacity >= tenderValue);
-
-    // 6. Domain-specific Gap Verification
-    const ownedEquipmentNames = profile.machineryInventory.map(m => m.name.toLowerCase());
-    const gaps = [];
-
-    if (!classPass && !isGoodsOrIT) {
-      gaps.push({
-        type: 'REGISTRATION_CLASS',
-        severity: 'HIGH',
-        title: 'Tender Exceeds Registration Class Limit',
-        detail: `Tender value (₹${(tenderValue / 1e7).toFixed(2)} Cr) exceeds your ${contractorClass} tendering ceiling of ₹${(classLimit / 1e7).toFixed(2)} Cr.`,
-        recommendation: 'Upgrade your enlistment card with the Chief Engineer / Superintending Engineer or form a Joint Venture.'
-      });
-    }
-
-    if (!turnoverPass) {
-      gaps.push({
-        type: 'FINANCIAL_TURNOVER',
-        severity: 'HIGH',
-        title: 'Turnover Threshold Gap',
-        detail: `Tender requires minimum ₹${(requiredTurnover / 1e7).toFixed(2)} Cr average 3-year turnover. Your profile has ₹${(profile.avgAnnualTurnoverInr / 1e7).toFixed(2)} Cr.`,
-        recommendation: isGoodsOrIT ? 'Bid in consortium with an authorized distribution partner or verified GeM reseller.' : 'Form a Joint Venture (JV) or consortium with an eligible contractor partner.'
-      });
-    }
-
-    if (!solvencyPass) {
-      gaps.push({
-        type: 'BANK_SOLVENCY',
-        severity: 'MEDIUM',
-        title: 'Bank Solvency Verification',
-        detail: `Expected Solvency / Working Capital Certificate is ₹${(requiredSolvency / 1e7).toFixed(2)} Cr. Your saved limit is ₹${(profile.solvencyLimitInr / 1e7).toFixed(2)} Cr.`,
-        recommendation: 'Request your scheduled bank branch (e.g. J&K Bank) to issue an enhanced Solvency Certificate for this tender reference.'
-      });
-    }
-
-    if (!bidCapacityPass && !isGoodsOrIT) {
-      gaps.push({
-        type: 'BID_CAPACITY',
-        severity: 'HIGH',
-        title: 'Available Bid Capacity Deficiency',
-        detail: `J&K SBD formula [(A × N × 2) - B] yields available capacity of ₹${(Math.max(0, availableBidCapacity) / 1e7).toFixed(2)} Cr, below required tender value of ₹${(tenderValue / 1e7).toFixed(2)} Cr.`,
-        recommendation: 'Clear pending Running Account (RA) bills on ongoing projects to free up financial commitment balance.'
-      });
-    }
-
-    if (domain === 'IT_HARDWARE') {
-      gaps.push({
-        type: 'OEM_AUTHORIZATION',
-        severity: 'MEDIUM',
-        title: 'Bid-Specific OEM Authorization (MAF) Required',
-        detail: 'This is an IT Hardware procurement on GeM. Non-OEM bidders must attach an official Manufacturer Authorization Form (MAF) with 3-Year Onsite OEM Warranty backing.',
-        recommendation: 'Obtain bid-specific MAF and OEM warranty commitment letter from an authorized distributor prior to bid submission.'
-      });
-    } else if (domain === 'CIVIL_WORKS') {
-      const isPavingWork = (tender.title + ' ' + (tender.workDescription || '')).toLowerCase().includes('road') || 
-                           (tender.title + ' ' + (tender.workDescription || '')).toLowerCase().includes('bitumen') ||
-                           (tender.title + ' ' + (tender.workDescription || '')).toLowerCase().includes('macadam');
-      const hasHotMix = ownedEquipmentNames.some(e => e.includes('hot mix') || e.includes('paver') || e.includes('roller'));
-
-      if (isPavingWork && !hasHotMix) {
-        gaps.push({
-          type: 'PLANT_EQUIPMENT',
-          severity: 'MEDIUM',
-          title: 'Mandatory Machinery Attachment Needed',
-          detail: 'Tender involves bituminous macadamization. J&K special conditions mandate a Sensor Paver & Hot Mix Plant within hauling radius.',
-          recommendation: 'Attach a notarized lease agreement or supplier tie-up MoU with an established plant owner.'
-        });
-      }
-    }
-
-    // Dynamic Bid Match Score (out of 100) based on actual margins
-    let score = 45;
-    if (classPass) score += 15;
-    if (turnoverPass) score += (turnoverRatio >= 150 ? 15 : 10);
-    if (solvencyPass) {
-      const solvencyRatio = profile.solvencyLimitInr / requiredSolvency;
-      score += (solvencyRatio >= 1.5 ? 15 : 10);
-    }
-    if (experiencePass) {
-      const expRatio = profile.largestSingleWorkDoneInr / requiredSingleWork;
-      score += (expRatio >= 1.5 ? 15 : 10);
-    }
-    if (bidCapacityPass) score += 5;
-
-    // Apply gap penalty
-    if (gaps.length > 0) {
-      score = Math.max(40, Math.min(88, score - (gaps.length * 8)));
-    } else {
-      score = Math.min(97, Math.max(86, score));
-    }
-
-    let verdict = 'Strong Bid Candidate';
-    if (score < 60) verdict = 'High Risk - Joint Venture Recommended';
-    else if (score < 80) verdict = isGoodsOrIT ? 'Conditionally Eligible (Requires OEM MAF Attachment)' : 'Conditionally Eligible (Requires Leased Machinery / Enhanced Solvency)';
-
-    return {
-      matchScore: score,
-      verdict,
-      tenderDomain: domain,
-      classCheck: {
-        passed: classPass,
-        contractorClass,
-        ceilingLimit: classLimit,
-        tenderValue
-      },
-      turnoverCheck: {
-        required: requiredTurnover,
-        contractor: profile.avgAnnualTurnoverInr,
-        passed: turnoverPass,
-        ratioPercent: turnoverRatio
-      },
-      solvencyCheck: {
-        required: requiredSolvency,
-        contractor: profile.solvencyLimitInr,
-        passed: solvencyPass
-      },
-      experienceCheck: {
-        required: requiredSingleWork,
-        contractor: profile.largestSingleWorkDoneInr,
-        passed: experiencePass
-      },
-      bidCapacityCheck: {
-        passed: bidCapacityPass,
-        availableCapacity: Math.max(0, availableBidCapacity),
-        requiredValue: tenderValue
-      },
-      identifiedGaps: gaps,
-      contractorName: profile.companyName,
-      registrationClass: profile.registrationClass
-    };
+    return computeContractorFit(profile, dossier, this.detectTenderDomain(tender));
   }
 
   /**
@@ -1355,7 +1191,7 @@ EMD: ${dossier.executiveOverview?.emdAmount ? `₹${dossier.executiveOverview.em
 Eligibility Criteria: ${JSON.stringify(dossier.preBidAnalysis?.eligibilityCriteria)}
 BOQ Materials: ${JSON.stringify(dossier.preBidAnalysis?.boqMaterialBreakdown?.materials?.map(m => `${m.name}: ${m.estimatedQuantity}`) || [])}
 Risk Red Flags: ${JSON.stringify(dossier.preBidAnalysis?.riskAndRedFlags?.map(r => r.title) || [])}
-Personalized Fit: Match Score ${personalizedFit.matchScore}%, Gaps: ${JSON.stringify(personalizedFit.identifiedGaps)}
+Personalized Fit: ${personalizedFit.matchScore === null ? 'Not assessed' : `${personalizedFit.matchScore}%`} (${personalizedFit.verdict}), Gaps: ${JSON.stringify(personalizedFit.identifiedGaps)}
 
 CONTRACTOR QUESTION:
 "${userQuestion}"
@@ -1402,30 +1238,35 @@ RESPONSE RULES (STRICT):
   generateFallbackChatResponse(question, dossier, profile, fit) {
     const q = question.toLowerCase();
     const overview = dossier.executiveOverview || {};
-    const estVal = overview.estimatedValue || dossier.preBidAnalysis?.eligibilityCriteria?.tenderValue || 4500000;
+    const estVal = overview.estimatedValue || null;
+    const describe = (check, okText) => {
+      if (!check || check.status === 'NOT_REQUIRED') return 'Not required by this tender';
+      if (check.status === 'NOT_ASSESSED') return 'Not assessed';
+      if (check.status === 'CONFIRM') return `Confirm: ${check.detail}`;
+      return check.passed ? `✅ ${okText}` : `⚠️ ${check.detail}`;
+    };
 
     // 1. Turnover & Financial Eligibility Check (Catches "Check my turnover eligibility", solvency, fit)
     if (q.includes('turnover') || q.includes('solvency') || q.includes('eligib') || q.includes('qualif') || q.includes('fit') || q.includes('chance') || q.includes('score')) {
-      const isCompliant = fit.turnoverCheck.passed;
       return [
-        `• **Bid Match Score**: ${fit.matchScore}% (${fit.verdict})`,
-        `• **Turnover Check**: ${isCompliant ? `✅ Fully Compliant (Your 3-Yr Turnover: ₹${(fit.turnoverCheck.contractor / 1e7).toFixed(2)} Cr vs Required: ₹${(fit.turnoverCheck.required / 1e7).toFixed(2)} Cr)` : `⚠️ Turnover Deficit (${fit.turnoverCheck.ratioPercent}%)`}`,
-        `• **Bank Solvency**: ${fit.solvencyCheck.passed ? `✅ Sufficient (Limit: ₹${(fit.solvencyCheck.contractor / 1e7).toFixed(2)} Cr vs Required: ₹${(fit.solvencyCheck.required / 1e7).toFixed(2)} Cr)` : `⚠️ Solvency Certificate Needs Upgrade`}`,
-        `• **Registration Class**: ${fit.classCheck?.passed ? `✅ Fully Eligible (${fit.registrationClass || profile.registrationClass || 'Registered Bidder'})` : `⚠️ Tendering Ceiling Exceeded`}`,
-        `• **Key Next Step**: ${fit.identifiedGaps.length > 0 ? fit.identifiedGaps[0].recommendation : 'All statutory & financial benchmarks are 100% compliant.'}`
+        `• **Bid Match**: ${fit.matchScore === null ? '' : `${fit.matchScore}% `}(${fit.verdict})`,
+        `• **Turnover**: ${describe(fit.turnoverCheck, 'Meets the stated minimum')}`,
+        `• **Bank Solvency**: ${describe(fit.solvencyCheck, 'Meets the stated minimum')}`,
+        `• **Registration**: ${describe(fit.classCheck, `Matches (${fit.registrationClass || profile.registrationClass})`)}`,
+        ...(fit.licenceChecks || []).map((c) => `• **${c.label}**: ${c.passed ? '✅ In your profile' : '⚠️ Not in your profile, the bid is rejected without it'}`),
+        `• **Key Next Step**: ${fit.identifiedGaps.length > 0 ? fit.identifiedGaps[0].recommendation : 'Check the submission checklist and upload every listed document.'}`
       ].join('\n');
     }
 
     // 2. EMD & Deposits Check
     if (q.includes('emd') || q.includes('fee') || q.includes('fdr') || q.includes('deposit') || q.includes('cdr')) {
-      const emdVal = overview.emdAmount || (estVal ? Math.round(estVal * 0.02) : 0);
-      const isExempt = dossier.preBidAnalysis?.eligibilityCriteria?.emdExemptionPossible;
+      const checklist = dossier.preBidAnalysis?.mandatoryDocumentChecklist || [];
+      const feeItems = checklist.filter((doc) => /emd|bid security|earnest|fee|epbg|performance security/i.test(`${doc.title} ${doc.description}`));
       return [
-        `• **EMD Required**: ₹${emdVal.toLocaleString('en-IN')} (${emdVal > 0 ? 'Standard 2% of NIT value' : 'Nil / Exempted'})`,
-        `• **Acceptable Mode**: CDR / FDR / Bank Guarantee or online payment via GeM portal`,
-        `• **Tender Fee**: Non-refundable under Major Head 0059-PWD (Revenue) / e-Challan`,
-        `• **Exemption Status**: ${isExempt ? 'Applicable for verified MSME / Udyam / StartUp registrants.' : 'Not allowed in standard J&K works contracts; CDR/FDR is mandatory.'}`,
-        `• **Validity Tip**: Ensure CDR/FDR validity is minimum 180 days from technical bid opening date.`
+        `• **EMD**: ${overview.emdAmount ? `₹${overview.emdAmount.toLocaleString('en-IN')}` : 'Not stated in the tender documents'}`,
+        `• **Tender Fee**: ${overview.tenderFee ? `₹${overview.tenderFee.toLocaleString('en-IN')}` : 'Not stated in the tender documents'}`,
+        ...feeItems.slice(0, 3).map((doc) => `• **${doc.title}**: ${doc.description}${doc.complianceTip ? ` ${doc.complianceTip}` : ''}`),
+        `• **Exemption**: ${dossier.preBidAnalysis?.eligibilityCriteria?.emdExemptionPossible === true ? 'The documents allow an exemption; check the conditions in the Pre-bid tab.' : dossier.preBidAnalysis?.eligibilityCriteria?.emdExemptionPossible === false ? 'Not allowed by the documents.' : 'Not stated in the tender documents.'}`
       ].join('\n');
     }
 
@@ -1442,19 +1283,20 @@ RESPONSE RULES (STRICT):
 
     // 4. Delay & Penalties Check
     if (q.includes('penalty') || q.includes('delay') || q.includes('risk') || q.includes('late') || q.includes('ld')) {
-      const ldPenalty = dossier.postAwardAnalysis?.penaltyClauses?.[0];
+      const penalties = dossier.postAwardAnalysis?.penaltyClauses || [];
+      const risks = (dossier.preBidAnalysis?.riskAndRedFlags || []).filter((r) => r.severity === 'HIGH').slice(0, 2);
       return [
-        `• **Liquidated Damages (LD)**: ${ldPenalty ? `${ldPenalty.rate} (${ldPenalty.maximumCap})` : '0.5% per week of delay (up to 10% maximum cap)'}`,
-        `• **Milestone Penalty**: Standard penalty or payment withholding for milestone slippages > 7 days`,
-        `• **Defect Liability / SLA**: Comprehensive warranty and SLA maintenance during contract lifecycle`,
-        `• **Mitigation**: Track delivery challans, maintain service log, and ensure timely submission of documentation.`
+        ...(penalties.length
+          ? penalties.slice(0, 3).map((p) => `• **${p.type}**: ${p.rate}${p.maximumCap ? `, cap ${p.maximumCap}` : ''}. ${p.conditions || ''}`.trim())
+          : ['• **Penalties**: No delay penalty is stated in the tender documents.']),
+        ...risks.map((r) => `• **${r.title}** (${r.clauseReference}): ${r.mitigationAction}`)
       ].join('\n');
     }
 
     // 5. Default Fallback
     return [
-      `• **Project Value**: ₹${(estVal / 1e5).toFixed(2)} Lakhs (${overview.completionPeriodDays || 45} Days duration)`,
-      `• **Contractor Compatibility**: ${fit.matchScore}% Match for ${profile.companyName} (${profile.registrationClass})`,
+      `• **Project Value**: ${estVal ? `₹${(estVal / 1e5).toFixed(2)} Lakhs` : 'Not stated in the tender'}${overview.completionPeriodDays ? ` (${overview.completionPeriodDays} days)` : ''}`,
+      `• **Contractor Compatibility**: ${fit.matchScore === null ? fit.verdict : `${fit.matchScore}% for ${profile.companyName} (${fit.verdict})`}`,
       `• **Immediate Action**: Check Tab 1 for mandatory document checklist and compliance certificates`,
       `• **Detailed Tabs**: Use tabs above for BOQ Breakdown, Delivery Milestones, and Risk Analysis.`
     ].join('\n');

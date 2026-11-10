@@ -27,6 +27,10 @@ const contractorAgentProfileSchema = new mongoose.Schema({
 
   // Work Categories & Specialties
   specialties: [{ type: String }], // 'Road Construction', 'Bridges', 'Water Supply', 'Civil Buildings'
+
+  // Licences and registrations the firm holds (e.g. 'Drug License', 'Electrical
+  // Contractor Licence A-Grade'), matched against a tender's mandatory licences.
+  licences: [{ type: String }],
   
   // Contractor Custom Prompt Instructions
   customInstructions: { 

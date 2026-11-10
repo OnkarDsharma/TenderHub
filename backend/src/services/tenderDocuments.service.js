@@ -31,7 +31,8 @@ export const MAX_SCANNED_PDF_BYTES = 100 * 1024 * 1024;
 export const MAX_SCANNED_PAGES = 400;
 export const DEFAULT_TEXT_BUDGET = 400000;
 
-const PRIORITY = { NIT: 0, 'GeM bid document': 0, Corrigendum: 1, BOQ: 2, 'Tender Documents': 3 };
+const PRIORITY = { NIT: 0, 'GeM bid document': 0, Corrigendum: 1, BOQ: 2, Specification: 3, 'Tender Documents': 3 };
+const MAX_GEM_ATTACHMENTS = 12;
 const priorityOf = (doc) => PRIORITY[doc.category] ?? (/boq/i.test(doc.name) ? 2 : 4);
 
 const detectKind = (buffer, name = '') => {
@@ -90,6 +91,47 @@ const isR2Url = (url) => {
     return false;
   }
 };
+/**
+ * The links a GeM bid PDF carries. Its "View File" links point to the buyer's
+ * specification and BOQ files on mkp.gem.gov.in; only those uploads are kept,
+ * not GeM's generic policy circulars.
+ */
+export function pickGeMAttachmentLinks(links) {
+  const out = [];
+  const seen = new Set();
+  for (const link of links) {
+    let url;
+    try { url = new URL(link.url); } catch { continue; }
+    if (url.protocol !== 'https:' || !['mkp.gem.gov.in', 'bidplus.gem.gov.in'].includes(url.host)) continue;
+    if (!url.pathname.startsWith('/uploaded_documents/') || seen.has(url.href)) continue;
+    seen.add(url.href);
+    const category = /BoqLineItemsDocument/i.test(url.pathname) ? 'BOQ'
+      : /BoqDocument|specification/i.test(url.pathname) ? 'Specification' : 'Bid attachment';
+    out.push({ url: url.href, name: fileNameOf(url.href), category });
+  }
+  return out.slice(0, MAX_GEM_ATTACHMENTS);
+}
+
+async function readPdfLinks(buffer) {
+  const { PDFParse } = await import('pdf-parse');
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const info = await parser.getInfo({ parsePageInfo: true });
+    return (info.pages || []).flatMap((page) => page.links || []);
+  } finally {
+    await parser.destroy();
+  }
+}
+
+async function downloadPublic(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (TenderHub document reader)' }, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (Number(res.headers.get('content-length')) > MAX_FILE_BYTES) throw new Error('file is larger than 25 MB');
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length > MAX_FILE_BYTES) throw new Error('file is larger than 25 MB');
+  return buffer;
+}
+
 const isGeMUrl = (url) => {
   try { return new URL(url).host === 'bidplus.gem.gov.in'; } catch { return false; }
 };
@@ -197,24 +239,20 @@ export async function collectTenderDocuments(tender, { textBudget = DEFAULT_TEXT
     }
   };
 
-  // GeM bid PDFs are already parsed into text during sync.
-  if (tender.sourcePortal === 'GEM' && tender.gemRawText?.trim()) {
-    const text = tender.gemRawText.trim();
-    docs.push({ name: 'GeM bid document', category: 'GeM bid document', kind: 'pdf', hash: crypto.createHash('sha256').update(text).digest('hex'), text });
-    if (tender.gemRawTextTruncated) warnings.push('GeM bid document: only the first 120,000 characters were stored, the rest was not analysed.');
-  }
-  const haveGemText = docs.length > 0;
-
   const sources = listTenderSources(tender);
+  const gemLinks = [];
   await Promise.all(sources.map(async (source) => {
     try {
       let buffer;
       if (isR2Url(source.url)) {
         buffer = await downloadR2(source.url);
       } else if (isGeMUrl(source.url)) {
-        if (haveGemText) return;
+        // The bid PDF is fetched even though its text is stored at sync time,
+        // because its links lead to the specification and BOQ files.
         gemClient ||= new GeMHttpClient();
         buffer = await gemClient.downloadPdf(source.url);
+        source.name = 'GeM bid document';
+        gemLinks.push(...await readPdfLinks(buffer).catch(() => []));
       } else {
         warnings.push(`${source.name}: stored outside TenderHub, not fetched.`);
         return;
@@ -224,8 +262,26 @@ export async function collectTenderDocuments(tender, { textBudget = DEFAULT_TEXT
       warnings.push(`${source.name}: download failed (${error.message}).`);
     }
   }));
+  const gemBidFetched = sources.some((s) => s.buffer && isGeMUrl(s.url));
+  if (!gemBidFetched && tender.sourcePortal === 'GEM' && tender.gemRawText?.trim()) {
+    // Fall back to the text stored at sync time; the attachments stay unknown.
+    const text = tender.gemRawText.trim();
+    docs.push({ name: 'GeM bid document', category: 'GeM bid document', kind: 'pdf', hash: crypto.createHash('sha256').update(text).digest('hex'), text });
+    warnings.push('GeM bid document: could not be downloaded, so its specification and BOQ attachments were not analysed.');
+    if (tender.gemRawTextTruncated) warnings.push('GeM bid document: only the first 120,000 characters were stored, the rest was not analysed.');
+  }
+
+  const attachments = pickGeMAttachmentLinks(gemLinks);
+  await Promise.all(attachments.map(async (attachment) => {
+    try {
+      attachment.buffer = await downloadPublic(attachment.url);
+    } catch (error) {
+      warnings.push(`${attachment.name}: download failed (${error.message}).`);
+    }
+  }));
+
   // Read in a fixed order so results do not depend on download timing.
-  for (const source of sources) {
+  for (const source of [...sources, ...attachments]) {
     if (source.buffer) await addFile(source.buffer, source.name, source.category);
     source.buffer = null;
   }

@@ -232,7 +232,7 @@ export default function Home() {
 
             {/* Subtitle */}
             <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
-              Active civil, road, water and electrical contracts,synced daily from official portals.
+              Active civil, road, water and electrical contracts, synced daily from official portals.
             </p>
 
             {/* Search Console & CTA */}

@@ -134,7 +134,7 @@ export function buildHandlers() {
     ['get', '/services/contractor-profile', ({ headers }) => { requireAuth(headers); return { success: true, profile: getState().agentProfile }; }],
     ['put', '/services/contractor-profile', ({ headers, body }) => {
       requireAuth(headers);
-      const allowed = ['companyName', 'registrationClass', 'primaryJurisdiction', 'avgAnnualTurnoverInr', 'solvencyLimitInr', 'ongoingCommitmentsInr', 'largestSingleWorkDoneInr', 'machineryInventory', 'specialties', 'customInstructions'];
+      const allowed = ['companyName', 'registrationClass', 'primaryJurisdiction', 'avgAnnualTurnoverInr', 'solvencyLimitInr', 'ongoingCommitmentsInr', 'largestSingleWorkDoneInr', 'machineryInventory', 'specialties', 'licences', 'customInstructions'];
       const s = saveState((st) => {
         for (const k of allowed) if (k in body) st.agentProfile[k] = body[k];
         st.agentProfile.updatedAt = iso(0);

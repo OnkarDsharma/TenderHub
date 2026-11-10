@@ -34,7 +34,17 @@ const tenderAiDossierSchema = new mongoose.Schema({
       minimumRegistrationClass: { type: String },
       jointVentureAllowed: { type: Boolean, default: false },
       emdExemptionPossible: { type: Boolean, default: false },
-      keyRequirements: [{ type: String }]
+      keyRequirements: [{ type: String }],
+      // Minimums as the documents state them (null when the tender sets none).
+      // The contractor fit check compares the profile against these.
+      thresholds: {
+        minAvgAnnualTurnoverInr: { type: Number, default: null },
+        minSolvencyInr: { type: Number, default: null },
+        minSingleSimilarWorkInr: { type: Number, default: null },
+        minYearsExperience: { type: Number, default: null },
+        requiredRegistration: { type: String, default: null }
+      },
+      mandatoryLicences: [{ name: { type: String }, source: { type: String }, _id: false }]
     },
     mandatoryDocumentChecklist: [{
       sNo: { type: Number },

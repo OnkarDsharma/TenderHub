@@ -289,29 +289,39 @@ export function buildDossier(tender, profile) {
   const contractorTurnover = profile.avgAnnualTurnoverInr || 0;
   const contractorSolvency = profile.solvencyLimitInr || 0;
   const contractorExp = profile.largestSingleWorkDoneInr || 0;
-  const ceiling = /special/i.test(profile.registrationClass) ? Infinity : /class a/i.test(profile.registrationClass) ? 250000000 : /class b/i.test(profile.registrationClass) ? 50000000 : 20000000;
-  const checks = {
-    classCheck: { passed: value <= ceiling, contractorClass: profile.registrationClass, ceilingLimit: Number.isFinite(ceiling) ? ceiling : null, tenderValue: value },
-    turnoverCheck: { required: turnoverReq, contractor: contractorTurnover, passed: contractorTurnover >= turnoverReq, ratioPercent: turnoverReq ? Math.round((contractorTurnover / turnoverReq) * 100) : 0 },
-    solvencyCheck: { required: solvencyReq, contractor: contractorSolvency, passed: contractorSolvency >= solvencyReq },
-    experienceCheck: { required: expReq, contractor: contractorExp, passed: contractorExp >= expReq },
-    bidCapacityCheck: { passed: true, availableCapacity: Math.max(0, contractorTurnover * 2 - (profile.ongoingCommitmentsInr || 0)), requiredValue: value },
-  };
-  const passed = ['classCheck', 'turnoverCheck', 'solvencyCheck', 'experienceCheck'].filter((k) => checks[k].passed).length;
-  const matchScore = Math.min(97, 40 + passed * 14 + (isRoad ? 0 : 3));
-  const gaps = [];
-  if (!checks.turnoverCheck.passed) gaps.push({ type: 'FINANCIAL_TURNOVER', severity: 'HIGH', title: 'Turnover Below Threshold', detail: `Required ${crore(turnoverReq)} against your ${crore(contractorTurnover)}.`, recommendation: 'Bid in joint venture with a partner whose turnover bridges the gap, or target smaller lots.' });
-  if (!checks.solvencyCheck.passed) gaps.push({ type: 'BANK_SOLVENCY', severity: 'HIGH', title: 'Solvency Certificate Shortfall', detail: `Required ${crore(solvencyReq)} against your ${crore(contractorSolvency)}.`, recommendation: 'Request an enhanced solvency certificate from your banker against fixed deposits.' });
-  if (!checks.experienceCheck.passed) gaps.push({ type: 'BID_CAPACITY', severity: 'MEDIUM', title: 'Similar Work Experience Gap', detail: `Largest similar work ${crore(contractorExp)} is below the ${crore(expReq)} benchmark.`, recommendation: 'Attach consortium experience or a JV partner with a qualifying completion certificate.' });
-  if (!checks.classCheck.passed) gaps.push({ type: 'REGISTRATION_CLASS', severity: 'HIGH', title: 'Registration Class Ceiling Exceeded', detail: `${profile.registrationClass} ceiling does not cover ${crore(value)}.`, recommendation: 'Apply for class upgradation or bid as the minor partner in a JV.' });
-  if (isRoad) gaps.push({ type: 'PLANT_EQUIPMENT', severity: 'MEDIUM', title: 'Mandatory Machinery Attachment Needed', detail: 'Bituminous work requires a sensor paver and hot-mix plant within the hauling radius per state special conditions.', recommendation: 'Attach a notarised lease agreement or supplier tie-up MoU with an established plant owner.' });
+  // Same shape as backend/src/services/contractorFit.js: checks only against
+  // thresholds the (mock) tender documents state.
+  const licences = profile.licences || [];
+  const status = (req, have) => (req == null ? 'NOT_REQUIRED' : have >= req ? 'PASS' : 'FAIL');
+  const money = (label, req, have) => ({ label, required: req, contractor: have || null, status: status(req, have), passed: req == null ? null : have >= req });
+  const turnoverCheck = money('Average annual turnover', isGem ? null : turnoverReq, contractorTurnover);
+  const solvencyCheck = money('Bank solvency', isGem ? null : solvencyReq, contractorSolvency);
+  const experienceCheck = money('Largest similar work', isGem ? null : expReq, contractorExp);
+  const classCheck = { label: 'Registration', required: isGem ? null : minClass, contractorClass: profile.registrationClass, status: isGem ? 'NOT_REQUIRED' : 'CONFIRM', passed: null, detail: isGem ? null : `Tender requires ${minClass}. Confirm your enlistment matches.` };
+  const yearsCheck = isGem
+    ? { label: 'Years of experience', required: 3, status: 'CONFIRM', passed: null, detail: 'Tender requires 3 years of supplying similar products; confirm you can show contracts for each year.' }
+    : { label: 'Years of experience', required: null, status: 'NOT_REQUIRED', passed: null };
+  const hasDrug = licences.some((l) => /drug/i.test(l));
+  const licenceChecks = isGem ? [{ label: 'Drug License', source: '[GeM bid document, Buyer Added ATC, Clause 1]', status: hasDrug ? 'PASS' : 'FAIL', passed: hasDrug, detail: hasDrug ? null : 'Drug License is mandatory and is not among your profile\'s licences. Add it to your profile if you hold it.' }] : [];
+  const all = [classCheck, turnoverCheck, solvencyCheck, experienceCheck, yearsCheck, ...licenceChecks].filter((c) => ['PASS', 'FAIL', 'CONFIRM'].includes(c.status));
+  const failed = all.filter((c) => c.status === 'FAIL');
+  const confirm = all.filter((c) => c.status === 'CONFIRM');
+  let matchScore = Math.round((100 * (all.filter((c) => c.status === 'PASS').length + 0.5 * confirm.length)) / all.length);
+  let verdict;
+  if (failed.some((c) => licenceChecks.includes(c))) { verdict = 'Not eligible: Drug License missing'; matchScore = Math.min(matchScore, 30); }
+  else if (failed.length) { verdict = `Below the tender's ${failed.map((c) => c.label.toLowerCase()).join(', ')} requirement`; matchScore = Math.min(matchScore, 60); }
+  else if (confirm.length) verdict = `Meets the stated figures; confirm ${confirm.length} item${confirm.length === 1 ? '' : 's'}`;
+  else verdict = 'Meets all requirements stated in the tender';
+  const gaps = [...failed, ...confirm].map((c) => ({ type: 'FIT', severity: c.status === 'FAIL' ? 'HIGH' : 'MEDIUM', title: `${c.label}: ${c.status === 'FAIL' ? 'not met' : 'confirm'}`, detail: c.detail || `Required ${c.required ? crore(c.required) : ''}`, recommendation: c.status === 'FAIL' ? 'Bid as a joint venture if the tender allows it, or obtain the missing licence.' : 'Confirm before bidding.' }));
 
-  const verdict = matchScore >= 80 ? 'Strong Bid Candidate'
-    : matchScore >= 65 ? 'Conditionally Eligible (Requires Leased Machinery / Enhanced Solvency)'
-      : 'High Risk - Joint Venture Recommended';
+  dossier.preBidAnalysis.eligibilityCriteria.thresholds = isGem
+    ? { minAvgAnnualTurnoverInr: null, minSolvencyInr: null, minSingleSimilarWorkInr: null, minYearsExperience: 3, requiredRegistration: null }
+    : { minAvgAnnualTurnoverInr: turnoverReq, minSolvencyInr: solvencyReq, minSingleSimilarWorkInr: expReq, minYearsExperience: null, requiredRegistration: minClass };
+  dossier.preBidAnalysis.eligibilityCriteria.mandatoryLicences = isGem ? [{ name: 'Drug License', source: '[GeM bid document, Buyer Added ATC, Clause 1]' }] : [];
 
   const personalizedFit = {
-    matchScore, verdict, tenderDomain: isGem ? 'GOODS_SUPPLY' : 'CIVIL_WORKS', ...checks, identifiedGaps: gaps,
+    assessed: true, matchScore, verdict, tenderDomain: isGem ? 'GOODS_SUPPLY' : 'CIVIL_WORKS',
+    classCheck, turnoverCheck, solvencyCheck, experienceCheck, yearsCheck, licenceChecks, identifiedGaps: gaps,
     contractorName: profile.companyName, registrationClass: profile.registrationClass,
   };
 
@@ -329,7 +339,7 @@ export function copilotReply(message, dossier, fit) {
     return `• **EMD Required**: ${inr(ov.emdAmount)} as CDR/FDR/BG pledged to the inviting authority\n• **Validity**: Minimum 180 days from technical bid opening\n• **Exemption**: Not available for this notice; MSME exemptions must be confirmed with the department\n• **Tip**: Scan the pledged instrument into the Fee Cover and carry the original to the opening`;
   }
   if (/turnover|solvency|eligib|qualify/.test(q)) {
-    return `• **Turnover Check**: ${crore(fit.turnoverCheck.contractor)} available vs ${crore(fit.turnoverCheck.required)} required — ${fit.turnoverCheck.passed ? 'cleared' : 'short'}\n• **Solvency Check**: ${crore(fit.solvencyCheck.contractor)} vs ${crore(fit.solvencyCheck.required)} — ${fit.solvencyCheck.passed ? 'cleared' : 'short'}\n• **Experience**: ${crore(fit.experienceCheck.contractor)} vs ${crore(fit.experienceCheck.required)} — ${fit.experienceCheck.passed ? 'cleared' : 'short'}\n• **Verdict**: ${fit.verdict}`;
+    return [fit.turnoverCheck, fit.solvencyCheck, fit.experienceCheck, ...(fit.licenceChecks || [])].map((c) => `• **${c.label}**: ${c.status === 'NOT_REQUIRED' ? 'not required by this tender' : c.required ? `${c.contractor ? crore(c.contractor) : 'not in profile'} vs ${crore(c.required)} required` : (c.passed ? 'in your profile' : 'missing')}`).concat(`• **Verdict**: ${fit.verdict}`).join('\n');
   }
   if (/cement|steel|material|boq|quantity|aggregate|bitumen/.test(q)) {
     const m = dossier.preBidAnalysis.boqMaterialBreakdown.materials;
@@ -343,7 +353,7 @@ export function copilotReply(message, dossier, fit) {
     const r = dossier.preBidAnalysis.riskAndRedFlags;
     return r.map((x) => `• **${x.title}** (${x.clauseReference}, ${x.severity}): ${x.riskSummary} Mitigation: ${x.mitigationAction}`).join('\n');
   }
-  return `• **Bid Match Score**: ${fit.matchScore}% (${fit.verdict})\n• **Scope**: ${ov.title}\n• **Outlay**: ${lakh(ov.estimatedValue)} over ${ov.completionPeriodDays} days\n• Ask me about EMD rules, turnover compliance, BOQ material quantities, or delay penalties.`;
+  return `• **Bid Match**: ${fit.matchScore === null ? '' : `${fit.matchScore}% `}(${fit.verdict})\n• **Scope**: ${ov.title}\n• **Outlay**: ${lakh(ov.estimatedValue)} over ${ov.completionPeriodDays} days\n• Ask me about EMD rules, turnover compliance, BOQ material quantities, or delay penalties.`;
 }
 
 /* ------------------------------------------------------------------ */

@@ -119,6 +119,7 @@ export const updateContractorProfile = async (req, res) => {
       largestSingleWorkDoneInr,
       machineryInventory,
       specialties,
+      licences,
       customInstructions
     } = req.body;
 
@@ -131,6 +132,9 @@ export const updateContractorProfile = async (req, res) => {
     if (largestSingleWorkDoneInr !== undefined) profile.largestSingleWorkDoneInr = Number(largestSingleWorkDoneInr);
     if (machineryInventory) profile.machineryInventory = machineryInventory;
     if (specialties) profile.specialties = specialties;
+    if (Array.isArray(licences)) {
+      profile.licences = licences.filter((l) => typeof l === 'string' && l.trim()).map((l) => l.trim().slice(0, 120)).slice(0, 30);
+    }
     if (customInstructions) profile.customInstructions = customInstructions;
 
     await profile.save();
