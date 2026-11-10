@@ -2638,6 +2638,27 @@ body { background-color: #f7faff; }
 .ai-tile--dark .ai-dates .is-open dd { color: #93c5fd; }
 .ai-tile--blue .ai-dates .is-open dd { color: #fff; }
 
+/* Horizontal critical-dates timeline */
+.ai-timeline { display: flex; margin-top: 1rem; overflow-x: auto; padding-bottom: .25rem; }
+.ai-timeline-item { position: relative; flex: 1 0 7.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 .4rem; }
+.ai-timeline-item::before { content: ''; position: absolute; top: 2.05rem; left: 0; right: 0; height: 1px; background: #cbd5e1; }
+.dark .ai-timeline-item::before { background: var(--line); }
+.ai-timeline-item:first-child::before { left: 50%; }
+.ai-timeline-item:last-child::before { right: 50%; }
+.ai-timeline-label { min-height: 1.25rem; font-size: .8125rem; font-weight: 650; color: var(--ink); white-space: nowrap; }
+.ai-timeline-dot { position: relative; z-index: 1; width: .7rem; height: .7rem; margin: .55rem 0 .65rem; border-radius: 999px; background: var(--ai-tl, #0f172a); box-shadow: 0 0 0 4px #f3f7ff; }
+.ai-timeline-item:not(.is-passed) .ai-timeline-dot { background: #f3f7ff; border: 2px solid var(--ai-tl, #0f172a); }
+.ai-timeline-date { font-size: .8125rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ai-timeline-time { margin-top: .1rem; font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace; font-size: .75rem; font-weight: 600; color: var(--ai-tl, var(--ink)); }
+.ai-timeline-item.is-start { --ai-tl: #047857; }
+.ai-timeline-item.is-end { --ai-tl: #be123c; }
+.ai-timeline-item.is-open { --ai-tl: #1d4ed8; }
+.dark .ai-timeline-dot { background: var(--ai-tl, #e2e8f0); box-shadow: 0 0 0 4px #12213f; }
+.dark .ai-timeline-item:not(.is-passed) .ai-timeline-dot { background: #12213f; border-color: var(--ai-tl, #e2e8f0); }
+.dark .ai-timeline-item.is-start { --ai-tl: #34d399; }
+.dark .ai-timeline-item.is-end { --ai-tl: #fb7185; }
+.dark .ai-timeline-item.is-open { --ai-tl: #93c5fd; }
+
 /* Chips, raw text, link rows */
 .ai-chip-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
 .ai-chip-list span { padding: .35rem .7rem; border-radius: 999px; border: 1px solid var(--line); font-size: .8125rem; font-weight: 500; color: var(--ink); }

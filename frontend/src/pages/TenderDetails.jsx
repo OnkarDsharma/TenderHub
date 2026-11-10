@@ -123,6 +123,7 @@ const getOfficialPortal = (tender) => {
 
 export default function TenderDetails() {
   const { id } = useParams();
+  const [nowMs] = useState(() => Date.now());
   const navigate = useNavigate();
   const { isAuthenticated, isPro, isLoading: authLoading, updateDailyViews } = useAuthStore();
   const { data: tender, isLoading, isError, error } = useTender(id);
@@ -467,6 +468,37 @@ export default function TenderDetails() {
           </div>
         )}
 
+        {/* Critical Dates — horizontal timeline */}
+        <Tile tone="light" order={0} className="ai-tile--full mb-2">
+          <p className="ai-tile-kicker">Critical dates</p>
+          <ol className="ai-timeline filter-scrollbar">
+            {[
+              { label: 'Published', raw: tender.publishedDate, str: tender.publishedDateStr },
+              { label: 'Download Start', raw: tender.documentDownloadStartDate, str: tender.documentDownloadStartDateStr },
+              { label: 'Download End', raw: tender.documentDownloadEndDate, str: tender.documentDownloadEndDateStr },
+              { label: 'Clarification Start', raw: tender.clarificationStartDate, str: tender.clarificationStartDateStr, optional: true },
+              { label: 'Clarification End', raw: tender.clarificationEndDate, str: tender.clarificationEndDateStr, optional: true },
+              { label: 'Bid Start', raw: tender.bidSubmissionStartDate, str: tender.bidSubmissionStartDateStr, tone: 'is-start' },
+              { label: 'Bid End', raw: tender.bidSubmissionEndDate, str: tender.bidSubmissionEndDateStr, tone: 'is-end' },
+              { label: 'Bid Opening', raw: tender.bidOpeningDate, str: tender.bidOpeningDateStr, tone: 'is-open' },
+            ]
+              .filter((d) => !d.optional || ((d.str || d.raw) && d.raw !== 'NA'))
+              .map((d) => {
+                const [datePart, timePart] = formatDateTimeDisplay(d.str || d.raw).split(', ');
+                const when = d.raw ? new Date(d.raw?.$date || d.raw) : null;
+                const passed = when && !isNaN(when.getTime()) && when.getTime() <= nowMs;
+                return (
+                  <li key={d.label} className={`ai-timeline-item ${d.tone || ''} ${passed ? 'is-passed' : ''}`}>
+                    <span className="ai-timeline-label">{d.label}</span>
+                    <span className="ai-timeline-dot" aria-hidden="true" />
+                    <span className="ai-timeline-date">{datePart}</span>
+                    {timePart && <span className="ai-timeline-time">{timePart}</span>}
+                  </li>
+                );
+              })}
+          </ol>
+        </Tile>
+
         {/* Content Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           
@@ -702,25 +734,6 @@ export default function TenderDetails() {
                   <dd className="ai-field-meta">Payable At: <strong>{tender.emdPayableAt || 'N/A'}</strong></dd>
                   <dd className="ai-field-meta">Exemption: <strong>{tender.emdExemptionAllowed || 'No'}</strong></dd>
                 </div>
-              </dl>
-            </Tile>
-
-            {/* Critical Dates Section */}
-            <Tile tone="dark" order={8}>
-              <p className="ai-tile-kicker">Critical dates</p>
-              <dl className="ai-dates">
-                <div><dt>Published</dt><dd>{formatDateTimeDisplay(tender.publishedDateStr || tender.publishedDate)}</dd></div>
-                <div><dt>Download Start</dt><dd>{formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate)}</dd></div>
-                <div><dt>Download End</dt><dd>{formatDateTimeDisplay(tender.documentDownloadEndDateStr || tender.documentDownloadEndDate)}</dd></div>
-                {(tender.clarificationStartDateStr || tender.clarificationStartDate) && tender.clarificationStartDate !== 'NA' && (
-                  <div><dt>Clarification Start</dt><dd>{formatDateTimeDisplay(tender.clarificationStartDateStr || tender.clarificationStartDate)}</dd></div>
-                )}
-                {(tender.clarificationEndDateStr || tender.clarificationEndDate) && tender.clarificationEndDate !== 'NA' && (
-                  <div><dt>Clarification End</dt><dd>{formatDateTimeDisplay(tender.clarificationEndDateStr || tender.clarificationEndDate)}</dd></div>
-                )}
-                <div className="is-start"><dt>Bid Start</dt><dd>{formatDateTimeDisplay(tender.bidSubmissionStartDateStr || tender.bidSubmissionStartDate)}</dd></div>
-                <div className="is-end"><dt>Bid End</dt><dd>{formatDateTimeDisplay(tender.bidSubmissionEndDateStr || tender.bidSubmissionEndDate)}</dd></div>
-                <div className="is-open"><dt>Bid Opening</dt><dd>{formatDateTimeDisplay(tender.bidOpeningDateStr || tender.bidOpeningDate)}</dd></div>
               </dl>
             </Tile>
 
