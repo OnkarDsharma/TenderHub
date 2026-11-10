@@ -383,14 +383,14 @@ export default function GeMTenders() {
 
         {/* Search stays visible beneath the site navigation while browsing results. */}
         <div className="gem-search-sticky bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-4 shadow-xs border border-slate-200 dark:border-slate-800">
-          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
             <SearchBeam className="flex-1 min-w-0" borderRadius={8}>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bid number, item, ministry or department…" className="w-full h-11 pl-10 pr-4 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-dalBlue/50 dark:focus:border-blue-400/50 transition-colors" />
               </div>
             </SearchBeam>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 h-11 px-5 bg-dalBlue hover:bg-dalBlue-700 text-white rounded-lg text-sm font-semibold active:scale-[0.98] transition-[background-color,transform] duration-150 cursor-pointer"><span>Search bids</span></button>
+            <button type="submit" aria-label="Search bids" title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer"><Search className="w-5 h-5" strokeWidth={2.25} /></button>
           </form>
         </div>
 
