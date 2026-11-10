@@ -55,6 +55,8 @@ const DEFAULT_STATE = () => ({
     userId: TEST_USER_ID,
     companyName: 'Prime Infrastructure & Engineering',
     registrationClass: 'Class A Works',
+    // The mock test account has already set up its profile; clear this to try the setup flow.
+    profileConfiguredAt: iso(-30),
     primaryJurisdiction: 'Jammu & Kashmir / North Zone',
     gstin: '01AABCP1234F1Z5',
     panNumber: 'AABCP1234F',

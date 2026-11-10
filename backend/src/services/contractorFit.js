@@ -28,7 +28,8 @@ const LETTER = { a: 1, b: 2, c: 3, d: 4, e: 5 };
 /** Rank of an enlistment class: 0 for special class, 1 for A / I, larger is lower. */
 export function registrationRank(text) {
   const s = String(text || '').toLowerCase();
-  if (/special\s*class|class\s*-?\s*s\b/.test(s)) return 0;
+  if (/special\s*class|class\s*-?\s*special|class\s*-?\s*s\b/.test(s)) return 0;
+  if (/not registered|goods|services supplier/.test(s)) return null;
   const m = s.match(/class\s*-?\s*\(?([a-e]|iv|v|i{1,3}|[1-5])\)?\b/);
   if (!m) return null;
   const v = m[1];
@@ -69,7 +70,10 @@ export function computeContractorFit(profile, dossier, tenderDomain = null) {
   if (requiredRegistration) {
     const need = registrationRank(requiredRegistration);
     const have = registrationRank(profile.registrationClass);
-    if (need !== null && have !== null) {
+    if (/not registered/i.test(profile.registrationClass || '')) {
+      classCheck = { ...classCheck, required: requiredRegistration, status: 'FAIL', passed: false,
+        detail: `Tender requires ${requiredRegistration}; your profile says you are not registered as a contractor.` };
+    } else if (need !== null && have !== null) {
       const passed = have <= need;
       classCheck = { ...classCheck, required: requiredRegistration, status: passed ? 'PASS' : 'FAIL', passed,
         detail: passed ? null : `Tender requires ${requiredRegistration}; your profile is ${profile.registrationClass}.` };

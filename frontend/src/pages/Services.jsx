@@ -291,6 +291,10 @@ export default function Services() {
   }, [showProfilePopover, showScopeAdvisory]);
   const lastAutoAnalyzeRef = useRef('');
   const analysisInFlightRef = useRef(false);
+  // Tender the user asked to analyse before setting up their profile; it runs
+  // as soon as the profile is saved.
+  const pendingAnalysisRef = useRef('');
+  const profileConfigured = Boolean(profile?.profileConfiguredAt);
   useEffect(() => {
     if (!chatLockedUntil) return undefined;
     const timer = setInterval(() => setCountdownNow(Date.now()), 1000);
@@ -344,8 +348,11 @@ export default function Services() {
       setError('Contractor profile is loading. Try again in a moment.');
       return;
     }
-    if (!profile) {
-      setError('Review and save your contractor profile before running a personalized analysis.');
+    if (!profileConfigured) {
+      // The analysis compares the tender with the contractor's own figures, so
+      // it needs a saved profile; the requested tender runs right after saving.
+      pendingAnalysisRef.current = targetId;
+      setError('Set up your contractor profile first. The analysis checks the tender against your firm\'s figures and starts as soon as you save.');
       setShowProfileModal(true);
       return;
     }
@@ -431,12 +438,16 @@ export default function Services() {
     } catch (err) {
       console.error('Analysis error:', err);
       const payload = err.response?.data;
+      if (payload?.error === 'PROFILE_REQUIRED') {
+        pendingAnalysisRef.current = targetId;
+        setShowProfileModal(true);
+      }
       setError(payload?.message || payload?.error || err.message || 'Error executing AI analysis.');
     } finally {
       analysisInFlightRef.current = false;
       setAnalyzing(false);
     }
-  }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileReady]);
+  }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileConfigured, profileReady]);
 
   useEffect(() => {
     if (showProfileModal) setProfileSaveError('');
@@ -455,13 +466,16 @@ export default function Services() {
     if (!targetId) return;
 
     setInputTenderId(targetId);
-    // Wait until a usable profile exists. If setup is required, the user can
-    // save it and this effect will then run for the same requested tender.
-    if (profileReady && profile && lastAutoAnalyzeRef.current !== targetId) {
-      lastAutoAnalyzeRef.current = targetId;
+    // Wait until the profile is set up. handleAnalyze opens the setup form when
+    // it is not; once saved, this effect runs again for the same tender.
+    // The ref is keyed by profile state so the setup form opens once per tender,
+    // not again on every re-render while it is closed.
+    const runKey = `${profileConfigured ? 'run' : 'setup'}:${targetId}`;
+    if (profileReady && lastAutoAnalyzeRef.current !== runKey) {
+      lastAutoAnalyzeRef.current = runKey;
       handleAnalyze(targetId);
     }
-  }, [paramTenderId, queryTenderId, profileReady, profile, handleAnalyze]);
+  }, [paramTenderId, queryTenderId, profileReady, profileConfigured, handleAnalyze]);
 
   const handleSendMessage = async (e) => {
     e?.preventDefault();
@@ -512,11 +526,21 @@ export default function Services() {
         throw new Error('The server did not return the saved profile. Please try again.');
       }
       setProfile(updated);
+      if (!updated.profileConfiguredAt) {
+        setProfileSaveError('Saved, but some required fields are still empty. Fill in every field to run an AI analysis.');
+        return;
+      }
       setShowProfileModal(false);
       setError('');
-      setStatusMsg('Contractor baseline updated. Re-checking eligibility...');
+      setStatusMsg('Contractor profile saved. Checking eligibility...');
+      // A tender in the URL is picked up by the route effect once the profile is set.
+      const pending = pendingAnalysisRef.current;
+      pendingAnalysisRef.current = '';
+      const routeTender = paramTenderId || queryTenderId;
       if (dossierData) {
         handleAnalyze(dossierData.tenderId);
+      } else if (pending && pending !== routeTender) {
+        handleAnalyze(pending);
       }
     } catch (err) {
       // Shown inside the modal: the page-level error sits behind the overlay,
@@ -588,9 +612,9 @@ export default function Services() {
                 onClick={() => setShowProfilePopover((open) => !open)}
               >
                 <Building2 className="w-4 h-4 shrink-0 opacity-80" />
-                <span className="truncate">{profile?.companyName || 'Profile not set'}</span>
+                <span className="truncate">{profileConfigured ? profile.companyName : 'Set up your profile'}</span>
                 <span aria-hidden="true" className="ai-hero-chip-dot" />
-                <span className="shrink-0 opacity-80">{profile?.registrationClass || 'Class not set'}</span>
+                <span className="shrink-0 opacity-80">{profileConfigured ? profile.registrationClass : 'Required for analysis'}</span>
                 <ChevronDown className={`w-3.5 h-3.5 shrink-0 opacity-70 transition-transform ${showProfilePopover ? 'rotate-180' : ''}`} />
               </button>
 
@@ -1154,7 +1178,7 @@ export default function Services() {
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-dalBlue dark:text-blue-400" />
-                  <span>Configure Contractor Baseline</span>
+                  <span>{profileConfigured ? 'Configure Contractor Baseline' : 'Set up your contractor profile'}</span>
                 </h3>
                 <button
                   onClick={() => setShowProfileModal(false)}
@@ -1165,6 +1189,11 @@ export default function Services() {
               </div>
 
               <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">
+                {!profileConfigured && (
+                  <p className="rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-3 py-2 text-blue-800 dark:text-blue-200 leading-relaxed">
+                    AI analysis checks each tender against your firm&apos;s real figures. Fill in every field to start; you can change them later.
+                  </p>
+                )}
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                     Company / Firm Name
@@ -1194,6 +1223,7 @@ export default function Services() {
                       <option value="Class B Works">Class B Works</option>
                       <option value="Class C Works">Class C Works</option>
                       <option value="Class 1 PWD">Class 1 PWD</option>
+                      <option value="Not registered (goods / services supplier)">Not registered (goods / services supplier)</option>
                     </select>
                   </div>
 
@@ -1206,7 +1236,7 @@ export default function Services() {
                       min="0"
                       required
                       value={editProfile.avgAnnualTurnoverInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, avgAnnualTurnoverInr: Number(e.target.value) })}
+                      onChange={(e) => setEditProfile({ ...editProfile, avgAnnualTurnoverInr: e.target.value === '' ? '' : Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -1221,7 +1251,7 @@ export default function Services() {
                       min="0"
                       required
                       value={editProfile.solvencyLimitInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, solvencyLimitInr: Number(e.target.value) })}
+                      onChange={(e) => setEditProfile({ ...editProfile, solvencyLimitInr: e.target.value === '' ? '' : Number(e.target.value) })}
                     />
                   </div>
                   <div>
@@ -1233,7 +1263,7 @@ export default function Services() {
                       min="0"
                       required
                       value={editProfile.largestSingleWorkDoneInr}
-                      onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: Number(e.target.value) })}
+                      onChange={(e) => setEditProfile({ ...editProfile, largestSingleWorkDoneInr: e.target.value === '' ? '' : Number(e.target.value) })}
                     />
                   </div>
                 </div>

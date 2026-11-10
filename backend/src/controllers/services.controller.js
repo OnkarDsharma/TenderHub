@@ -1,5 +1,8 @@
 import { contractorAgentService } from '../services/contractorAgent.service.js';
-import ContractorAgentProfile from '../models/ContractorAgentProfile.js';
+import ContractorAgentProfile, { isProfileComplete, PROFILE_REQUIRED_FIELDS } from '../models/ContractorAgentProfile.js';
+
+// A complete profile used to test one field at a time.
+const PROFILE_FILLED = { companyName: 'x', registrationClass: 'x', avgAnnualTurnoverInr: 0, solvencyLimitInr: 0, largestSingleWorkDoneInr: 0 };
 import TenderAiDossier from '../models/TenderAiDossier.js';
 import Tender from '../models/Tender.js';
 import mongoose from 'mongoose';
@@ -123,13 +126,20 @@ export const updateContractorProfile = async (req, res) => {
       customInstructions
     } = req.body;
 
-    if (companyName) profile.companyName = companyName;
-    if (registrationClass) profile.registrationClass = registrationClass;
+    // An empty field stays empty: Number('') would silently save ₹0.
+    const toAmount = (value, label) => {
+      if (value === '' || value === null) return null;
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0) throw Object.assign(new Error(`${label} must be a positive amount in rupees.`), { status: 400 });
+      return n;
+    };
+    if (typeof companyName === 'string') profile.companyName = companyName.trim().slice(0, 200);
+    if (typeof registrationClass === 'string') profile.registrationClass = registrationClass.trim().slice(0, 100);
     if (primaryJurisdiction) profile.primaryJurisdiction = primaryJurisdiction;
-    if (avgAnnualTurnoverInr !== undefined) profile.avgAnnualTurnoverInr = Number(avgAnnualTurnoverInr);
-    if (solvencyLimitInr !== undefined) profile.solvencyLimitInr = Number(solvencyLimitInr);
-    if (ongoingCommitmentsInr !== undefined) profile.ongoingCommitmentsInr = Number(ongoingCommitmentsInr);
-    if (largestSingleWorkDoneInr !== undefined) profile.largestSingleWorkDoneInr = Number(largestSingleWorkDoneInr);
+    if (avgAnnualTurnoverInr !== undefined) profile.avgAnnualTurnoverInr = toAmount(avgAnnualTurnoverInr, 'Average annual turnover');
+    if (solvencyLimitInr !== undefined) profile.solvencyLimitInr = toAmount(solvencyLimitInr, 'Solvency limit');
+    if (ongoingCommitmentsInr !== undefined) profile.ongoingCommitmentsInr = toAmount(ongoingCommitmentsInr, 'Ongoing commitments');
+    if (largestSingleWorkDoneInr !== undefined) profile.largestSingleWorkDoneInr = toAmount(largestSingleWorkDoneInr, 'Largest single work');
     if (machineryInventory) profile.machineryInventory = machineryInventory;
     if (specialties) profile.specialties = specialties;
     if (Array.isArray(licences)) {
@@ -137,11 +147,20 @@ export const updateContractorProfile = async (req, res) => {
     }
     if (customInstructions) profile.customInstructions = customInstructions;
 
+    // The profile counts as set up only when every field the fit check uses is filled in.
+    const missing = PROFILE_REQUIRED_FIELDS.filter((field) => !isProfileComplete({ ...PROFILE_FILLED, [field]: profile[field] }));
+    profile.profileConfiguredAt = missing.length ? null : (profile.profileConfiguredAt || new Date());
+
     await profile.save();
-    return res.status(200).json({ success: true, profile, message: 'Contractor AI memory updated successfully.' });
+    return res.status(200).json({
+      success: true,
+      profile,
+      missingFields: missing,
+      message: missing.length ? 'Profile saved. Fill in the remaining fields to run an AI analysis.' : 'Contractor AI memory updated successfully.',
+    });
   } catch (error) {
     logger.error(`Error updating contractor profile: ${error.message}`);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(error.status || 500).json({ success: false, error: error.message, message: error.message });
   }
 };
 
@@ -190,6 +209,13 @@ export const getTenderDossier = async (req, res) => {
 
     if (!tenderId) {
       return res.status(400).json({ success: false, error: 'Tender identifier is required.' });
+    }
+
+    const profile = await contractorAgentService.getOrCreateContractorProfile(userId);
+    try {
+      contractorAgentService.assertProfileConfigured(profile);
+    } catch (gate) {
+      return res.status(gate.status).json({ success: false, error: gate.error, message: gate.message });
     }
 
     let tender = null;

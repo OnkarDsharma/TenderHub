@@ -4,17 +4,21 @@ const contractorAgentProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
   
   // Organization / Firm Details
-  companyName: { type: String, default: 'My Contracting Enterprise' },
-  registrationClass: { type: String, default: 'Class A Works' },
+  // Empty until the contractor fills them in. AI analysis is refused until
+  // profileConfiguredAt is set, so the fit check never uses made-up figures.
+  companyName: { type: String, default: '' },
+  registrationClass: { type: String, default: '' },
   primaryJurisdiction: { type: String, default: 'Jammu & Kashmir / North Zone' },
   gstin: { type: String, default: '' },
   panNumber: { type: String, default: '' },
   
   // Financial Baselines
-  avgAnnualTurnoverInr: { type: Number, default: 50000000 }, // Default 5 Cr
-  solvencyLimitInr: { type: Number, default: 20000000 },      // Default 2 Cr
-  ongoingCommitmentsInr: { type: Number, default: 10000000 }, // Default 1 Cr
-  largestSingleWorkDoneInr: { type: Number, default: 30000000 }, // Default 3 Cr
+  avgAnnualTurnoverInr: { type: Number, default: null },
+  solvencyLimitInr: { type: Number, default: null },
+  ongoingCommitmentsInr: { type: Number, default: null },
+  largestSingleWorkDoneInr: { type: Number, default: null },
+  // Set when the contractor saves a complete profile (see isProfileComplete).
+  profileConfiguredAt: { type: Date, default: null },
   
   // Plant & Machinery Inventory (Key for technical eligibility)
   machineryInventory: [{
@@ -35,7 +39,7 @@ const contractorAgentProfileSchema = new mongoose.Schema({
   // Contractor Custom Prompt Instructions
   customInstructions: { 
     type: String, 
-    default: 'Highlight strict liquidated damages, calculate exact cement and TMT steel tons, and flag if equipment lease is required.'
+    default: ''
   },
 
   // AI Usage & Credit Balances
@@ -64,5 +68,15 @@ const contractorAgentProfileSchema = new mongoose.Schema({
   // Analyzed Tenders history
   analyzedTenders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tender' }]
 }, { timestamps: true });
+
+/** A profile is complete when the fields the fit check compares are filled in. */
+export const PROFILE_REQUIRED_FIELDS = ['companyName', 'registrationClass', 'avgAnnualTurnoverInr', 'solvencyLimitInr', 'largestSingleWorkDoneInr'];
+export function isProfileComplete(profile) {
+  if (!profile) return false;
+  return PROFILE_REQUIRED_FIELDS.every((field) => {
+    const value = profile[field];
+    return typeof value === 'string' ? value.trim().length > 0 : Number.isFinite(value) && value >= 0;
+  });
+}
 
 export default mongoose.model('ContractorAgentProfile', contractorAgentProfileSchema);

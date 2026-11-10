@@ -137,6 +137,10 @@ export function buildHandlers() {
       const allowed = ['companyName', 'registrationClass', 'primaryJurisdiction', 'avgAnnualTurnoverInr', 'solvencyLimitInr', 'ongoingCommitmentsInr', 'largestSingleWorkDoneInr', 'machineryInventory', 'specialties', 'licences', 'customInstructions'];
       const s = saveState((st) => {
         for (const k of allowed) if (k in body) st.agentProfile[k] = body[k];
+        const p = st.agentProfile;
+        const complete = ['companyName', 'registrationClass'].every((k) => String(p[k] || '').trim())
+          && ['avgAnnualTurnoverInr', 'solvencyLimitInr', 'largestSingleWorkDoneInr'].every((k) => p[k] !== '' && p[k] !== null && Number.isFinite(Number(p[k])) && Number(p[k]) >= 0);
+        p.profileConfiguredAt = complete ? (p.profileConfiguredAt || iso(0)) : null;
         st.agentProfile.updatedAt = iso(0);
       });
       dossierCache.clear();
@@ -144,6 +148,7 @@ export function buildHandlers() {
     }],
     ['post', '/services/analyze', ({ headers, body }) => {
       requireAuth(headers);
+      if (!getState().agentProfile.profileConfiguredAt) throw httpError(409, { success: false, error: 'PROFILE_REQUIRED', message: 'Set up your contractor profile (firm name, registration class, turnover, solvency and largest similar work) before running an AI analysis.' });
       const t = resolveTender(body.tenderId);
       if (!t) throw httpError(404, { success: false, error: 'Tender not found', message: `No tender matches "${body.tenderId}". Try a reference from the Browse Tenders page.` });
       const { dossier, personalizedFit } = dossierFor(t);

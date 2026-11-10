@@ -66,3 +66,14 @@ test('routine registrations (PAN, GST, EPF) never fail the fit', async () => {
   const post = sanitizePostAwardAnalysis({ qualityAndSafetyCompliance: [{ standardCode: 'Not stated in the tender documents', title: 'Not stated in the tender documents' }, { standardCode: 'IS 694', title: 'PVC cables' }], penaltyClauses: [] });
   assert.deepEqual(post.qualityAndSafetyCompliance.map((q) => q.standardCode), ['IS 694']);
 });
+
+test('profile completeness and class names from the profile form', async () => {
+  const { isProfileComplete } = await import('../src/models/ContractorAgentProfile.js');
+  assert.equal(isProfileComplete({ companyName: 'A', registrationClass: 'Class A Works', avgAnnualTurnoverInr: 1, solvencyLimitInr: 0, largestSingleWorkDoneInr: 5 }), true);
+  assert.equal(isProfileComplete({ companyName: '', registrationClass: 'Class A Works', avgAnnualTurnoverInr: 1, solvencyLimitInr: 0, largestSingleWorkDoneInr: 5 }), false);
+  assert.equal(isProfileComplete({ companyName: 'A', registrationClass: 'Class A Works', avgAnnualTurnoverInr: null, solvencyLimitInr: 0, largestSingleWorkDoneInr: 5 }), false);
+  assert.equal(registrationRank('Class Special'), 0);
+  const unregistered = computeContractorFit({ ...profile, registrationClass: 'Not registered (goods / services supplier)' }, dossier({ thresholds: { requiredRegistration: 'Class C or above' } }));
+  assert.equal(unregistered.classCheck.status, 'FAIL');
+  assert.match(unregistered.verdict, /^Not eligible: registration class/);
+});

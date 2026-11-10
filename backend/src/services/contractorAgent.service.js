@@ -4,7 +4,13 @@ import OpenAI from 'openai';
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
 import TenderAiDossier from '../models/TenderAiDossier.js';
-import ContractorAgentProfile from '../models/ContractorAgentProfile.js';
+import ContractorAgentProfile, { isProfileComplete } from '../models/ContractorAgentProfile.js';
+
+// The sample firm earlier versions pre-filled into every new profile.
+const isSeededDemoProfile = (p) => (
+  (p.companyName === 'Prime Infrastructure & Engineering' && p.avgAnnualTurnoverInr === 65000000 && p.solvencyLimitInr === 25000000)
+  || (p.companyName === 'My Contracting Enterprise' && p.avgAnnualTurnoverInr === 50000000 && p.solvencyLimitInr === 20000000)
+);
 import AiAgentChatSession from '../models/AiAgentChatSession.js';
 import Tender from '../models/Tender.js';
 import pino from 'pino';
@@ -98,22 +104,9 @@ export class ContractorAgentService {
   async getOrCreateContractorProfile(userId) {
     let profile = await ContractorAgentProfile.findOne({ userId });
     if (!profile) {
+      // A new profile starts empty: the contractor fills it in before any analysis.
       profile = await ContractorAgentProfile.create({
         userId,
-        companyName: 'Prime Infrastructure & Engineering',
-        registrationClass: 'Class A Works',
-        avgAnnualTurnoverInr: 65000000, // 6.5 Cr
-        solvencyLimitInr: 25000000,      // 2.5 Cr
-        ongoingCommitmentsInr: 12000000,
-        largestSingleWorkDoneInr: 32000000,
-        machineryInventory: [
-          { name: 'JCB 3DX Excavator', category: 'Earthmoving', quantity: 2, isOwned: true },
-          { name: 'Static Tandem Roller (8-10T)', category: 'Paving', quantity: 1, isOwned: true },
-          { name: 'Transit Concrete Mixer 6m3', category: 'Concrete', quantity: 1, isOwned: true },
-          { name: 'Water Tanker (5000L)', category: 'Transport', quantity: 2, isOwned: true },
-        ],
-        specialties: ['Road & Highway Construction', 'Civil Buildings', 'Drainage Works'],
-        customInstructions: 'Strictly check liquidated damages, bank guarantee duration, and material price escalation.',
         credits: {
           planTier: 'free_trial',
           availableDossiers: 2,
@@ -122,14 +115,35 @@ export class ContractorAgentService {
           copilotQueriesUsed: 0,
         }
       });
+    } else if (!profile.profileConfiguredAt && isSeededDemoProfile(profile)) {
+      // Profiles created before this change were pre-filled with a sample firm.
+      // Clear that sample data so the setup form starts blank, not with fake figures.
+      Object.assign(profile, {
+        companyName: '', registrationClass: '', avgAnnualTurnoverInr: null, solvencyLimitInr: null,
+        ongoingCommitmentsInr: null, largestSingleWorkDoneInr: null, machineryInventory: [], specialties: [], customInstructions: '',
+      });
+      await profile.save();
     }
     return profile;
+  }
+
+  /** Refuses AI analysis until the contractor has saved a complete profile. */
+  assertProfileConfigured(profile) {
+    if (!profile?.profileConfiguredAt || !isProfileComplete(profile)) {
+      throw new QuotaError(409, {
+        error: 'PROFILE_REQUIRED',
+        message: 'Set up your contractor profile (firm name, registration class, turnover, solvency and largest similar work) before running an AI analysis.',
+      });
+    }
   }
 
   /**
    * Runs or retrieves full AI Dossier for a specific tender
    */
   async getOrGenerateTenderDossier(tenderId, userId, forceRefresh = false) {
+    const profile = await this.getOrCreateContractorProfile(userId);
+    this.assertProfileConfigured(profile);
+
     let tender = null;
     if (mongoose.isValidObjectId(tenderId)) {
       tender = await Tender.findById(tenderId).select('+gemRawText');
@@ -199,7 +213,6 @@ export class ContractorAgentService {
     }
 
     // Dossier limits are temporarily disabled to support open testing.
-    const profile = await this.getOrCreateContractorProfile(userId);
 
     // Create or mark dossier as PROCESSING
     if (!dossier) {
@@ -293,6 +306,12 @@ export class ContractorAgentService {
    */
   async calculateContractorPersonalizedFit(tender, userId, dossier) {
     const profile = await this.getOrCreateContractorProfile(userId);
+    if (!profile.profileConfiguredAt || !isProfileComplete(profile)) {
+      return {
+        assessed: false, matchScore: null, verdict: 'Not assessed: set up your contractor profile',
+        identifiedGaps: [], licenceChecks: [], contractorName: profile.companyName || null, registrationClass: profile.registrationClass || null,
+      };
+    }
     return computeContractorFit(profile, dossier, this.detectTenderDomain(tender));
   }
 
