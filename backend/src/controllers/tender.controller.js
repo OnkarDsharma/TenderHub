@@ -11,12 +11,17 @@ import User from '../models/User.js';
 import Subscription from '../modules/billing/models/Subscription.js';
 import { env } from '../config/env.js';
 import { aiQueue } from '../workers/queue.js';
+import AdmZip from 'adm-zip';
 import { getTenderR2Object } from '../utils/r2Storage.js';
+import { spreadsheetToCsv } from '../utils/spreadsheetText.js';
 import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 
 /**
  * Helper to get current date formatted as YYYY-MM-DD in Asia/Kolkata (IST)
  */
+// Upper bound for one listing lookup, so a slow search fails instead of hanging.
+const LIST_QUERY_MAX_MS = 15000;
+
 const getTodayISTString = () => {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
@@ -429,20 +434,11 @@ export const getTenders = async (req, res, next) => {
       }
     ];
 
-    // Compute live counts for all 3 tabs (Active, Archived, Expired) and 48h closing soon
-    const activeCount = await Tender.countDocuments(
-      baseConditions.length > 0 ? { $and: [...baseConditions, activeFilter] } : activeFilter
-    );
-    const archivedCount = await Tender.countDocuments(
-      baseConditions.length > 0 
-        ? { $and: [...baseConditions, { $or: archivedFilterConditions }] } 
-        : { $or: archivedFilterConditions }
-    );
-    const expiredCount = await Tender.countDocuments(
-      baseConditions.length > 0 
-        ? { $and: [...baseConditions, { $or: expiredFilterConditions }] } 
-        : { $or: expiredFilterConditions }
-    );
+    // Live counts for the 3 tabs (Active, Archived, Expired) and 48h closing soon.
+    // Started here, awaited together with the page query below, so a search
+    // costs one round of parallel lookups instead of six in a row.
+    const withBase = (cond) => (baseConditions.length > 0 ? { $and: [...baseConditions, cond] } : cond);
+    const countQuery = (q) => Tender.countDocuments(q).maxTimeMS(LIST_QUERY_MAX_MS);
     const closingSoonDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     const closingSoonFilter = {
       $and: [
@@ -450,9 +446,14 @@ export const getTenders = async (req, res, next) => {
         { closingDate: { $gte: now, $lte: closingSoonDate } }
       ]
     };
-    const closingSoonCount = await Tender.countDocuments(
-      baseConditions.length > 0 ? { $and: [...baseConditions, closingSoonFilter] } : closingSoonFilter
-    );
+    const tabCountsPromise = Promise.all([
+      countQuery(withBase(activeFilter)),
+      countQuery(withBase({ $or: archivedFilterConditions })),
+      countQuery(withBase({ $or: expiredFilterConditions })),
+      countQuery(withBase(closingSoonFilter)),
+    ]);
+    // Silences an unhandled rejection if the page query below fails first.
+    tabCountsPromise.catch(() => {});
 
     // 5. Build final query with status and closing date criteria
     const queryConditions = [...baseConditions];
@@ -560,15 +561,30 @@ export const getTenders = async (req, res, next) => {
       'detailsUrl',
     ].join(' ');
 
-    const tenders = await Tender.find(query)
+    const tendersPromise = Tender.find(query)
       .select(PUBLIC_SUMMARY_PROJECTION)
       .sort(sortConfig)
       .skip((safePage - 1) * safeLimit)
       .limit(safeLimit)
+      .maxTimeMS(LIST_QUERY_MAX_MS)
       .lean();
 
-    // Get the total count of documents matching the active query for frontend pagination controls
-    const total = await Tender.countDocuments(query);
+    // The total for pagination is one of the tab counts unless a deadline
+    // window narrows it, so only count separately when it has to.
+    // totalTab indexes [activeCount, archivedCount, expiredCount]; null = count separately.
+    let totalTab = 0;
+    if (status === 'archived') totalTab = 1;
+    else if (status === 'expired') totalTab = 2;
+    else if (status === 'cancelled' || status === 'all') totalTab = null;
+    if (closingDays && status !== 'archived' && status !== 'expired') totalTab = null;
+    const totalPromise = totalTab === null ? countQuery(query) : null;
+
+    const [tenders, [activeCount, archivedCount, expiredCount, closingSoonCount], separateTotal] = await Promise.all([
+      tendersPromise,
+      tabCountsPromise,
+      totalPromise,
+    ]);
+    const total = totalTab === null ? separateTotal : [activeCount, archivedCount, expiredCount][totalTab];
 
     // 8. Send Response Payload
     res.status(200).json({
@@ -860,6 +876,63 @@ export const downloadTenderZip = async (req, res, next) => {
   }
 };
 
+const MAX_SPREADSHEET_BYTES = 25 * 1024 * 1024;
+const MAX_ZIP_BYTES = 150 * 1024 * 1024;
+
+/** Reads an R2 object into memory, refusing anything over maxBytes. */
+const readR2Bytes = async (object, maxBytes) => {
+  if (object.ContentLength && object.ContentLength > maxBytes) {
+    const error = new Error('File is too large to convert');
+    error.statusCode = 413;
+    throw error;
+  }
+  return Buffer.from(await object.Body.transformToByteArray());
+};
+
+/** Sends an Excel file's cell values as a CSV download named after the original. */
+const sendSpreadsheetCsv = (res, bytes, originalName) => {
+  let csv;
+  try {
+    csv = spreadsheetToCsv(bytes);
+  } catch {
+    return res.status(422).json({ message: 'This file could not be converted to CSV. Download the original Excel file instead.' });
+  }
+  const csvName = `${String(originalName).replace(/\.(xlsx?|xlsm)$/i, '') || 'BOQ'}.csv`.replace(/[\r\n"\\/]/g, '_');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${csvName}"`);
+  return res.send(csv);
+};
+
+/**
+ * Converts one Excel file inside the tender's ZIP archive to CSV.
+ *
+ * @route GET /api/v1/tenders/:id/zip/csv?entry=<path inside the zip>
+ */
+export const downloadZipEntryCsv = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const entryName = typeof req.query.entry === 'string' ? req.query.entry : '';
+    if (!mongoose.isValidObjectId(id) || !entryName || !/\.(xlsx?|xlsm)$/i.test(entryName)) {
+      return res.status(400).json({ message: 'Invalid BOQ conversion request' });
+    }
+
+    const tender = await Tender.findById(id).select('boqZipUrl boqFileUrl').lean();
+    if (!tender) return res.status(404).json({ message: 'Tender not found' });
+    const zipUrl = tender.boqZipUrl || (tender.boqFileUrl && tender.boqFileUrl.toLowerCase().endsWith('.zip') ? tender.boqFileUrl : null);
+    if (!zipUrl) return res.status(404).json({ message: 'No ZIP archive found for this tender' });
+
+    const zipBytes = await readR2Bytes(await getTenderR2Object(zipUrl), MAX_ZIP_BYTES);
+    const entry = new AdmZip(zipBytes).getEntry(entryName);
+    if (!entry || entry.isDirectory) return res.status(404).json({ message: 'File not found in the tender ZIP' });
+    if (entry.header.size > MAX_SPREADSHEET_BYTES) return res.status(413).json({ message: 'File is too large to convert' });
+
+    return sendSpreadsheetCsv(res, entry.getData(), entryName.split('/').pop());
+  } catch (error) {
+    if (error.statusCode === 413) return res.status(413).json({ message: error.message });
+    next(error);
+  }
+};
+
 /** Stream a tender notice or work document through private R2 credentials. */
 export const streamTenderDocument = async (req, res, next) => {
   try {
@@ -891,11 +964,16 @@ export const streamTenderDocument = async (req, res, next) => {
 
     const object = await getTenderR2Object(document.fileUrl);
     const fileName = (document.documentName || `tender-document-${itemIndex + 1}`).replace(/[\r\n"\\]/g, '_');
+    if (req.query.format === 'csv') {
+      const bytes = await readR2Bytes(object, MAX_SPREADSHEET_BYTES);
+      return sendSpreadsheetCsv(res, bytes, fileName);
+    }
     res.setHeader('Content-Type', object.ContentType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `${req.query.download === '1' ? 'attachment' : 'inline'}; filename="${fileName}"`);
     if (object.ContentLength) res.setHeader('Content-Length', object.ContentLength);
     return Readable.from(object.Body).pipe(res);
   } catch (error) {
+    if (error.statusCode === 413) return res.status(413).json({ message: error.message });
     next(error);
   }
 };

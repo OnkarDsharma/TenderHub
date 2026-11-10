@@ -5,6 +5,7 @@ import {
   getTenderStats, // Imported the newly created stats controller
   getTenderById,
   downloadTenderZip,
+  downloadZipEntryCsv,
   streamTenderDocument,
   triggerAiAnalysis
 } from '../controllers/tender.controller.js';
@@ -38,6 +39,12 @@ router.get('/:id/documents/:kind/:index', streamTenderDocument);
  * Stream the ZIP archive directly with CORS headers to avoid client browser CORS blocks.
  * Accessible to all visitors.
  */
+/**
+ * @route GET /api/tenders/:id/zip/csv?entry=<file>
+ * One BOQ spreadsheet from the ZIP, converted to CSV.
+ */
+router.get('/:id/zip/csv', optionalAuth, downloadZipEntryCsv);
+
 router.get('/:id/zip', optionalAuth, downloadTenderZip);
 
 /**

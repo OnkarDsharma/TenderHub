@@ -316,21 +316,69 @@ export function parseXlsx(buffer) {
  * sheet says "Please Enable Macros", so sheets are chosen by content, not
  * visibility: one-or-two-row notice sheets are dropped when a fuller sheet exists.
  */
-export function sheetsToText(sheets) {
+function chooseSheets(sheets) {
   const withContent = sheets.filter((s) => s.cells.size > 0);
   const substantial = withContent.filter((s) => s.cells.size > 2);
-  const chosen = substantial.length ? substantial : withContent;
-  return chosen.map((sheet) => {
-    const usedCols = [...new Set([...sheet.cells.values()].flatMap((row) => [...row.keys()]))].sort((a, b) => a - b);
-    const lines = [...sheet.cells.keys()].sort((a, b) => a - b).map((r) => {
-      const row = sheet.cells.get(r);
-      const values = usedCols.map((c) => (row.get(c) || '').replace(/\s+/g, ' ').trim());
-      while (values.length && !values[values.length - 1]) values.pop();
-      return values.join('\t');
-    }).filter((line) => line.trim());
+  return substantial.length ? substantial : withContent;
+}
+
+/** Each chosen sheet as non-empty rows of tidied cell values, empty columns dropped. */
+function sheetRows(sheet) {
+  const usedCols = [...new Set([...sheet.cells.values()].flatMap((row) => [...row.keys()]))].sort((a, b) => a - b);
+  return [...sheet.cells.keys()].sort((a, b) => a - b).map((r) => {
+    const row = sheet.cells.get(r);
+    const values = usedCols.map((c) => (row.get(c) || '').replace(/\s+/g, ' ').trim());
+    while (values.length && !values[values.length - 1]) values.pop();
+    return values;
+  }).filter((values) => values.some(Boolean));
+}
+
+export function sheetsToText(sheets) {
+  return chooseSheets(sheets).map((sheet) => {
+    const lines = sheetRows(sheet).map((values) => values.join('\t'));
     return `### Sheet: ${sheet.name}\n${lines.join('\n')}`;
   }).join('\n\n');
 }
 
+// A cell starting with = + - @ (or a tab/CR) is run as a formula by spreadsheet
+// apps, so it is prefixed with ' unless it is a plain number such as -12.5.
+const csvCell = (value) => {
+  let v = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(v) && !/^[+-]?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(v)) v = `'${v}`;
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+};
+
+/**
+ * Renders sheets as CSV: cell values only (formulas give their last
+ * calculated result). Several BOQ sheets go one after another, each headed by
+ * a "Sheet: <name>" row. Starts with a UTF-8 byte-order mark so Excel reads
+ * Hindi and the rupee sign correctly.
+ */
+export function sheetsToCsv(sheets) {
+  const chosen = chooseSheets(sheets);
+  const blocks = chosen.map((sheet) => {
+    const rows = sheetRows(sheet);
+    if (chosen.length > 1) rows.unshift([`Sheet: ${sheet.name}`]);
+    return rows.map((values) => values.map(csvCell).join(',')).join('\r\n');
+  });
+  return `\uFEFF${blocks.join('\r\n\r\n')}\r\n`;
+}
+
+const isXlsxZip = (buffer) => {
+  try {
+    return Boolean(new AdmZip(buffer).getEntry('xl/workbook.xml'));
+  } catch {
+    return false;
+  }
+};
+
+/** Parses an .xls or .xlsx buffer by its contents, not its file name. */
+export function parseSpreadsheet(buffer) {
+  if (isOle(buffer)) return parseXls(buffer);
+  if (isXlsxZip(buffer)) return parseXlsx(buffer);
+  throw new Error('Not an Excel spreadsheet');
+}
+
 export const spreadsheetToText = (buffer, { xlsx = false } = {}) => sheetsToText(xlsx ? parseXlsx(buffer) : parseXls(buffer));
+export const spreadsheetToCsv = (buffer) => sheetsToCsv(parseSpreadsheet(buffer));
 export { isOle };

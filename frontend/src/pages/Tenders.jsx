@@ -21,11 +21,11 @@ import {
   Landmark,
   AlertCircle,
   Calendar,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Loader2,
 } from 'lucide-react';
 
 import { useTenders, useTenderOrganizations } from '@/hooks/useTenders';
-import { useDebounce } from '@/hooks/useDebounce';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -221,7 +221,6 @@ export default function Tenders() {
 
   const [search, setSearch] = useState(initialSearch);
   const [appliedSearch, setAppliedSearch] = useState(initialSearch);
-  const debouncedSearch = useDebounce(appliedSearch, 300);
 
   const [state, setState] = useState(initialState);
   const [category, setCategory] = useState(initialCategory);
@@ -271,7 +270,7 @@ export default function Tenders() {
 
   // Construct API Query
   const queryFilters = {
-    search: debouncedSearch,
+    search: appliedSearch,
     state: state || undefined,
     category: category,
     organisation: organization,
@@ -296,7 +295,9 @@ export default function Tenders() {
     limit: queryLimit,
   };
 
-  const { data, isLoading, isError, error } = useTenders(queryFilters);
+  const { data, isLoading, isFetching, isError, error } = useTenders(queryFilters);
+  // A new search or filter is loading while the previous results stay on screen.
+  const isSearching = isFetching && !isLoading;
 
   const tenders = data?.data || [];
   const totalCount = data?.meta?.total || 0;
@@ -425,7 +426,7 @@ export default function Tenders() {
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bid number, item, department…" className="w-full h-11 pl-10 pr-4 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-dalBlue/50 dark:focus:border-blue-400/50 transition-colors" />
               </div>
             </SearchBeam>
-            <button type="submit" aria-label="Search bids" title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer"><Search className="w-5 h-5" strokeWidth={2.25} /></button>
+            <button type="submit" aria-label={isSearching ? 'Searching bids' : 'Search bids'} aria-busy={isSearching} title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer">{isSearching ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.25} /> : <Search className="w-5 h-5" strokeWidth={2.25} />}</button>
           </form>
         </div>
 
@@ -844,7 +845,11 @@ export default function Tenders() {
             </div>
 
             <div className="text-xs text-slate-500 dark:text-slate-400 px-1">
-              Showing <strong className="font-mono text-slate-900 dark:text-white">{totalCount.toLocaleString('en-IN')}</strong> bids
+              {isSearching ? (
+                <span role="status">Searching…</span>
+              ) : (
+                <>Showing <strong className="font-mono text-slate-900 dark:text-white">{totalCount.toLocaleString('en-IN')}</strong> bids</>
+              )}
             </div>
           </div>
 
@@ -885,7 +890,7 @@ export default function Tenders() {
 
           {/* Tenders Bid List matching GeM Feed */}
           {!isLoading && !isError && tenders.length > 0 && (
-            <div className="gem-bid-list">
+            <div className={`gem-bid-list transition-opacity duration-150 ${isSearching ? 'opacity-50 pointer-events-none' : ''}`} aria-busy={isSearching}>
               {tenders.map((tender) => (
                 <TenderCard 
                   key={tender._id || tender.sourceTenderId}

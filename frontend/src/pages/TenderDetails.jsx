@@ -173,6 +173,7 @@ export default function TenderDetails() {
 
         files.push({
           name: fileName,
+          path: relativePath,
           sizeKb,
           url: fileUrl,
           type: fileType
@@ -975,7 +976,7 @@ export default function TenderDetails() {
                         <div className="flex items-start gap-2 p-2 rounded-lg bg-white/70 dark:bg-slate-900/50 border border-emerald-100 dark:border-emerald-900/40 text-[11px] text-slate-600 dark:text-slate-400">
                           <Info className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                           <span>
-                            Looking for individual files without downloading the full archive? Click <strong>&quot;Inspect &amp; Unzip Files&quot;</strong> to unpack and download specific BOQ Excel sheets or PDFs directly in your browser. (Note: Extraction may take a few moments depending on archive size).
+                            Looking for individual files without downloading the full archive? Click <strong>&quot;Inspect &amp; Unzip Files&quot;</strong> to unpack and download specific BOQ sheets (as the original Excel file or as CSV) or PDFs directly in your browser. (Note: Extraction may take a few moments depending on archive size).
                           </span>
                         </div>
                       )}
@@ -1088,8 +1089,20 @@ export default function TenderDetails() {
                                       }`}
                                     >
                                       <Download className="w-3 h-3" />
-                                      <span>{isXls ? 'Download BOQ' : 'Download'}</span>
+                                      <span>{isXls ? 'Excel' : 'Download'}</span>
                                     </a>
+                                    {isXls && (
+                                      <a
+                                        href={`${api.defaults.baseURL}/tenders/${tender._id || id}/zip/csv?entry=${encodeURIComponent(file.path || file.name)}`}
+                                        download
+                                        aria-label={`Download ${file.name} as CSV`}
+                                        title="Cell values only, opens in any app. Bid with the Excel file."
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all cursor-pointer"
+                                      >
+                                        <Download className="w-3 h-3" />
+                                        <span>CSV</span>
+                                      </a>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -1189,6 +1202,7 @@ export default function TenderDetails() {
                                   </a>
                                 </>
                               ) : isXls ? (
+                                <>
                                 <a 
                                   href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`}
                                   target="_blank" 
@@ -1197,8 +1211,19 @@ export default function TenderDetails() {
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition-all cursor-pointer"
                                 >
                                   <FileSpreadsheet className="w-3.5 h-3.5" />
-                                  <span>Download BOQ (.xls)</span>
+                                  <span>Excel</span>
                                 </a>
+                                <a
+                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?format=csv`}
+                                  download
+                                  aria-label={`Download ${docName} as CSV`}
+                                  title="Cell values only, opens in any app. Bid with the Excel file."
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs transition-all cursor-pointer"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>CSV</span>
+                                </a>
+                                </>
                               ) : (
                                 <a 
                                   href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?download=1`}

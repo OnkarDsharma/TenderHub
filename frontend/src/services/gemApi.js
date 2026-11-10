@@ -11,7 +11,8 @@ export const gemApi = {
    * @param {Object} params Search and filter parameters
    */
   async getTenders(params = {}) {
-    const response = await api.get('/gem/tenders', { params });
+    // Long enough for a sleeping server to wake, short enough never to hang.
+    const response = await api.get('/gem/tenders', { params, timeout: 60000 });
     return response.data;
   },
 

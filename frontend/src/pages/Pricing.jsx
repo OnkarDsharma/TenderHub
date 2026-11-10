@@ -15,7 +15,7 @@ export const UNIFIED_PLANS = [
   {
     id: 'contractor_pro', name: 'Contractor Pro Suite', badge: 'Most Popular', price: '₹999', billingCycle: '/ month',
     description: 'Continuous tender intelligence and high-volume AI estimation for active bidders.', isLocked: true, lockLabel: 'Full Unrestricted Access Coming Soon', ctaText: 'Join Priority Waitlist',
-    features: ['Unrestricted daily AI Tender Dossiers (BOQ & materials)', 'Unlimited 24/7 AI Copilot queries (No lockouts)', 'Real-time daily WhatsApp tender alerts (Custom filters)', 'Instant Excel/PDF BOQ schedule exports', 'Corrigendum & bid extension instant SMS/WhatsApp alerts', 'Priority email & WhatsApp desk support'],
+    features: ['Unrestricted daily AI Tender Dossiers (BOQ & materials)', 'Unlimited 24/7 AI Copilot queries (No lockouts)', 'Real-time daily WhatsApp tender alerts (Custom filters)', 'Instant Excel, CSV and PDF BOQ schedule exports', 'Corrigendum & bid extension instant SMS/WhatsApp alerts', 'Priority email & WhatsApp desk support'],
   },
   {
     id: 'bidding_pro_enterprise', name: 'Bidding Pro & Enterprise', badge: 'Maximum Value', price: '₹2,499', billingCycle: '/ month',

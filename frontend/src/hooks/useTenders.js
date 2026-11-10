@@ -2,7 +2,7 @@
  * @file src/hooks/useTenders.js
  * @description React Query hook to fetch and cache paginated/filtered tenders.
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/services/api';
 
 export const useTenders = (filters = {}) => {
@@ -16,13 +16,19 @@ export const useTenders = (filters = {}) => {
         Object.entries(filters).filter(([, v]) => v != null && v !== '')
       );
       
-      const response = await api.get('/tenders', { params: cleanFilters });
-      return response.data;
+      try {
+        // Long enough for a sleeping server to wake, short enough never to hang.
+        const response = await api.get('/tenders', { params: cleanFilters, timeout: 60000 });
+        return response.data;
+      } catch (err) {
+        if (err?.code === 'ECONNABORTED') throw new Error('Search took too long. Please try again.', { cause: err });
+        throw err;
+      }
     },
     
     // Keep data fresh for 5 minutes to avoid redundant network requests
     staleTime: 1000 * 60 * 5, 
-    keepPreviousData: true, // Prevents UI flickering during pagination
+    placeholderData: keepPreviousData, // Keeps the current results on screen while the next page or search loads
   });
 };
 

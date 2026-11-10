@@ -78,56 +78,6 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full transition-colors duration-200">
       
-      {/* Top Utility Bar (Clean, uncluttered top strip) */}
-      <div className="navbar-source-strip bg-blue-950 text-blue-100/75 text-[11px] sm:text-xs py-1 px-4 sm:px-6 lg:px-8 border-b border-blue-900 hidden md:block">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
-          {/* Left: data-source context */}
-          <div className="flex items-center gap-2 font-medium">
-            <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
-            <span>Data sources: <strong className="text-white font-semibold">J&amp;K, Punjab, HP Portals &amp; GeM</strong></span>
-          </div>
-
-          {/* Right: AI Shortcut, Theme Toggle & Saved Bookmarks */}
-          <div className="flex items-center gap-4">
-            <Link 
-              to="/services" 
-              className="inline-flex items-center gap-1.5 text-techCoral hover:text-white transition-colors text-[11px] font-semibold"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>AI BOQ Estimator</span>
-            </Link>
-
-            <div className="h-3 w-px bg-blue-800" />
-
-            {/* Light/Dark Mode Switch */}
-            <button
-              onClick={toggleTheme}
-              className="text-blue-100/75 hover:text-white transition-colors cursor-pointer"
-              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
-            </button>
-
-            {/* Saved Tenders Bookmark */}
-            <Link
-              to="/profile?tab=saved"
-              className="relative text-blue-100/75 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
-              title="Saved Tenders"
-              aria-label="Saved Tenders"
-            >
-              <Heart className="w-3.5 h-3.5" />
-              {savedTenders.length > 0 && (
-                <span className="w-3.5 h-3.5 rounded-full bg-techCoral text-white text-[8px] font-bold flex items-center justify-center">
-                  {savedTenders.length}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* Main Navigation Bar */}
       <div className="bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-[#262832] shadow-xs">
         <div className="navbar-main-row max-w-7xl mx-auto flex lg:grid lg:grid-cols-[1fr_auto_1fr] items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
@@ -180,6 +130,16 @@ export function Navbar() {
 
           {/* Right Action: Clean Profile / Auth */}
           <div className="flex items-center justify-end justify-self-end gap-3 sm:gap-4 shrink-0">
+            {/* Light/Dark Mode Switch (desktop; mobile has it in the drawer) */}
+            <button
+              onClick={toggleTheme}
+              className="hidden lg:inline-flex p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-techCoral transition-colors cursor-pointer"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            </button>
+
             {/* Auth Buttons / Profile Dropdown */}
             {isAuthenticated ? (
               <div className="relative" ref={profileDropdownRef}>

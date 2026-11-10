@@ -18,6 +18,7 @@ import {
   Landmark,
   Calendar,
   SlidersHorizontal,
+  Loader2,
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
@@ -275,7 +276,7 @@ export default function GeMTenders() {
         }
       } catch (err) {
         console.error('[GeM Page] Failed to fetch tenders:', err);
-        if (!cancelled) setError('Unable to connect to GeM tenders index. Please try again.');
+        if (!cancelled) setError(err?.code === 'ECONNABORTED' ? 'Search took too long. Please try again.' : 'Unable to connect to GeM tenders index. Please try again.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -390,7 +391,7 @@ export default function GeMTenders() {
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bid number, item, ministry or department…" className="w-full h-11 pl-10 pr-4 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-dalBlue/50 dark:focus:border-blue-400/50 transition-colors" />
               </div>
             </SearchBeam>
-            <button type="submit" aria-label="Search bids" title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer"><Search className="w-5 h-5" strokeWidth={2.25} /></button>
+            <button type="submit" aria-label={loading ? 'Searching bids' : 'Search bids'} aria-busy={loading} title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer">{loading ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.25} /> : <Search className="w-5 h-5" strokeWidth={2.25} />}</button>
           </form>
         </div>
 
