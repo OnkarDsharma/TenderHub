@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderArchive, Trash2, Clock, CheckCircle2, ShieldAlert, Loader2 } from 'lucide-react';
+import { FolderArchive, Trash2, Clock, CheckCircle2, ShieldAlert, Loader2, GitCompare } from 'lucide-react';
 import { adminApi } from '../services/api';
 
 export function ArchiveView({ overview, onRefresh }) {
@@ -13,6 +13,9 @@ export function ArchiveView({ overview, onRefresh }) {
 
   const [isPurgingExpired, setIsPurgingExpired] = useState(false);
   const [expiredPurgeResult, setExpiredPurgeResult] = useState(null);
+
+  const [isReconciling, setIsReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState(null);
 
   const handlePurgeNow = async () => {
     if (!window.confirm(`Are you sure you want to permanently delete all archived tenders expired more than 30 days ago? This action cannot be undone.`)) {
@@ -52,6 +55,25 @@ export function ArchiveView({ overview, onRefresh }) {
     }
   };
 
+  const handleReconcilePortalNow = async () => {
+    if (!window.confirm(`Are you sure you want to trigger portal parity reconciliation? This verifies tender records against the source portal catalog.`)) {
+      return;
+    }
+
+    setIsReconciling(true);
+    setReconcileResult(null);
+
+    try {
+      const res = await adminApi.reconcilePortal();
+      setReconcileResult(res);
+      onRefresh();
+    } catch (err) {
+      alert(`Portal reconciliation failed: ${err.message}`);
+    } finally {
+      setIsReconciling(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
 
@@ -88,6 +110,20 @@ export function ArchiveView({ overview, onRefresh }) {
         </div>
       )}
 
+      {reconcileResult && (
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-bold">{reconcileResult.message || 'Portal reconciliation completed successfully.'}</p>
+            {reconcileResult.result && (
+              <p className="font-mono text-[11px] opacity-80">
+                {typeof reconcileResult.result === 'string' ? reconcileResult.result : JSON.stringify(reconcileResult.result)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -100,11 +136,11 @@ export function ArchiveView({ overview, onRefresh }) {
 
           <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-display font-black text-slate-900 dark:text-white">03:00 AM</span>
+              <span className="text-3xl font-display font-black text-slate-900 dark:text-white">02:00 AM</span>
               <span className="text-xs font-mono text-slate-500 dark:text-slate-400">Nightly (IST)</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Every night at 03:00 AM, the scheduler triggers a synchronized flush:
+              Every night at 02:00 AM, the scheduler triggers a synchronized flush:
             </p>
             <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
               <li><strong>Expired Tenders:</strong> Purged immediately from MongoDB, Primary R2 &amp; Secondary Backup R2 (both JSON and documents, 0-day retention).</li>
@@ -157,20 +193,20 @@ export function ArchiveView({ overview, onRefresh }) {
         </div>
 
         {/* 3. 30-Day Archive Purge Trigger Card */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between md:col-span-2">
-          <div className="space-y-2">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
               <FolderArchive className="w-4 h-4" />
               <span>30-Day Archived Tenders Cleanup</span>
             </div>
 
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-display font-black text-purple-600 dark:text-purple-400">
-                {expiredCount}
-              </span>
-              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                archived tenders eligible for &gt;30-day deletion (out of {archivedTotal} total archived records)
-              </span>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Permanently deletes archived tender records and associated documents that have exceeded the 30-day retention cutoff.
+            </p>
+
+            <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50 rounded-xl p-2.5 text-xs text-purple-700 dark:text-purple-300 font-mono flex items-center justify-between">
+              <span>Eligible for Deletion:</span>
+              <strong className="text-sm font-bold text-purple-600 dark:text-purple-400">{expiredCount} tender(s)</strong>
             </div>
           </div>
 
@@ -188,6 +224,43 @@ export function ArchiveView({ overview, onRefresh }) {
               <>
                 <Trash2 className="w-4 h-4" />
                 <span>Purge Archived Tenders Older Than 30 Days</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* 4. Portal Parity Reconciliation Action Card */}
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dalBlue dark:text-blue-400">
+              <GitCompare className="w-4 h-4" />
+              <span>Portal Parity Reconciliation</span>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Cross-references local database records against the live portal catalog to detect status drift, verify data integrity, and reconcile missing tenders.
+            </p>
+
+            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl p-2.5 text-xs text-dalBlue dark:text-blue-300 font-mono flex items-center justify-between">
+              <span>Catalog State:</span>
+              <strong className="text-sm font-bold text-dalBlue dark:text-blue-400">On-demand Audit</strong>
+            </div>
+          </div>
+
+          <button
+            onClick={handleReconcilePortalNow}
+            disabled={isReconciling}
+            className="w-full py-2.5 px-4 rounded-xl bg-dalBlue hover:bg-dalBlue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isReconciling ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Reconciling Portal Catalog...</span>
+              </>
+            ) : (
+              <>
+                <GitCompare className="w-4 h-4" />
+                <span>Reconcile Portal Parity Now</span>
               </>
             )}
           </button>

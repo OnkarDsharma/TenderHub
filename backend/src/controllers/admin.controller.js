@@ -16,6 +16,15 @@ import SyncJob from '../models/SyncJob.js';
 import CronConfig from '../models/CronConfig.js';
 import Tender from '../models/Tender.js';
 import PendingDocumentTender from '../models/PendingDocumentTender.js';
+import mongoose from 'mongoose';
+import User from '../models/User.js';
+import Organization from '../models/Organization.js';
+import OrganizationMember from '../models/OrganizationMember.js';
+import Bid from '../models/Bid.js';
+import ContractorProfile from '../models/ContractorProfile.js';
+import Subscription from '../modules/billing/models/Subscription.js';
+import TenderDocument from '../models/TenderDocument.js';
+import TenderRequirement from '../models/TenderRequirement.js';
 
 /**
  * Validate admin credentials
@@ -655,5 +664,658 @@ export const triggerPendingDocsFetch = async (req, res) => {
     return res.status(500).json({ error: 'Failed to dispatch pending docs recovery', message: err.message });
   }
 };
+
+/**
+ * Safely escape regex special characters
+ */
+const escapeRegex = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+// ==============================================================================
+// 1. DASHBOARD STATISTICS
+// ==============================================================================
+
+/**
+ * Aggregate counts: total users, role breakdown, active/inactive,
+ * tender status breakdown, total organizations, total bids, recent users & tenders (7 days).
+ */
+export const getDashboardStats = async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [userAggregation, tenderAggregation, totalOrganizations, totalBids] = await Promise.all([
+      User.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            byRole: [{ $group: { _id: '$role', count: { $sum: 1 } } }],
+            byActive: [{ $group: { _id: '$isActive', count: { $sum: 1 } } }],
+            recent7Days: [
+              { $match: { createdAt: { $gte: sevenDaysAgo } } },
+              { $count: 'count' },
+            ],
+          },
+        },
+      ]),
+      Tender.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+            recent7Days: [
+              { $match: { createdAt: { $gte: sevenDaysAgo } } },
+              { $count: 'count' },
+            ],
+          },
+        },
+      ]),
+      Organization.countDocuments(),
+      Bid.countDocuments(),
+    ]);
+
+    const userFacet = userAggregation[0] || {};
+    const totalUsers = userFacet.total?.[0]?.count || 0;
+    const recentUsers = userFacet.recent7Days?.[0]?.count || 0;
+
+    const usersByRole = {
+      user: 0,
+      contractor: 0,
+      admin: 0,
+      owner: 0,
+    };
+    (userFacet.byRole || []).forEach((item) => {
+      if (item._id) {
+        usersByRole[item._id] = item.count;
+      }
+    });
+
+    let activeUsers = 0;
+    let inactiveUsers = 0;
+    (userFacet.byActive || []).forEach((item) => {
+      if (item._id === true || item._id === 'true') {
+        activeUsers = item.count;
+      } else {
+        inactiveUsers = item.count;
+      }
+    });
+
+    const tenderFacet = tenderAggregation[0] || {};
+    const totalTenders = tenderFacet.total?.[0]?.count || 0;
+    const recentTenders = tenderFacet.recent7Days?.[0]?.count || 0;
+
+    const tendersByStatus = {
+      ACTIVE: 0,
+      EXPIRED: 0,
+      ARCHIVED: 0,
+      CANCELLED: 0,
+    };
+    (tenderFacet.byStatus || []).forEach((item) => {
+      if (item._id) {
+        tendersByStatus[item._id] = item.count;
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      totalUsers,
+      usersByRole,
+      activeUsers,
+      inactiveUsers,
+      totalTenders,
+      tendersByStatus,
+      totalOrganizations,
+      totalBids,
+      recentUsers,
+      recentTenders,
+      users: {
+        total: totalUsers,
+        byRole: usersByRole,
+        active: activeUsers,
+        inactive: inactiveUsers,
+        recent7Days: recentUsers,
+      },
+      tenders: {
+        total: totalTenders,
+        byStatus: tendersByStatus,
+        recent7Days: recentTenders,
+      },
+      organizations: {
+        total: totalOrganizations,
+      },
+      bids: {
+        total: totalBids,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to retrieve dashboard statistics',
+      message: err.message,
+    });
+  }
+};
+
+// ==============================================================================
+// 2. USER MANAGEMENT
+// ==============================================================================
+
+/**
+ * Paginated user list with search, role, and active status filters
+ */
+export const getUsers = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const { search, role, isActive, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    const query = {};
+
+    // 1. Search filter (name, email, firstName, lastName)
+    if (search && search.trim()) {
+      const sanitized = escapeRegex(search);
+      const searchRegex = new RegExp(sanitized, 'i');
+      query.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+      ];
+    }
+
+    // 2. Role filter
+    if (role && role !== 'ALL') {
+      query.role = role;
+    }
+
+    // 3. isActive filter
+    if (isActive !== undefined && isActive !== 'ALL') {
+      if (isActive === 'true' || isActive === true) {
+        query.isActive = true;
+      } else if (isActive === 'false' || isActive === false) {
+        query.isActive = false;
+      }
+    }
+
+    // 4. Sorting
+    const allowedSortFields = ['createdAt', 'name', 'email', 'role', 'lastLoginAt', 'isActive'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortDirection = (sortOrder === 'asc' || sortOrder === '1') ? 1 : -1;
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-passwordHash')
+        .sort({ [sortField]: sortDirection })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(query),
+    ]);
+
+    // Attach subscription status
+    const userIds = users.map((u) => u._id);
+    const subscriptions = await Subscription.find({ userId: { $in: userIds } })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const subMap = new Map();
+    for (const sub of subscriptions) {
+      const uIdStr = sub.userId.toString();
+      if (!subMap.has(uIdStr)) {
+        subMap.set(uIdStr, sub);
+      }
+    }
+
+    const now = new Date();
+    const enrichedUsers = users.map((user) => {
+      const sub = subMap.get(user._id.toString());
+      return {
+        ...user,
+        subscription: sub
+          ? {
+              status: sub.status,
+              planId: sub.planId,
+              billingCycle: sub.billingCycle,
+              currentPeriodEnd: sub.currentPeriodEnd,
+              isValid: (sub.status === 'active' || sub.status === 'trialing') && new Date(sub.currentPeriodEnd) > now,
+            }
+          : null,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return res.status(200).json({
+      success: true,
+      users: enrichedUsers,
+      total,
+      page,
+      totalPages,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to fetch users',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Single user details with organization memberships, contractor profile, and subscription
+ */
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    const user = await User.findById(id).select('-passwordHash').lean();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const [organizationMemberships, contractorProfile, subscription] = await Promise.all([
+      OrganizationMember.find({ userId: id }).populate('organizationId').lean(),
+      ContractorProfile.findOne({ userId: id }).lean(),
+      Subscription.findOne({ userId: id }).sort({ createdAt: -1 }).lean(),
+    ]);
+
+    const userDetails = {
+      ...user,
+      organizationMemberships: organizationMemberships || [],
+      contractorProfile: contractorProfile || null,
+      subscription: subscription || null,
+    };
+
+    return res.status(200).json({
+      success: true,
+      user: userDetails,
+      organizationMemberships: organizationMemberships || [],
+      contractorProfile: contractorProfile || null,
+      subscription: subscription || null,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to retrieve user details',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Update user fields (role, isActive, emailVerified, name)
+ */
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { role, isActive, emailVerified, name } = req.body || {};
+    const updates = {};
+
+    if (role !== undefined) {
+      const allowedRoles = ['user', 'contractor', 'admin', 'owner'];
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({
+          error: `Invalid role. Must be one of: ${allowedRoles.join(', ')}`,
+        });
+      }
+      updates.role = role;
+      user.role = role;
+    }
+
+    if (isActive !== undefined) {
+      const boolIsActive = isActive === true || isActive === 'true';
+      updates.isActive = boolIsActive;
+      user.isActive = boolIsActive;
+    }
+
+    if (emailVerified !== undefined) {
+      const boolVerified = emailVerified === true || emailVerified === 'true';
+      updates.emailVerified = boolVerified;
+      user.emailVerified = boolVerified;
+    }
+
+    if (name !== undefined) {
+      const trimmedName = typeof name === 'string' ? name.trim() : '';
+      updates.name = trimmedName;
+      user.name = trimmedName;
+      const parts = trimmedName.split(/\s+/);
+      user.firstName = parts[0] || '';
+      user.lastName = parts.slice(1).join(' ') || '';
+    }
+
+    await user.save();
+
+    await SystemLog.create({
+      level: 'INFO',
+      source: 'API',
+      message: `Admin ${req.adminUser?.email || 'Unknown'} updated user ${user.email} (${user._id})`,
+      metadata: {
+        adminUser: req.adminUser,
+        targetUserId: user._id,
+        targetUserEmail: user.email,
+        updates,
+      },
+    }).catch(() => {});
+
+    const userObj = user.toObject();
+    delete userObj.passwordHash;
+
+    return res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      user: userObj,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to update user',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Soft delete user (set isActive: false)
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.isActive = false;
+    await user.save();
+
+    await SystemLog.create({
+      level: 'WARN',
+      source: 'API',
+      message: `Admin ${req.adminUser?.email || 'Unknown'} soft-deleted user ${user.email} (${user._id})`,
+      metadata: {
+        adminUser: req.adminUser,
+        targetUserId: user._id,
+        targetUserEmail: user.email,
+        action: 'DEACTIVATE_USER',
+      },
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deactivated successfully',
+      user: {
+        _id: user._id,
+        email: user.email,
+        isActive: false,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to delete user',
+      message: err.message,
+    });
+  }
+};
+
+// ==============================================================================
+// 3. TENDER MANAGEMENT
+// ==============================================================================
+
+/**
+ * Paginated tender list for admin
+ */
+export const getAdminTenders = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const { search, status, departmentName, sortBy = 'publishedDate', sortOrder = 'desc' } = req.query;
+
+    const query = {};
+
+    // 1. Search filter (title, tenderReferenceNumber)
+    if (search && search.trim()) {
+      const sanitized = escapeRegex(search);
+      const searchRegex = new RegExp(sanitized, 'i');
+      query.$or = [
+        { title: searchRegex },
+        { tenderReferenceNumber: searchRegex },
+      ];
+    }
+
+    // 2. Status filter
+    if (status && status !== 'ALL') {
+      query.status = status;
+    }
+
+    // 3. Department filter
+    if (departmentName && departmentName !== 'ALL') {
+      query.departmentName = new RegExp(escapeRegex(departmentName), 'i');
+    }
+
+    // 4. Sorting
+    const allowedSortFields = ['publishedDate', 'closingDate', 'estimatedValue', 'createdAt'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'publishedDate';
+    const sortDirection = (sortOrder === 'asc' || sortOrder === '1') ? 1 : -1;
+
+    const selectedFields = '_id title tenderReferenceNumber departmentName status estimatedValue publishedDate closingDate pdfFetchStatus sourcePortal';
+
+    const [tenders, total] = await Promise.all([
+      Tender.find(query)
+        .select(selectedFields)
+        .sort({ [sortField]: sortDirection })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Tender.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return res.status(200).json({
+      success: true,
+      tenders,
+      total,
+      page,
+      totalPages,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to fetch admin tenders',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Single tender with full details and related document / requirement counts
+ */
+export const getAdminTenderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tender ID format' });
+    }
+
+    const tender = await Tender.findById(id).lean();
+    if (!tender) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    const [tenderDocumentsCount, tenderRequirementsCount] = await Promise.all([
+      TenderDocument.countDocuments({ tenderId: id }),
+      TenderRequirement.countDocuments({ tenderId: id }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      tender: {
+        ...tender,
+        tenderDocumentsCount,
+        tenderRequirementsCount,
+      },
+      tenderDocumentsCount,
+      tenderRequirementsCount,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to retrieve tender details',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Update tender fields (status, isDelisted, delistReason)
+ */
+export const updateAdminTender = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tender ID format' });
+    }
+
+    const tender = await Tender.findById(id);
+    if (!tender) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    const { status, isDelisted, delistReason } = req.body || {};
+    const updates = {};
+
+    if (status !== undefined) {
+      updates.status = status;
+      tender.status = status;
+      if (status === 'CANCELLED' && !tender.cancelledAt) {
+        tender.cancelledAt = new Date();
+        updates.cancelledAt = tender.cancelledAt;
+      }
+    }
+
+    if (isDelisted !== undefined) {
+      const boolDelisted = isDelisted === true || isDelisted === 'true';
+      updates.isDelisted = boolDelisted;
+      tender.isDelisted = boolDelisted;
+    }
+
+    if (delistReason !== undefined) {
+      updates.delistReason = typeof delistReason === 'string' ? delistReason.trim() : '';
+      tender.delistReason = updates.delistReason;
+    }
+
+    await tender.save();
+
+    await SystemLog.create({
+      level: 'INFO',
+      source: 'API',
+      message: `Admin ${req.adminUser?.email || 'Unknown'} updated tender ${tender.sourceTenderId || tender._id}`,
+      metadata: {
+        adminUser: req.adminUser,
+        targetTenderId: tender._id,
+        sourceTenderId: tender.sourceTenderId,
+        updates,
+      },
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Tender updated successfully',
+      tender,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to update tender',
+      message: err.message,
+    });
+  }
+};
+
+/**
+ * Soft delete tender (status = CANCELLED, isDelisted = true)
+ */
+export const deleteAdminTender = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tender ID format' });
+    }
+
+    const tender = await Tender.findById(id);
+    if (!tender) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    tender.status = 'CANCELLED';
+    tender.isDelisted = true;
+    tender.cancelledAt = new Date();
+    if (req.body?.reason) {
+      tender.delistReason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
+    }
+
+    await tender.save();
+
+    await SystemLog.create({
+      level: 'WARN',
+      source: 'API',
+      message: `Admin ${req.adminUser?.email || 'Unknown'} soft-deleted tender ${tender.sourceTenderId || tender._id} (marked CANCELLED, delisted)`,
+      metadata: {
+        adminUser: req.adminUser,
+        targetTenderId: tender._id,
+        sourceTenderId: tender.sourceTenderId,
+        action: 'SOFT_DELETE_TENDER',
+        delistReason: tender.delistReason,
+      },
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Tender delisted and marked as CANCELLED successfully',
+      tender: {
+        _id: tender._id,
+        sourceTenderId: tender.sourceTenderId,
+        status: tender.status,
+        isDelisted: tender.isDelisted,
+        cancelledAt: tender.cancelledAt,
+        delistReason: tender.delistReason,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to delete tender',
+      message: err.message,
+    });
+  }
+};
+
 
 

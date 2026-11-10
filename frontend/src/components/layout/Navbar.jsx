@@ -14,7 +14,6 @@ import {
   Sun, 
   Moon, 
   LogOut, 
-  ArrowUpRight,
   Sparkles,
   User,
   MessageSquare,
@@ -179,20 +178,11 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* Right Action: Clean Button & Profile */}
+          {/* Right Action: Clean Profile / Auth */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            {/* Quick Explore Button */}
-            <Link
-              to="/tenders"
-              className="navbar-glass-cta hidden sm:inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider"
-            >
-              <span className="relative">Explore Tenders</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-
             {/* Auth Buttons / Profile Dropdown */}
             {isAuthenticated ? (
-              <div className="relative pl-2 border-l border-slate-200 dark:border-slate-800" ref={profileDropdownRef}>
+              <div className="relative" ref={profileDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen((prev) => !prev)}
@@ -290,7 +280,7 @@ export function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
                 <Link
                   to="/login"
                   className="px-3 py-1.5 rounded text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-techCoral transition-colors"
@@ -333,16 +323,7 @@ export function Navbar() {
               </Link>
             ))}
 
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <Link
-                to="/tenders"
-                onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-techCoral"
-              >
-                <span>Explore Tenders</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
-
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
               <button
                 onClick={toggleTheme}
                 className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"

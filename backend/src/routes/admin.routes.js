@@ -5,6 +5,7 @@
  */
 import express from 'express';
 import { adminAuth } from '../middleware/adminAuth.middleware.js';
+import * as adminController from '../controllers/admin.controller.js';
 import {
   verifyAdminSession,
   getTelemetry,
@@ -80,5 +81,20 @@ router.get('/backup/download/:fileName', downloadBackupArchive);
 router.get('/backup/disaster-recovery-guide', downloadDisasterRecoveryGuide);
 router.get('/backup/deployment-guide', downloadDeploymentGuide);
 router.get('/backup/future-config-guide', downloadFutureConfigGuide);
+
+// Dashboard
+router.get('/dashboard/stats', adminController.getDashboardStats);
+
+// User Management
+router.get('/users', adminController.getUsers);
+router.get('/users/:id', adminController.getUserById);
+router.put('/users/:id', adminController.updateUser);
+router.delete('/users/:id', adminController.deleteUser);
+
+// Tender Management  
+router.get('/tenders', adminController.getAdminTenders);
+router.get('/tenders/:id', adminController.getAdminTenderById);
+router.put('/tenders/:id', adminController.updateAdminTender);
+router.delete('/tenders/:id', adminController.deleteAdminTender);
 
 export default router;

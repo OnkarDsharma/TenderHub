@@ -68,7 +68,14 @@ async function request(endpoint, options = {}) {
     throw error;
   }
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type');
+  let data;
+  if (contentType && contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    data = { message: text || `HTTP ${response.status}` };
+  }
   if (!response.ok) {
     throw new Error(data.message || data.error || `HTTP ${response.status}`);
   }
@@ -78,6 +85,31 @@ async function request(endpoint, options = {}) {
 
 export const adminApi = {
   verify: (key, email) => request('/verify', { adminKey: key, adminEmail: email }),
+
+  // Dashboard
+  getDashboardStats: () => request('/dashboard/stats'),
+
+  // User Management
+  getUsers: (params) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/users?${query}`);
+  },
+  getUserById: (id) => request(`/users/${id}`),
+  updateUser: (id, data) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+
+  // Tender Management
+  getTenders: (params) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/tenders?${query}`);
+  },
+  getTenderById: (id) => request(`/tenders/${id}`),
+  updateTender: (id, data) => request(`/tenders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTender: (id) => request(`/tenders/${id}`, { method: 'DELETE' }),
+
+  // Portal Reconciliation (Bug #7 - missing endpoint)
+  reconcilePortal: () => request('/maintenance/reconcile-portal', { method: 'POST' }),
+
   getTelemetry: () => request('/telemetry'),
   getOverview: () => request('/overview'),
   getDiagnostics: () => request('/diagnostics'),
@@ -122,7 +154,7 @@ export const adminApi = {
   downloadBackupFile: async (fileName) => {
     const adminKey = getStoredAdminKey();
     const response = await fetch(`${BASE_URL}/backup/download/${encodeURIComponent(fileName)}`, {
-      headers: { 'x-admin-key': adminKey },
+      headers: { 'x-admin-key': adminKey, 'x-admin-email': getStoredAdminEmail() },
     });
     if (!response.ok) {
       throw new Error(`Failed to download backup archive: HTTP ${response.status}`);
@@ -140,7 +172,7 @@ export const adminApi = {
   downloadDisasterRecoveryGuide: async () => {
     const adminKey = getStoredAdminKey();
     const response = await fetch(`${BASE_URL}/backup/disaster-recovery-guide`, {
-      headers: { 'x-admin-key': adminKey },
+      headers: { 'x-admin-key': adminKey, 'x-admin-email': getStoredAdminEmail() },
     });
     if (!response.ok) {
       throw new Error(`Failed to download disaster recovery manual: HTTP ${response.status}`);
@@ -158,7 +190,7 @@ export const adminApi = {
   downloadDeploymentGuide: async () => {
     const adminKey = getStoredAdminKey();
     const response = await fetch(`${BASE_URL}/backup/deployment-guide`, {
-      headers: { 'x-admin-key': adminKey },
+      headers: { 'x-admin-key': adminKey, 'x-admin-email': getStoredAdminEmail() },
     });
     if (!response.ok) {
       throw new Error(`Failed to download deployment manual: HTTP ${response.status}`);
@@ -176,7 +208,7 @@ export const adminApi = {
   downloadFutureConfigGuide: async () => {
     const adminKey = getStoredAdminKey();
     const response = await fetch(`${BASE_URL}/backup/future-config-guide`, {
-      headers: { 'x-admin-key': adminKey },
+      headers: { 'x-admin-key': adminKey, 'x-admin-email': getStoredAdminEmail() },
     });
     if (!response.ok) {
       throw new Error(`Failed to download future configuration manual: HTTP ${response.status}`);
@@ -193,3 +225,4 @@ export const adminApi = {
   },
 };
 
+export default adminApi;

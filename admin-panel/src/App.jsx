@@ -1,17 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  Activity, 
-  Wrench, 
-  Layers, 
-  FolderArchive, 
-  FileText, 
-  Loader2,
-  Landmark,
-  ShieldCheck,
-  ChevronRight
-} from 'lucide-react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Loader2, Landmark } from 'lucide-react';
 import { adminApi, getStoredAdminKey, getStoredAdminEmail } from './services/api';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { AdminLogin } from './components/AdminLogin';
 import { Navbar } from './components/Navbar';
 import { TelemetryView } from './components/TelemetryView';
@@ -21,9 +12,13 @@ import { ArchiveView } from './components/ArchiveView';
 import { LogsView } from './components/LogsView';
 import { BackupView } from './components/BackupView';
 
+// Lazy-loaded views created by peer agent
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const UsersView = lazy(() => import('./components/UsersView'));
+const TendersView = lazy(() => import('./components/TendersView'));
+
 function AdminAppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState('telemetry');
   const [telemetry, setTelemetry] = useState(null);
   const [overview, setOverview] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
@@ -95,33 +90,6 @@ function AdminAppContent() {
   const activeIssuesCount = diagnostics?.count || 0;
   const isOperational = telemetry?.status === 'OPERATIONAL' && activeIssuesCount === 0;
 
-  const TABS = [
-    { id: 'telemetry', label: 'Telemetry & Health', icon: Activity },
-    { 
-      id: 'diagnostics', 
-      label: 'Intelligent Diagnostics', 
-      icon: Wrench,
-      badge: activeIssuesCount > 0 ? activeIssuesCount : null,
-      badgeColor: 'bg-chinarRed text-white'
-    },
-    { 
-      id: 'ingestion', 
-      label: 'Ingestion & Automation', 
-      icon: Layers,
-      badge: overview?.documents?.pendingMissingPdfs > 0 ? `${overview.documents.pendingMissingPdfs} pending` : null,
-      badgeColor: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-    },
-    { id: 'archive', label: 'Archive & Purge', icon: FolderArchive },
-    { 
-      id: 'backup', 
-      label: 'Backup & Recovery', 
-      icon: ShieldCheck,
-      badge: '02:00 AM',
-      badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-    },
-    { id: 'logs', label: 'System Logs Stream', icon: FileText },
-  ];
-
   return (
     <div className="min-h-screen bg-paper dark:bg-slate-900 text-charcoal dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       
@@ -132,77 +100,33 @@ function AdminAppContent() {
         onRefresh={refreshAllData}
         isRefreshing={isRefreshing}
         onLogout={() => setIsAuthenticated(false)}
+        diagnostics={diagnostics}
+        overview={overview}
+        telemetry={telemetry}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        
-        {/* Navigation Tabs Bar (Styled matching frontend Profile tab bar) */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-1.5 rounded-2xl shadow-xs overflow-x-auto flex items-center gap-1.5 scrollbar-none">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-dalBlue text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/60'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span className={`px-2 py-0.2 rounded-full text-[10px] font-mono font-bold ${tab.badgeColor}`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Dynamic Views */}
-        {activeTab === 'telemetry' && (
-          <TelemetryView 
-            telemetry={telemetry} 
-            overview={overview} 
-            isRefreshing={isRefreshing} 
-          />
-        )}
-
-        {activeTab === 'diagnostics' && (
-          <DiagnosticView 
-            diagnostics={diagnostics} 
-            onRefresh={refreshAllData} 
-          />
-        )}
-
-        {activeTab === 'ingestion' && (
-          <IngestionView 
-            overview={overview} 
-            syncHistory={syncHistory} 
-            onRefresh={refreshAllData} 
-          />
-        )}
-
-        {activeTab === 'archive' && (
-          <ArchiveView 
-            overview={overview} 
-            onRefresh={refreshAllData} 
-          />
-        )}
-
-        {activeTab === 'backup' && (
-          <BackupView />
-        )}
-
-        {activeTab === 'logs' && (
-          <LogsView />
-        )}
-
+        <Suspense fallback={
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-12 text-center text-sm font-mono text-slate-400 flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-dalBlue dark:text-blue-400" />
+            <span>Loading view...</span>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardView />} />
+            <Route path="/telemetry" element={<TelemetryView telemetry={telemetry} overview={overview} isRefreshing={isRefreshing} />} />
+            <Route path="/diagnostics" element={<DiagnosticView diagnostics={diagnostics} onRefresh={refreshAllData} />} />
+            <Route path="/ingestion" element={<IngestionView overview={overview} syncHistory={syncHistory} onRefresh={refreshAllData} />} />
+            <Route path="/archive" element={<ArchiveView overview={overview} onRefresh={refreshAllData} />} />
+            <Route path="/backup" element={<BackupView />} />
+            <Route path="/logs" element={<LogsView />} />
+            <Route path="/users" element={<UsersView />} />
+            <Route path="/tenders" element={<TendersView />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </main>
 
       {/* Institutional Footer */}
@@ -230,7 +154,9 @@ function AdminAppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AdminAppContent />
+      <BrowserRouter>
+        <AdminAppContent />
+      </BrowserRouter>
     </ThemeProvider>
   );
 }

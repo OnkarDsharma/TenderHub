@@ -6,7 +6,8 @@ import {
   RotateCcw, 
   ChevronLeft, 
   ChevronRight,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 
@@ -19,10 +20,12 @@ export function LogsView() {
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [expandedLogId, setExpandedLogId] = useState(null);
 
   const fetchLogs = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const params = { page, limit: 25 };
       if (levelFilter !== 'ALL') params.level = levelFilter;
@@ -35,6 +38,7 @@ export function LogsView() {
       setTotalPages(data.pagination?.totalPages || 1);
     } catch (err) {
       console.error('Failed to load logs:', err);
+      setError(err.message || 'Failed to load logs');
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +121,17 @@ export function LogsView() {
         </div>
 
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-center justify-between gap-2.5 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-800 dark:hover:text-rose-300 text-xs cursor-pointer">✕</button>
+        </div>
+      )}
 
       {/* Logs Table / List */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">

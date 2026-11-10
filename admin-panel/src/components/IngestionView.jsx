@@ -455,6 +455,15 @@ export function IngestionView({ overview, syncHistory, onRefresh }) {
               )}
             </button>
 
+            <button
+              onClick={handleRetryMissingPdfs}
+              disabled={isRetryingPdfs || isRunning}
+              className="w-full py-2 px-3 rounded-xl border border-amber-300 dark:border-amber-700/80 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-800 dark:text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRetryingPdfs ? 'animate-spin' : ''}`} />
+              <span>Retry Missing PDFs</span>
+            </button>
+
             {pendingDocsStats.totalPending > pendingDocsStats.readyToDownload && (
               <button
                 onClick={() => handleTriggerPendingDocs(true)}
