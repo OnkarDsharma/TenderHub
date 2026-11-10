@@ -8,7 +8,7 @@ import { billingApi } from '@/services/billingApi';
 
 export const UNIFIED_PLANS = [
   {
-    id: 'free_starter', name: 'Free Launch Access', badge: 'Active Free Access', price: '₹0', billingCycle: 'free forever',
+    id: 'free_starter', name: 'Free', badge: 'Active Free Access', price: '₹0', billingCycle: 'free forever',
     description: 'Perfect for local contractors exploring public tenders and AI estimation.', isLocked: false, ctaText: 'Current Active Plan',
     features: ['Full search & discovery across all northern states (J&K, Punjab, HP)', '2 Full AI Tender Dossiers per day (BOQ & eligibility)', '5 Interactive Copilot queries / 24-hr session', '2 Targeted WhatsApp tender alerts per week', 'Standard SOR rate schedules & document downloads', 'Save up to 15 bookmarked tenders'],
   },
@@ -116,7 +116,7 @@ export default function Pricing() {
 
         <section className="mt-14 max-w-4xl mx-auto rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 sm:p-7">
           <div className="flex items-center gap-2 mb-3"><HelpCircle className="w-5 h-5 text-dalBlue dark:text-blue-400" /><h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">How access works</h3></div>
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">Free Launch Access is available now with daily usage limits. Contractor Pro Suite and Bidding Pro &amp; Enterprise are in preparation. Join the priority waitlist to receive an invitation and early-bird launch offer when they become available.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">The Free plan is available now with daily usage limits. Contractor Pro Suite and Bidding Pro &amp; Enterprise are in preparation. Join the priority waitlist to receive an invitation and early-bird launch offer when they become available.</p>
         </section>
         <div className="mt-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-5 border border-slate-200 dark:border-slate-700 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-3"><Shield className="w-5 h-5 text-emerald-600 shrink-0" /><span className="text-sm text-slate-700 dark:text-slate-300">Need help selecting a plan for multiple firm divisions or Joint Ventures?</span></div>
