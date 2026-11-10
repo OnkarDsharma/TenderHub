@@ -1,27 +1,3 @@
-/* ---------------------------------------------------------------------------
-   Typography system
-   - Novar  (serif)  → display: h1, h2, .font-display (page + section titles)
-   - Nohemi (sans)   → everything else: body, nav, buttons, labels, h3–h6, numbers
-   Drop the licensed .woff2 files into /public/fonts (names below); until then
-   Outfit / Source Serif 4 from Google Fonts render as close fallbacks.
---------------------------------------------------------------------------- */
-@font-face { font-family: 'Nohemi'; font-weight: 100; font-style: normal; font-display: swap; src: local('Nohemi Thin'), local('Nohemi-Thin'), url('/fonts/Nohemi-Thin.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 200; font-style: normal; font-display: swap; src: local('Nohemi ExtraLight'), local('Nohemi-ExtraLight'), url('/fonts/Nohemi-ExtraLight.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 300; font-style: normal; font-display: swap; src: local('Nohemi Light'), local('Nohemi-Light'), url('/fonts/Nohemi-Light.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 400; font-style: normal; font-display: swap; src: local('Nohemi Regular'), local('Nohemi-Regular'), url('/fonts/Nohemi-Regular.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 500; font-style: normal; font-display: swap; src: local('Nohemi Medium'), local('Nohemi-Medium'), url('/fonts/Nohemi-Medium.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 600; font-style: normal; font-display: swap; src: local('Nohemi SemiBold'), local('Nohemi-SemiBold'), url('/fonts/Nohemi-SemiBold.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 700; font-style: normal; font-display: swap; src: local('Nohemi Bold'), local('Nohemi-Bold'), url('/fonts/Nohemi-Bold.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 800; font-style: normal; font-display: swap; src: local('Nohemi ExtraBold'), local('Nohemi-ExtraBold'), url('/fonts/Nohemi-ExtraBold.woff2') format('woff2'); }
-@font-face { font-family: 'Nohemi'; font-weight: 900; font-style: normal; font-display: swap; src: local('Nohemi Black'), local('Nohemi-Black'), url('/fonts/Nohemi-Black.woff2') format('woff2'); }
-@font-face { font-family: 'Novar'; font-weight: 400; font-style: normal; font-display: swap; src: local('Novar Regular'), local('Novar-Regular'), url('/fonts/Novar-Regular.woff2') format('woff2'); }
-@font-face { font-family: 'Novar'; font-weight: 700; font-style: normal; font-display: swap; src: local('Novar Bold'), local('Novar-Bold'), url('/fonts/Novar-Bold.woff2') format('woff2'); }
-
-:root {
-  --font-sans: 'Nohemi', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Novar', 'Source Serif 4', Georgia, 'Times New Roman', serif;
-}
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -38,11 +14,11 @@
 
 @layer base {
   html {
-    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   body {
-    font-family: var(--font-sans);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: #F8F9FA;
     color: #1E293B;
     -webkit-font-smoothing: antialiased;
@@ -51,29 +27,9 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+    letter-spacing: -0.02em;
     color: #0F172A;
-  }
-
-  /* Display tier — Novar */
-  h1, h2, .font-display {
-    font-family: var(--font-serif);
-    letter-spacing: -0.01em;
-  }
-
-  /* Novar is a text-weight serif: cap black/extrabold so it never looks smeared */
-  :is(h1, h2, .font-display):is(.font-black, .font-extrabold) {
-    font-weight: 700;
-  }
-
-  /* UI tier — Nohemi */
-  h3, h4, h5, h6 {
-    font-family: var(--font-sans);
-    letter-spacing: -0.01em;
-  }
-
-  .font-mono {
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
   }
 
   /* Classical Dark Mode Root Styling */
@@ -1533,8 +1489,8 @@ html:not(.dark) [role="dialog"] > div {
 
 /* Match the landing page sections to the hero's crisp, premium typography. */
 .home-page {
-  --home-display: var(--font-serif);
-  --home-body: var(--font-sans);
+  --home-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --home-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .home-pipeline,
@@ -1547,18 +1503,13 @@ html:not(.dark) [role="dialog"] > div {
 .home-pipeline h2,
 .home-domains h2,
 .home-integrity h2,
-.home-latest h2 {
-  font-family: var(--home-display);
-  letter-spacing: -.01em;
-  font-weight: 700;
-}
-
+.home-latest h2,
 .home-pipeline h3,
 .home-domains h3,
 .home-latest h3 {
-  font-family: var(--home-body);
-  letter-spacing: -.01em;
-  font-weight: 600;
+  font-family: var(--home-display);
+  letter-spacing: -.045em;
+  font-weight: 700;
 }
 
 .home-pipeline h2,
@@ -1593,9 +1544,9 @@ html:not(.dark) [role="dialog"] > div {
 .home-latest h3 { line-height: 1.4; }
 
 .home-integrity h4 {
-  font-family: var(--home-body);
+  font-family: var(--home-display);
   font-size: .98rem;
-  letter-spacing: -.01em;
+  letter-spacing: -.025em;
   font-weight: 700;
 }
 
@@ -2196,7 +2147,7 @@ body { background-color: #f7faff; }
   border-top: 1px solid #edf2f7;
 }
 .dark .ai-scope-list li { border-color: #1e3150; }
-.ai-scope-num { font-family: var(--font-sans); font-variant-numeric: tabular-nums; font-size: .75rem; font-weight: 600; color: #2563eb; padding-top: .15rem; }
+.ai-scope-num { font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace; font-size: .75rem; font-weight: 600; color: #2563eb; padding-top: .15rem; }
 .dark .ai-scope-num { color: #60a5fa; }
 .estimator-page .ai-scope-list h3 { font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; color: inherit; }
 .ai-scope-list p { margin-top: .3rem; font-size: .875rem; line-height: 1.6; color: #475569; }
@@ -2675,7 +2626,7 @@ body { background-color: #f7faff; }
 .ai-dates { margin-top: .75rem; }
 .ai-dates > div { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--line); font-size: .8125rem; }
 .ai-dates dt { color: var(--muted); font-weight: 500; }
-.ai-dates dd { font-family: var(--font-sans); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; color: var(--ink); }
+.ai-dates dd { font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace; font-weight: 600; text-align: right; color: var(--ink); }
 .ai-dates .is-start dd { color: #047857; }
 .ai-dates .is-end dd { color: #be123c; }
 .ai-dates .is-open dd { color: #1d4ed8; }

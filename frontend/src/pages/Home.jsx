@@ -444,7 +444,7 @@ export default function Home() {
                             {item.subtitle}
                           </span>
                         </div>
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
+                        <h3 className="text-sm font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors leading-snug">
                           {item.title}
                         </h3>
                       </div>
@@ -508,7 +508,7 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-techCoral transition-colors">
+                      <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors">
                         {domain.title}
                       </h3>
                       <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -703,7 +703,7 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-techCoral transition-colors line-clamp-2 leading-snug">
+                    <h3 className="text-sm sm:text-base font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors line-clamp-2 leading-snug">
                       {cleanTitle}
                     </h3>
 

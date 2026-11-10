@@ -292,7 +292,7 @@ export default function Profile() {
             ) : (
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-12 text-center shadow-xs max-w-xl mx-auto">
                 <FolderArchive className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                <h4 className="text-base font-bold text-slate-900 dark:text-white font-display mb-1">
                   No Saved Tenders
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-5">
@@ -315,7 +315,7 @@ export default function Profile() {
             <span className="ai-tile-grid" aria-hidden="true" />
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
                   {isEditingProfile ? 'Edit Contractor Details' : 'Contractor Details'}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -558,7 +558,7 @@ export default function Profile() {
             <span className="ai-tile-grid" aria-hidden="true" />
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
                   {isEditingPreferences ? 'Edit Preferred Tender Filters' : 'Preferred Tender Filters'}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
