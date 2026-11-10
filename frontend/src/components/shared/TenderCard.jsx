@@ -74,7 +74,7 @@ const copyText = (text) => {
   return copied;
 };
 
-export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
+export function TenderCard({ tender, onViewDetails, isBlurred = false, locationLabel }) {
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
@@ -109,9 +109,9 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const fullOrganisation = cleanDisplayText(tender.organisationChain, cleanDepartment);
   const cleanTitle = cleanDisplayText(tender.title?.replace(/[[\]]/g, ''), 'Untitled Tender Notice');
   const famousLoc = isGeM ? null : extractFamousLocation(tender);
-  const locationText = isGeM
+  const locationText = locationLabel || (isGeM
     ? (tender.location ? `${tender.location}${tender.locationVerificationStatus === 'VERIFIED' ? '' : ' (unverified)'}` : 'Location not confirmed')
-    : cleanDisplayText(famousLoc || tender.location, 'Location not specified');
+    : cleanDisplayText(famousLoc || tender.location, 'Location not specified'));
 
   // Calculate days remaining to bid submission deadline
   const calculateDaysLeft = (closingDateStr) => {
@@ -122,7 +122,10 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false }) {
   const daysLeft = calculateDaysLeft(tender.bidSubmissionEndDate?.$date || tender.closingDateStr || tender.closingDate);
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 2;
 
-  const rawDocUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl;
+  const rawDocUrl = tender.pdfUrls?.[0] || tender.nitDocuments?.[0]?.fileUrl || tender.detailsUrl
+    || (isGeM && tender.sourceTenderId
+      ? `https://bidplus.gem.gov.in/showbidDocument/${tender.sourceTenderId.replace(/^GEM\/\d+\/[A-Z]\//i, '')}`
+      : undefined);
   const isArchivedR2Document = !isGeM && (() => {
     try {
       return new URL(rawDocUrl).hostname.endsWith('.r2.dev');

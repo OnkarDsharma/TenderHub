@@ -10,26 +10,19 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   RotateCcw, 
-  ExternalLink, 
-  Building2, 
-  Clock, 
   MapPin, 
   Layers, 
   ChevronLeft, 
   ChevronRight, 
   AlertCircle,
-  Sparkles,
-  Download,
   Landmark,
-  Heart,
   Calendar,
   SlidersHorizontal,
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
-import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
-import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
+import { TenderCard } from '@/components/shared/TenderCard';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
@@ -172,7 +165,6 @@ const cleanDisplayText = (value, fallback = '—') =>
 
 export default function GeMTenders() {
   const navigate = useNavigate();
-  const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [tenders, setTenders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -751,134 +743,18 @@ export default function GeMTenders() {
         ) : (
           <div className="gem-bid-list">
             {tenders.map((item) => {
-              const isUrgent = item._isClosingSoon;
-              const cleanTitle = cleanDisplayText(item.title, 'Untitled GeM bid');
-              const cleanDepartment = cleanDisplayText(item.departmentName || item.organisationChain);
-              const fullOrganisation = cleanDisplayText(item.organisationChain, cleanDepartment);
               // Delivery state(s) come from GeM's consignee-state search; the
               // city only from the PDF's consignee section.
-              const stateLabel = item.consigneeStates?.length ? item.consigneeStates.join(' · ') : null;
               const locationLabel = item.location
                 ? `Delivery: ${cleanDisplayText(item.location)}`
                 : (item.pdfParseStatus === 'COMPLETED' ? 'Delivery city not stated in bid document' : 'Delivery city: bid document not read yet');
-              const bookmarked = isBookmarked(item._id || item.sourceTenderId);
-              const rawDocUrl = item.pdfUrls?.[0] || item.detailsUrl || `https://bidplus.gem.gov.in/showbidDocument/${(item.sourceTenderId || '').replace(/^GEM\/\d+\/[A-Z]\//i, '')}`;
-              const docUrl = gemApi.getPdfDownloadUrl(item.sourceTenderId || item._id, rawDocUrl);
-
               return (
-                <div
+                <TenderCard
                   key={item._id || item.sourceTenderId}
-                  className="gem-bid-row bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors group"
-                >
-                  <div className="gem-bid-content">
-                    {/* Top Badges */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {stateLabel && (
-                          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-dalBlue dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
-                            <span>{stateLabel}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isUrgent && (
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-bold shrink-0">
-                            <Clock className="w-3 h-3" />
-                            <span>Closing Soon</span>
-                          </div>
-                        )}
-                        <button type="button" onClick={() => toggleBookmark(item)} className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${bookmarked ? 'bg-red-50 border-red-200 text-chinarRed dark:bg-red-950/40 dark:border-red-800 shadow-xs' : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-chinarRed hover:border-red-200 hover:bg-red-50/50 dark:hover:bg-red-950/20 bg-white dark:bg-slate-800'}`} title={bookmarked ? 'Remove from Saved' : 'Save this GeM bid'} aria-label={bookmarked ? 'Remove GeM bid from favorites' : 'Add GeM bid to favorites'}>
-                          <Heart className={`w-3.5 h-3.5 transition-transform active:scale-125 ${bookmarked ? 'fill-current text-chinarRed' : ''}`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Bid Number */}
-                    <div>
-                      <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-tight block">
-                        Bid Number
-                      </span>
-                      <a
-                        href={docUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-mono font-black text-dalBlue dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-                        title="Click to open official GeM PDF document"
-                      >
-                        <span>{item.sourceTenderId}</span>
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
-                    </div>
-
-                    {/* Title / Item Category */}
-                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors break-words">
-                      {cleanTitle}
-                    </h2>
-
-                    {/* Ministry / Organisation */}
-                    <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                      <div className="flex items-start gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span className="break-words" title={fullOrganisation}>{cleanDepartment}</span>
-                      </div>
-                      <div className="flex items-start gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0 mt-0.5" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-200 break-words">
-                          {locationLabel}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Key Technical & Financial Parameters */}
-                    <div className="gem-bid-financials grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                      <div className="p-2">
-                        <span className="text-slate-400 block font-medium">EMD Amount</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {item.emdAmount > 0 ? formatCurrencyINR(item.emdAmount) : 'Exempted / Zero'}
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/25">
-                        <span className="text-blue-700 dark:text-blue-300 block font-semibold">Published</span>
-                        <span className="font-mono font-bold text-blue-900 dark:text-blue-100">
-                          {formatDateDisplay(item.publishedDateStr || item.publishedDate || item.publishedDateOnly)}
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 ring-1 ring-inset ring-rose-100 dark:ring-rose-900/50">
-                        <span className="text-rose-600 dark:text-rose-300 block font-semibold">Bid Closing</span>
-                        <span className="font-mono font-bold text-rose-700 dark:text-rose-200">
-                          {formatDateDisplay(item.closingDateStr || item.closingDate)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions Bar: View Specs dominant, AI and PDF secondary */}
-                  <div className="gem-bid-actions flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      onClick={() => navigate(`/gem-tenders/${item._id || encodeURIComponent(item.sourceTenderId)}`)}
-                      className="py-2 px-3 bg-dalBlue hover:bg-dalBlue/90 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
-                    >
-                      Full Details
-                    </button>
-                    <button
-                      onClick={() => navigate(`/services?tenderId=${encodeURIComponent(item.sourceTenderId)}`)}
-                      className="inline-flex items-center gap-1 py-1.5 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                      title="Analyze with AI Estimator"
-                    >
-                      <Sparkles className="w-3 h-3 text-dalBlue dark:text-blue-400" />
-                      <span>AI analysis</span>
-                    </button>
-                    <a
-                      href={docUrl}
-                      download
-                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                      title="Download official GeM Bid PDF"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>PDF</span>
-                    </a>
-                  </div>
-                </div>
+                  tender={item}
+                  locationLabel={locationLabel}
+                  onViewDetails={() => navigate(`/gem-tenders/${item._id || encodeURIComponent(item.sourceTenderId)}`)}
+                />
               );
             })}
           </div>
