@@ -37,6 +37,8 @@
     "repair:gem:history": "node src/scripts/repairGeMHistoricalData.js",
     "scrape:all": "node src/scripts/fetchAllActiveTenders.js",
     "scrape:latest": "node src/scripts/fetchLatestDailyTenders.js",
+    "refresh:dates": "node src/scripts/refreshClosingDates.js --state all",
+    "refresh:dates:dry-run": "node src/scripts/refreshClosingDates.js --state all --dry-run",
     "scrape:date": "node src/scripts/fetchTendersByDate.js",
     "audit:org-coverage": "node src/scripts/auditOrganisationCoverage.js",
     "fetch:pending-docs": "node src/scripts/fetchPendingDocTenders.js",

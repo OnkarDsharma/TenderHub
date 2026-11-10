@@ -18,6 +18,7 @@ import { tenderQueue } from '../workers/queue.js';
 import { retentionService } from './retention.service.js';
 import { backupService } from './backup.service.js';
 import { reconciliationService } from './reconciliation.service.js';
+import { closingDateRefreshService } from './closingDateRefresh.service.js';
 import Subscription from '../modules/billing/models/Subscription.js';
 import ContractorPreference from '../modules/notifications/models/ContractorPreference.js';
 import { matchingEngine } from '../modules/notifications/services/matching.engine.js';
@@ -105,6 +106,20 @@ export class SchedulerService {
     }, {
       timezone: 'Asia/Kolkata'
     });
+
+    // 7b. NIC Closing-Date Refresh (07:00 AM & 06:30 PM IST, daily)
+    // The ingestion sweeps only read tenders published today, so corrigendum extensions to
+    // already-stored tenders are never seen. Re-read every portal's live list and re-date them.
+    for (const [expr, label] of [['0 7 * * *', 'CRON_SCHEDULE_07AM'], ['30 18 * * *', 'CRON_SCHEDULE_0630PM']]) {
+      cron.schedule(expr, async () => {
+        logger.info(`[Scheduler] ⏰ Running NIC closing-date refresh (${label})...`);
+        await closingDateRefreshService.refresh({ portals: 'ALL', triggeredBy: label }).catch(err => {
+          logger.error(`[Scheduler] Closing-date refresh failed: ${err.message}`);
+        });
+      }, {
+        timezone: 'Asia/Kolkata'
+      });
+    }
 
     // 8. Automated Morning WhatsApp Digest to Pro Contractors (09:30 AM IST, Mon-Sat)
     cron.schedule('30 9 * * 1-6', async () => {

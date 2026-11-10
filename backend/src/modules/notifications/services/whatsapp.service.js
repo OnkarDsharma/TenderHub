@@ -11,17 +11,11 @@ import ContractorAgentProfile from '../../../models/ContractorAgentProfile.js';
 import { matchingEngine } from './matching.engine.js';
 import { getWhatsAppProvider } from '../adapters/whatsappProvider.js';
 import { env } from '../../../config/env.js';
+import { buildRedisConnectionOptions } from '../../../config/redisConnection.js';
 
 const logger = pino();
 
-const redisUrl = new URL(env.REDIS_URL);
-const redisConnection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port) || 6379,
-  password: redisUrl.password || undefined,
-  tls: { rejectUnauthorized: false },
-  family: 4,
-};
+const redisConnection = buildRedisConnectionOptions();
 
 // Isolated BullMQ queue for WhatsApp alerts (Microservice ready)
 export const whatsappQueue = new Queue('WhatsAppQueue', {

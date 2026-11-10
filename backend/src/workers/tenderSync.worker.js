@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
 import pino from 'pino';
-import { env } from '../config/env.js';
 import { JKTenderDateAdapter } from '../services/adapters/JKTenderDateAdapter.js';
 import { JKTenderAdapter } from '../services/adapters/JKTenderAdapter.js';
 import { punjabTenderAdapter } from '../services/adapters/PunjabTenderAdapter.js';
@@ -13,16 +12,10 @@ import SyncJob from '../models/SyncJob.js';
 import Tender from '../models/Tender.js';
 import SystemLog from '../models/SystemLog.js';
 import { telegramService } from '../services/telegram.service.js';
+import { buildRedisConnectionOptions } from '../config/redisConnection.js';
 
 const logger = pino();
-const redisUrl = new URL(env.REDIS_URL);
-const connection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port) || 6379,
-  password: redisUrl.password || undefined,
-  tls: { rejectUnauthorized: false },
-  family: 4
-};
+const connection = buildRedisConnectionOptions();
 
 export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
   const startTime = Date.now();

@@ -5,21 +5,14 @@
  */
 import { Worker } from 'bullmq';
 import pino from 'pino';
-import { env } from '../../../config/env.js';
 import { getWhatsAppProvider } from '../adapters/whatsappProvider.js';
 import ContractorPreference from '../models/ContractorPreference.js';
 import ContractorAgentProfile from '../../../models/ContractorAgentProfile.js';
+import { buildRedisConnectionOptions } from '../../../config/redisConnection.js';
 
 const logger = pino();
 
-const redisUrl = new URL(env.REDIS_URL);
-const redisConnection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port) || 6379,
-  password: redisUrl.password || undefined,
-  tls: { rejectUnauthorized: false },
-  family: 4,
-};
+const redisConnection = buildRedisConnectionOptions();
 
 export const whatsappWorker = new Worker(
   'WhatsAppQueue',

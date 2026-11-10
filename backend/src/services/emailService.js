@@ -10,6 +10,9 @@ const logger = pino({
   transport: env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
 });
 
+export const EMAIL_DELIVERY_FAILED_MESSAGE =
+  "We couldn't send your verification code right now. Please try again in a moment.";
+
 /**
  * Send a 6-digit verification code email.
  *
@@ -105,11 +108,15 @@ export const sendOtpEmail = async (to, otp) => {
 
     throw new Error(`Unsupported email provider: ${env.EMAIL_PROVIDER}`);
   } catch (error) {
-    logger.error({ err: error.message }, '[EMAIL SERVICE] Delivery failure');
+    // Provider details (IP blocks, auth errors, quotas) stay in server logs only.
+    logger.error({ err: error.message, provider: env.EMAIL_PROVIDER }, '[EMAIL SERVICE] Delivery failure');
     // In development, log the OTP anyway so the flow never gets stuck
     if (env.NODE_ENV !== 'production') {
       logger.info(`[EMAIL SERVICE] (Dev Fallback) To: ${to} | OTP: [${otp}]`);
     }
-    throw error;
+    const safeError = new Error(EMAIL_DELIVERY_FAILED_MESSAGE, { cause: error });
+    safeError.status = 503;
+    safeError.code = 'EMAIL_DELIVERY_FAILED';
+    throw safeError;
   }
 };

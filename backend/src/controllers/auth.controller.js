@@ -20,7 +20,7 @@ import {
   generateAccessToken, 
   generateRefreshToken 
 } from '../utils/auth.utils.js';
-import { sendOtpEmail } from '../services/emailService.js';
+import { sendOtpEmail, EMAIL_DELIVERY_FAILED_MESSAGE } from '../services/emailService.js';
 import { redis } from '../config/redis.js';
 import { env } from '../config/env.js';
 import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
@@ -134,8 +134,21 @@ export const sendOtp = async (req, res, next) => {
     // 7. Set 60-second resend cooldown in Redis
     await redis.setex(cooldownKey, 60, '1');
 
-    // 8. Dispatch verification email via abstracted provider
-    await sendOtpEmail(normalizedEmail, otp);
+    // 8. Dispatch verification email via abstracted provider.
+    // On failure, roll back the OTP + cooldown so the user can retry immediately,
+    // and return a generic message (provider details are logged server-side only).
+    try {
+      await sendOtpEmail(normalizedEmail, otp);
+    } catch (emailError) {
+      await Promise.allSettled([
+        redis.del(cooldownKey),
+        Otp.deleteMany({ email: normalizedEmail }),
+      ]);
+      return res.status(503).json({
+        error: EMAIL_DELIVERY_FAILED_MESSAGE,
+        code: 'EMAIL_DELIVERY_FAILED',
+      });
+    }
 
     return res.status(200).json({
       success: true,
