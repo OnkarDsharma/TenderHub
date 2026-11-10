@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/useAuthStore';
 import { CopilotComposer } from '@/components/services/CopilotComposer';
+import { SearchBeam } from '@/components/ui/search-beam';
 import { Tile } from '@/components/shared/BentoTile';
 
 function renderCopilotText(content) {
@@ -696,6 +697,7 @@ export default function Services() {
               Eligibility fit, material schedules and contract risk, from the tender ID.
             </p>
 
+            <SearchBeam className="ai-hero-beam" borderRadius={32} theme="dark">
             <form
               className="ai-hero-pill"
               onSubmit={(e) => { e.preventDefault(); handleAnalyze(); }}
@@ -723,6 +725,7 @@ export default function Services() {
                 {analyzing ? <RefreshCw className="w-[18px] h-[18px] animate-spin" /> : <ArrowUp className="w-[18px] h-[18px]" />}
               </button>
             </form>
+            </SearchBeam>
 
             <div className="ai-hero-feedback" aria-live="polite">
               {error ? (

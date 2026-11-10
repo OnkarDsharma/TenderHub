@@ -3096,3 +3096,7 @@ body { background-color: #f7faff; }
   -webkit-text-stroke: 0;
   text-shadow: none;
 }
+
+/* Border beam around the AI analysis prompt pill: the wrapper takes the pill's width and spacing. */
+.ai-hero-beam { width: 100%; max-width: 680px; margin: 2rem auto 0; }
+.ai-hero-beam .ai-hero-pill { margin: 0; }

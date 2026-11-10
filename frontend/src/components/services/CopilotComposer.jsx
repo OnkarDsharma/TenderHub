@@ -6,6 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Search } from 'lucide-react';
+import { SearchBeam } from '@/components/ui/search-beam';
 
 const SPRING = 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
@@ -69,6 +70,7 @@ export function CopilotComposer({
       className="ai-composer"
       style={{ maxWidth: expanded ? 640 : 420, transition: `max-width 0.4s ${SPRING}` }}
     >
+      <SearchBeam borderRadius={24}>
       <div
         className={`ai-composer-card ${expanded ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''}`}
         style={{ height, transition: `height 0.4s ${SPRING}` }}
@@ -123,6 +125,7 @@ export function CopilotComposer({
           <ArrowUp className={`w-4 h-4 transition-transform duration-300 ${loading ? 'animate-pulse' : ''}`} />
         </button>
       </div>
+      </SearchBeam>
     </div>
   );
 }
