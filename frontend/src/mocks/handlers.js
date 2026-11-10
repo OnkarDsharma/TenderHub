@@ -150,7 +150,7 @@ export function buildHandlers() {
       requireAuth(headers);
       if (!getState().agentProfile.profileConfiguredAt) throw httpError(409, { success: false, error: 'PROFILE_REQUIRED', message: 'Set up your contractor profile (firm name, registration class, turnover, solvency and largest similar work) before running an AI analysis.' });
       const t = resolveTender(body.tenderId);
-      if (!t) throw httpError(404, { success: false, error: 'Tender not found', message: `No tender matches "${body.tenderId}". Try a reference from the Browse Tenders page.` });
+      if (!t) throw httpError(404, { success: false, error: 'TENDER_NOT_FOUND', message: 'This tender is not in TenderHub. Check the ID, or pick the tender from Browse Tenders or GeM Bids.' });
       const { dossier, personalizedFit } = dossierFor(t);
       saveState((st) => {
         const c = st.agentProfile.credits;

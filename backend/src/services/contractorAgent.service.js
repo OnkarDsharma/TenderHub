@@ -152,31 +152,16 @@ export class ContractorAgentService {
       tender = await Tender.findOne({ sourceTenderId: tenderId }).select('+gemRawText');
     }
     
-    // Fallback for demo sample tenders
-    if (!tender && typeof tenderId === 'string' && (tenderId.includes('_') || tenderId.startsWith('2026'))) {
-      tender = {
-        _id: new mongoose.Types.ObjectId(),
-        sourceTenderId: tenderId,
-        title: tenderId.includes('PWD') 
-          ? 'Upgradation and Macadamization of Link Road via Bus Stand, Division I'
-          : (tenderId.includes('JAL') ? 'Augmentation of Rural Water Supply Pipeline Network & Distribution Sump' : 'Construction of Additional Block at District Sub-District Hospital Complex'),
-        departmentName: tenderId.includes('PWD') ? 'Public Works (R&B) Department' : (tenderId.includes('JAL') ? 'Jal Shakti / PHE Department' : 'Health & Medical Education'),
-        estimatedValue: tenderId.includes('PWD') ? 4500000 : (tenderId.includes('JAL') ? 18000000 : 32000000),
-        emdAmount: tenderId.includes('PWD') ? 90000 : (tenderId.includes('JAL') ? 360000 : 640000),
-        tenderFee: 1500,
-        location: 'Zone 1 Central District',
-        periodOfWorkDays: tenderId.includes('PWD') ? 90 : 180,
-        closingDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        contractType: 'Item Rate Contract',
-        coversInfo: [
-          { coverNo: 1, coverType: 'Fee/PreQual/Technical', description: 'Technical Bid & Statutory Affidavits' },
-          { coverNo: 2, coverType: 'Finance', description: 'BOQ Price Schedule' }
-        ]
-      };
+    if (!tender) {
+      tender = await Tender.findOne({ tenderReferenceNumber: tenderId }).select('+gemRawText');
     }
 
+    // An unknown ID is an error: never analyse an invented stand-in tender.
     if (!tender) {
-      throw new Error('Tender not found with given identifier.');
+      throw new QuotaError(404, {
+        error: 'TENDER_NOT_FOUND',
+        message: 'This tender is not in TenderHub. Check the ID, or pick the tender from Browse Tenders or GeM Bids.',
+      });
     }
 
     // Check if a completed dossier already exists in DB (Global cache)

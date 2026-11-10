@@ -243,6 +243,8 @@ export default function Services() {
   const [dossierData, setDossierData] = useState(null);
   const [personalizedFit, setPersonalizedFit] = useState(null);
   const [error, setError] = useState('');
+  // Set when the requested tender is not in TenderHub, to offer the browse pages.
+  const [tenderNotFound, setTenderNotFound] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
 
   // Copilot Chat State
@@ -360,6 +362,7 @@ export default function Services() {
     try {
       analysisInFlightRef.current = true;
       setError('');
+      setTenderNotFound(false);
       setAnalyzing(true);
       setStatusMsg('AI Agents reading tender documentation and calculating contractor fit...');
 
@@ -395,7 +398,7 @@ export default function Services() {
         }
 
         if (!gemTender) {
-          throw new Error('This GeM bid is not in the tndrr index yet. Choose it from GeM Bids or sync the bid before analyzing it.');
+          throw Object.assign(new Error('This GeM bid is not in TenderHub yet. Pick it from GeM Bids, or check the bid number.'), { code: 'TENDER_NOT_FOUND' });
         }
         analysisTenderId = gemTender._id || gemTender.sourceTenderId || targetId;
       } else if (/^[a-f\d]{24}$/i.test(targetId)) {
@@ -413,7 +416,7 @@ export default function Services() {
             .some((value) => normalizeId(value) === normalizeId(targetId))
         );
         if (!tender) {
-          throw new Error('Tender reference was not found in the tndrr index. Choose an active tender from Browse Tenders and try again.');
+          throw Object.assign(new Error('This tender is not in TenderHub. Check the ID, or pick the tender from Browse Tenders.'), { code: 'TENDER_NOT_FOUND' });
         }
         analysisTenderId = tender._id || tender.sourceTenderId || targetId;
       }
@@ -438,6 +441,7 @@ export default function Services() {
     } catch (err) {
       console.error('Analysis error:', err);
       const payload = err.response?.data;
+      setTenderNotFound(payload?.error === 'TENDER_NOT_FOUND' || err.code === 'TENDER_NOT_FOUND');
       if (payload?.error === 'PROFILE_REQUIRED') {
         pendingAnalysisRef.current = targetId;
         setShowProfileModal(true);
@@ -447,7 +451,7 @@ export default function Services() {
       analysisInFlightRef.current = false;
       setAnalyzing(false);
     }
-  }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profile, profileConfigured, profileReady]);
+  }, [inputTenderId, isAuthenticated, loadPlansAndProfile, profileConfigured, profileReady]);
 
   useEffect(() => {
     if (showProfileModal) setProfileSaveError('');
@@ -735,6 +739,12 @@ export default function Services() {
                     >
                       Sign in / Sign up
                     </button>
+                  )}
+                  {tenderNotFound && (
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Link to="/tenders" className="ai-hero-ghost-btn">Browse Tenders</Link>
+                      <Link to="/gem-tenders" className="ai-hero-ghost-btn">GeM Bids</Link>
+                    </div>
                   )}
                 </>
               ) : statusMsg ? (
