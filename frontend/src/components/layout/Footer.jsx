@@ -25,7 +25,7 @@ export function Footer() {
 
           {/* Monitored Portals */}
           <div>
-            <h4 className="text-xs font-display font-bold uppercase tracking-wider text-slate-300 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
               Official Portals
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
@@ -78,7 +78,7 @@ export function Footer() {
 
           {/* Navigation Links */}
           <div>
-            <h4 className="text-xs font-display font-bold uppercase tracking-wider text-slate-300 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
               Directory
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
@@ -122,7 +122,7 @@ export function Footer() {
 
           {/* Operations Desk */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-display font-bold uppercase tracking-wider text-slate-300 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
               Operations Desk
             </h4>
             <div className="flex items-start gap-2 text-xs text-slate-400 leading-relaxed">

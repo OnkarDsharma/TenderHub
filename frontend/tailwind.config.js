@@ -53,9 +53,12 @@ export default {
         border: '#E2E8F0',
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Inter', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'monospace'],
+        // Two-family system: Nohemi for all UI/body text, Novar for display headings.
+        sans: ['Nohemi', 'Outfit', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['Novar', 'Source Serif 4', 'Georgia', 'serif'],
+        serif: ['Novar', 'Source Serif 4', 'Georgia', 'serif'],
+        // Numbers/IDs stay in Nohemi (tabular figures applied in index.css) instead of a third family.
+        mono: ['Nohemi', 'Outfit', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       boxShadow: {
         xs: '0 1px 2px 0 rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06)',

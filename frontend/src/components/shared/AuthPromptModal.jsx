@@ -53,7 +53,7 @@ export function AuthPromptModal({
             <span>Contractor Access Required</span>
           </div>
 
-          <h3 className="text-lg sm:text-xl font-display font-bold leading-snug">
+          <h3 className="text-lg sm:text-xl font-bold leading-snug">
             {title}
           </h3>
           <p className="text-xs text-blue-100/80 mt-1 leading-relaxed">

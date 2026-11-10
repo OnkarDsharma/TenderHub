@@ -88,7 +88,7 @@ export default function Contact() {
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 font-display mb-1">Inquiry Registered</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">Inquiry Registered</h3>
               <p className="text-xs sm:text-sm text-slate-600 max-w-sm">
                 Thank you. Your message has been routed to our operations desk. We will respond to your registered email address shortly.
               </p>
