@@ -242,9 +242,7 @@ export default function Tenders() {
   const [publishedTo, setPublishedTo] = useState(searchParams.get('publishedTo') || '');
   const [advancedFilters, setAdvancedFilters] = useState({
     hasPreBid: searchParams.get('hasPreBid') === 'true',
-    withdrawalAllowed: searchParams.get('withdrawalAllowed') === 'true',
-    twoStageBidding: searchParams.get('twoStageBidding') === 'true',
-    preferentialBidder: searchParams.get('preferentialBidder') === 'true',
+    withdrawalNotAllowed: searchParams.get('withdrawalNotAllowed') === 'true',
     tendererClass: searchParams.get('tendererClass') || '',
   });
 
@@ -254,9 +252,7 @@ export default function Tenders() {
   // Count active advanced filters
   const activeAdvancedCount = 
     (advancedFilters.hasPreBid ? 1 : 0) +
-    (advancedFilters.withdrawalAllowed ? 1 : 0) +
-    (advancedFilters.twoStageBidding ? 1 : 0) +
-    (advancedFilters.preferentialBidder ? 1 : 0) +
+    (advancedFilters.withdrawalNotAllowed ? 1 : 0) +
     (advancedFilters.tendererClass ? 1 : 0);
 
   // Dynamic District Options based on State
@@ -284,9 +280,7 @@ export default function Tenders() {
     publishedFrom: publishedRange === 'custom' && publishedFrom ? publishedFrom : undefined,
     publishedTo: publishedRange === 'custom' && publishedTo ? publishedTo : undefined,
     hasPreBid: advancedFilters.hasPreBid ? 'true' : undefined,
-    withdrawalAllowed: advancedFilters.withdrawalAllowed ? 'true' : undefined,
-    twoStageBidding: advancedFilters.twoStageBidding ? 'true' : undefined,
-    preferentialBidder: advancedFilters.preferentialBidder ? 'true' : undefined,
+    withdrawalNotAllowed: advancedFilters.withdrawalNotAllowed ? 'true' : undefined,
     tendererClass: advancedFilters.tendererClass || undefined,
     closingDays: closingDays,
     status: status,
@@ -347,9 +341,7 @@ export default function Tenders() {
     setPublishedTo('');
     setAdvancedFilters({
       hasPreBid: false,
-      withdrawalAllowed: false,
-      twoStageBidding: false,
-      preferentialBidder: false,
+      withdrawalNotAllowed: false,
       tendererClass: '',
     });
     setClosingDays('');
@@ -964,7 +956,7 @@ export default function Tenders() {
         onClose={() => setAdvancedModalOpen(false)}
         modalType="advancedFilters"
         title="Advanced Filters"
-        subtitle="Filter by meeting conditions, bidding models, and eligibility"
+        subtitle="Filter by pre-bid meetings, withdrawal rules, and contractor class"
         extraState={advancedFilters}
         onApply={(newState) => {
           setAdvancedFilters(newState);

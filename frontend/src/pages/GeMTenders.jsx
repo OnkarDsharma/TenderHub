@@ -17,7 +17,6 @@ import {
   AlertCircle,
   Landmark,
   Calendar,
-  SlidersHorizontal,
   Loader2,
 } from 'lucide-react';
 
@@ -193,24 +192,7 @@ export default function GeMTenders() {
   const [publishedRange, setPublishedRange] = useState('all');
   const [publishedFrom, setPublishedFrom] = useState('');
   const [publishedTo, setPublishedTo] = useState('');
-  const [advancedFilters, setAdvancedFilters] = useState({
-    hasPreBid: false,
-    withdrawalAllowed: false,
-    twoStageBidding: false,
-    preferentialBidder: false,
-    tendererClass: '',
-  });
-
-  const [advancedModalOpen, setAdvancedModalOpen] = useState(false);
   const [amountModalOpen, setAmountModalOpen] = useState(false);
-
-  // Count active advanced filters
-  const activeAdvancedCount = 
-    (advancedFilters.hasPreBid ? 1 : 0) +
-    (advancedFilters.withdrawalAllowed ? 1 : 0) +
-    (advancedFilters.twoStageBidding ? 1 : 0) +
-    (advancedFilters.preferentialBidder ? 1 : 0) +
-    (advancedFilters.tendererClass ? 1 : 0);
 
   // Determine active location options based on state
   const activeLocationOptions = selectedState && DISTRICTS_BY_STATE[selectedState]
@@ -254,11 +236,6 @@ export default function GeMTenders() {
           publishedRange: publishedRange !== 'all' ? publishedRange : undefined,
           publishedFrom: publishedRange === 'custom' && publishedFrom ? publishedFrom : undefined,
           publishedTo: publishedRange === 'custom' && publishedTo ? publishedTo : undefined,
-          hasPreBid: advancedFilters.hasPreBid ? 'true' : undefined,
-          withdrawalAllowed: advancedFilters.withdrawalAllowed ? 'true' : undefined,
-          twoStageBidding: advancedFilters.twoStageBidding ? 'true' : undefined,
-          preferentialBidder: advancedFilters.preferentialBidder ? 'true' : undefined,
-          tendererClass: advancedFilters.tendererClass || undefined,
           sortBy,
           closingDays: closingDays || undefined
         });
@@ -283,7 +260,7 @@ export default function GeMTenders() {
     };
     fetchTenders();
     return () => { cancelled = true; };
-  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, pdfStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo, advancedFilters]);
+  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, pdfStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -321,13 +298,6 @@ export default function GeMTenders() {
     setPublishedRange('all');
     setPublishedFrom('');
     setPublishedTo('');
-    setAdvancedFilters({
-      hasPreBid: false,
-      withdrawalAllowed: false,
-      twoStageBidding: false,
-      preferentialBidder: false,
-      tendererClass: '',
-    });
     setSortBy('arrival');
     setClosingDays('');
     setCurrentPage(1);
@@ -676,34 +646,6 @@ export default function GeMTenders() {
               </select>
             </div>
 
-            {/* Advanced Filters */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Advanced Filters
-              </label>
-              <button
-                type="button"
-                onClick={() => setAdvancedModalOpen(true)}
-                className={`w-full py-1.5 px-2.5 rounded-lg border text-left flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                  activeAdvancedCount > 0
-                    ? 'border-dalBlue bg-blue-50/60 dark:bg-blue-950/40 text-dalBlue dark:text-blue-300 font-semibold shadow-xs'
-                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
-                }`}
-              >
-                <span className="flex items-center gap-1.5 truncate">
-                  <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
-                  <span>
-                    {activeAdvancedCount > 0 ? `${activeAdvancedCount} active` : 'Select rules…'}
-                  </span>
-                </span>
-                {activeAdvancedCount > 0 && (
-                  <span className="h-4 min-w-[16px] px-1 rounded-full bg-dalBlue text-white text-[10px] flex items-center justify-center font-bold">
-                    {activeAdvancedCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
             {/* Reset Button */}
             <div className="flex items-end">
               <button
@@ -810,20 +752,6 @@ export default function GeMTenders() {
 
         </div>
       </div>
-
-      {/* Advanced Filters Modal */}
-      <FilterSelectionModal
-        isOpen={advancedModalOpen}
-        onClose={() => setAdvancedModalOpen(false)}
-        modalType="advancedFilters"
-        title="Advanced Filters"
-        subtitle="Filter by meeting conditions, bidding models, and eligibility"
-        extraState={advancedFilters}
-        onApply={(newState) => {
-          setAdvancedFilters(newState);
-          setCurrentPage(1);
-        }}
-      />
 
       {/* Tender Amount Modal (for Custom Range) */}
       <FilterSelectionModal

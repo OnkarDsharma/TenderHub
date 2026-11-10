@@ -66,6 +66,7 @@ export const getTenders = async (req, res, next) => {
       hasPreBid,
       tendererClass,
       withdrawalAllowed,
+      withdrawalNotAllowed,
       twoStageBidding,
       preferentialBidder,
       closingDays,
@@ -386,8 +387,23 @@ export const getTenders = async (req, res, next) => {
     if (preferentialBidder === 'true' || preferentialBidder === true) {
       baseConditions.push({ allowPreferentialBidder: { $regex: /^yes/i } });
     }
+    if (withdrawalNotAllowed === 'true' || withdrawalNotAllowed === true) {
+      baseConditions.push({ withdrawalAllowed: { $regex: /^no/i } });
+    }
     if (tendererClass && typeof tendererClass === 'string' && tendererClass.trim() && tendererClass.toUpperCase() !== 'ANY') {
-      baseConditions.push({ tendererClass: { $regex: escapeRegex(tendererClass), $options: 'i' } });
+      // Portals store the class inconsistently ("Class A", "A", "class-a", "Special Class"),
+      // so match the letter with or without the "Class" prefix, and super/special together.
+      const cls = tendererClass.trim();
+      const letter = cls.match(/^(?:class[\s-]*)?([a-z])$/i);
+      let classRegex;
+      if (letter) {
+        classRegex = new RegExp(`^\\s*(?:class[\\s-]*)?${letter[1]}\\s*$`, 'i');
+      } else if (/super|special/i.test(cls)) {
+        classRegex = /super|special/i;
+      } else {
+        classRegex = new RegExp(escapeRegex(cls), 'i');
+      }
+      baseConditions.push({ tendererClass: { $regex: classRegex } });
     }
 
     const now = new Date();

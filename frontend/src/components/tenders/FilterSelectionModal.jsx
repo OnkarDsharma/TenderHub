@@ -34,9 +34,7 @@ export function FilterSelectionModal({
   // For Advanced Filters
   const [advancedState, setAdvancedState] = useState({
     hasPreBid: extraState.hasPreBid || false,
-    withdrawalAllowed: extraState.withdrawalAllowed || false,
-    twoStageBidding: extraState.twoStageBidding || false,
-    preferentialBidder: extraState.preferentialBidder || false,
+    withdrawalNotAllowed: extraState.withdrawalNotAllowed || false,
     tendererClass: extraState.tendererClass || '',
   });
 
@@ -86,9 +84,7 @@ export function FilterSelectionModal({
     } else if (modalType === 'advancedFilters') {
       const reset = {
         hasPreBid: false,
-        withdrawalAllowed: false,
-        twoStageBidding: false,
-        preferentialBidder: false,
+        withdrawalNotAllowed: false,
         tendererClass: '',
       };
       setAdvancedState(reset);
@@ -230,59 +226,18 @@ export function FilterSelectionModal({
                 <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={advancedState.withdrawalAllowed}
+                    checked={advancedState.withdrawalNotAllowed}
                     onChange={(e) =>
-                      setAdvancedState((prev) => ({ ...prev, withdrawalAllowed: e.target.checked }))
+                      setAdvancedState((prev) => ({ ...prev, withdrawalNotAllowed: e.target.checked }))
                     }
                     className="mt-0.5 rounded text-dalBlue focus:ring-dalBlue h-4 w-4"
                   />
                   <div>
                     <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Bid Withdrawal Allowed
+                      Bid Withdrawal Not Allowed
                     </span>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Permits retraction or resubmission of tenders prior to closing.
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={advancedState.twoStageBidding}
-                    onChange={(e) =>
-                      setAdvancedState((prev) => ({ ...prev, twoStageBidding: e.target.checked }))
-                    }
-                    className="mt-0.5 rounded text-dalBlue focus:ring-dalBlue h-4 w-4"
-                  />
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Two-Stage Bidding
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Evaluated through separate technical and commercial qualifying stages.
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={advancedState.preferentialBidder}
-                    onChange={(e) =>
-                      setAdvancedState((prev) => ({
-                        ...prev,
-                        preferentialBidder: e.target.checked,
-                      }))
-                    }
-                    className="mt-0.5 rounded text-dalBlue focus:ring-dalBlue h-4 w-4"
-                  />
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Preferential Bidder Allowed
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Special consideration for MSME / local contractors.
+                      Bids cannot be retracted once submitted. Most tenders allow withdrawal.
                     </span>
                   </div>
                 </label>
