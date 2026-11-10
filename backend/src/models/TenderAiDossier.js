@@ -106,6 +106,26 @@ const tenderAiDossierSchema = new mongoose.Schema({
     }]
   },
 
+  // What the analysis was built from. DOCUMENTS: the tender's own files were
+  // read. LISTING_ONLY: no file could be read, so only portal listing fields
+  // were used. TEMPLATE: no AI model answered and a generic template was used.
+  grounding: {
+    mode: { type: String, enum: ['DOCUMENTS', 'LISTING_ONLY', 'TEMPLATE'] },
+    provider: { type: String },
+    documents: [{
+      name: { type: String },
+      category: { type: String },
+      kind: { type: String },
+      method: { type: String }, // text | scanned-pdf | skipped
+      pages: { type: Number },
+      chars: { type: Number },
+      truncated: { type: Boolean },
+      _id: false
+    }],
+    warnings: [{ type: String }],
+    missingInformation: [{ type: String }]
+  },
+
   // AI Inference Metadata & Cost Tracking
   aiEngine: {
     model: { type: String, default: 'gemini-1.5-flash' },

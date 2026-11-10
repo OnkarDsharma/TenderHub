@@ -128,6 +128,59 @@ function renderSummaryBullets(summaryText, listClassName = 'space-y-2.5') {
   );
 }
 
+const SOURCE_METHOD_LABEL = { text: 'read', 'scanned-pdf': 'scanned, read by AI', skipped: 'not read' };
+
+/** Shows which tender documents the dossier was built from, and what was missed. */
+function DossierSources({ grounding }) {
+  if (!grounding?.mode) {
+    return (
+      <div className="ai-sources is-warn" role="note">
+        <AlertTriangle size={15} aria-hidden="true" />
+        <p>This dossier was made before TenderHub read tender documents. Run the analysis again to base it on the NIT and BOQ.</p>
+      </div>
+    );
+  }
+  const docs = grounding.documents || [];
+  const read = docs.filter((d) => d.method !== 'skipped');
+  const notes = [...(grounding.warnings || []), ...(grounding.missingInformation || [])];
+
+  if (grounding.mode === 'TEMPLATE') {
+    return (
+      <div className="ai-sources is-high" role="alert">
+        <AlertTriangle size={15} aria-hidden="true" />
+        <p><strong>Not an analysis of this tender.</strong> The AI service did not respond, so this is a generic template for similar tenders. Its figures are not from the NIT. Try again in a few minutes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`ai-sources ${grounding.mode === 'LISTING_ONLY' ? 'is-warn' : ''}`}>
+      {grounding.mode === 'LISTING_ONLY' ? <AlertTriangle size={15} aria-hidden="true" /> : <CheckCircle2 size={15} aria-hidden="true" />}
+      <div className="min-w-0">
+        <p>
+          {grounding.mode === 'LISTING_ONLY'
+            ? 'No tender document could be read, so this is based only on the portal listing. Most requirements are not covered.'
+            : `Based on ${read.length} tender document${read.length === 1 ? '' : 's'}: ${read.map((d) => d.name).join(', ')}.`}
+        </p>
+        {(notes.length > 0 || docs.length > read.length) && (
+          <details className="ai-sources-details">
+            <summary>{notes.length} note{notes.length === 1 ? '' : 's'} on coverage</summary>
+            <ul>
+              {docs.map((d) => (
+                <li key={`doc-${d.name}`}>
+                  <span className="font-mono">{d.name}</span> - {SOURCE_METHOD_LABEL[d.method] || d.method}
+                  {d.pages ? `, ${d.pages} pages` : ''}{d.truncated ? ', partly read' : ''}
+                </li>
+              ))}
+              {notes.map((note, i) => <li key={`note-${i}`} className="is-note">{note}</li>)}
+            </ul>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Services() {
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -654,6 +707,7 @@ export default function Services() {
                 {dossierData.summary && (
                   <div className="ai-summary">{renderSummaryBullets(dossierData.summary, 'space-y-2')}</div>
                 )}
+                <DossierSources grounding={dossierData.grounding} />
               </div>
 
               {personalizedFit && (

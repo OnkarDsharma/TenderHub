@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleAIFileManager } from '@google/generative-ai/server';
 import OpenAI from 'openai';
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
@@ -7,6 +8,11 @@ import ContractorAgentProfile from '../models/ContractorAgentProfile.js';
 import AiAgentChatSession from '../models/AiAgentChatSession.js';
 import Tender from '../models/Tender.js';
 import pino from 'pino';
+import { collectTenderDocuments } from './tenderDocuments.service.js';
+import { buildDossierPrompt } from './dossierPrompt.js';
+
+// About 100k tokens: what gpt-4o-mini's 128k context can take with room for output.
+const OPENAI_PROMPT_CHARS = 300000;
 
 /**
  * AI output often puts text in numeric fields ("As per BOQ", "30 days",
@@ -116,10 +122,10 @@ export class ContractorAgentService {
   async getOrGenerateTenderDossier(tenderId, userId, forceRefresh = false) {
     let tender = null;
     if (mongoose.isValidObjectId(tenderId)) {
-      tender = await Tender.findById(tenderId);
+      tender = await Tender.findById(tenderId).select('+gemRawText');
     }
     if (!tender) {
-      tender = await Tender.findOne({ sourceTenderId: tenderId });
+      tender = await Tender.findOne({ sourceTenderId: tenderId }).select('+gemRawText');
     }
     
     // Fallback for demo sample tenders
@@ -163,9 +169,21 @@ export class ContractorAgentService {
       (domain === 'CIVIL_WORKS' && (dossier.summary?.toLowerCase().includes('desktop') || dossier.summary?.toLowerCase().includes('pc (v2)')))
     );
     const hasOldParagraphFormat = dossier && (!dossier.summary || !dossier.summary.trim().startsWith('•'));
+    // Dossiers made before document grounding, or from the template, are rebuilt.
+    const isUngrounded = dossier && (!dossier.grounding?.mode || dossier.grounding.mode === 'TEMPLATE');
+    const reusable = dossier && dossier.status === 'COMPLETED' && !hasDomainMismatch && !hasOldParagraphFormat && !isUngrounded;
 
-    if (dossier && dossier.status === 'COMPLETED' && !forceRefresh && !hasDomainMismatch && !hasOldParagraphFormat) {
+    if (reusable && !forceRefresh) {
       // Calculate personalized match for requesting user
+      const personalizedFit = await this.calculateContractorPersonalizedFit(tender, userId, dossier);
+      return { dossier, personalizedFit };
+    }
+
+    const corpus = await collectTenderDocuments(tender);
+
+    // Analysing the same documents again gives the same answer at a real cost,
+    // so a refresh only re-runs the AI when the tender's documents changed.
+    if (reusable && dossier.grounding.mode === 'DOCUMENTS' && corpus.documentHash && dossier.documentHash === corpus.documentHash) {
       const personalizedFit = await this.calculateContractorPersonalizedFit(tender, userId, dossier);
       return { dossier, personalizedFit };
     }
@@ -189,10 +207,12 @@ export class ContractorAgentService {
     const startTime = Date.now();
     try {
       // Generate through Gemini / OpenAI / Intelligent Fallback Engine
-      const aiResult = await this.executeGeminiTenderAnalysis(tender);
-
-      const computedVal = tender.estimatedValue || (tender.gemData?.pdfData?.minTurnoverLakhs ? tender.gemData.pdfData.minTurnoverLakhs * 100000 : 4500000);
-      const computedEmd = tender.emdAmount || Math.round(computedVal * 0.02);
+      const aiResult = await this.executeGeminiTenderAnalysis(tender, corpus);
+      // Scraped listing values first, then values the AI read from the documents.
+      // Nothing is guessed: an unknown value stays empty.
+      const facts = aiResult.isTemplate ? {} : (aiResult.keyFacts || {});
+      // Portals and NITs often print 0 for a value they do not disclose.
+      const num = (value) => (value !== null && value !== '' && Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : null);
 
       // Save extracted dossier with normalized newline bullets
       if (typeof aiResult.summary === 'string' && aiResult.summary.trim()) {
@@ -206,23 +226,34 @@ export class ContractorAgentService {
       }
       dossier.executiveOverview = {
         title: tender.title,
-        department: tender.departmentName || tender.organisationChain || (domain === 'IT_HARDWARE' ? 'Information Technology Department' : 'Public Works'),
-        estimatedValue: computedVal,
-        emdAmount: computedEmd,
-        tenderFee: tender.tenderFee || 0,
+        department: tender.departmentName || tender.organisationChain || null,
+        estimatedValue: num(tender.estimatedValue) ?? num(facts.estimatedValueInr),
+        emdAmount: num(tender.emdAmount) ?? num(facts.emdAmountInr),
+        tenderFee: num(tender.tenderFee) ?? num(facts.tenderFeeInr),
         submissionDeadline: tender.bidSubmissionEndDate || tender.closingDate,
-        location: tender.location || 'Jammu & Kashmir',
-        contractType: tender.contractType || (domain === 'CIVIL_WORKS' ? 'Item Rate Contract' : 'GeM Goods Supply Contract'),
-        completionPeriodDays: tender.periodOfWorkDays || (domain === 'CIVIL_WORKS' ? 90 : 45),
+        location: tender.location || facts.location || null,
+        contractType: tender.contractType || facts.contractType || null,
+        completionPeriodDays: num(tender.periodOfWorkDays) ?? num(facts.completionPeriodDays),
       };
       dossier.preBidAnalysis = sanitizePreBidAnalysis(aiResult.preBidAnalysis);
       dossier.postAwardAnalysis = sanitizePostAwardAnalysis(aiResult.postAwardAnalysis);
+      const usedDocuments = corpus.summary.some((d) => d.method !== 'skipped');
+      dossier.documentHash = corpus.documentHash;
+      dossier.grounding = {
+        mode: aiResult.isTemplate ? 'TEMPLATE' : (usedDocuments ? 'DOCUMENTS' : 'LISTING_ONLY'),
+        provider: aiResult.provider,
+        documents: corpus.summary,
+        warnings: corpus.warnings,
+        missingInformation: Array.isArray(aiResult.sourceNotes?.missingInformation)
+          ? aiResult.sourceNotes.missingInformation.filter((item) => typeof item === 'string').slice(0, 20)
+          : [],
+      };
+      // Token counts come from the provider's usage report (0 when none ran).
       dossier.aiEngine = {
-        model: env.GEMINI_MODEL || 'gemini-1.5-flash',
-        promptTokens: aiResult.tokens?.promptTokens || 12500,
-        completionTokens: aiResult.tokens?.completionTokens || 2800,
-        cachedTokens: aiResult.tokens?.cachedTokens || 8400,
-        estimatedCostPaise: 42, // ~ ₹0.42 actual compute cost
+        model: aiResult.provider,
+        promptTokens: aiResult.tokens?.promptTokens || 0,
+        completionTokens: aiResult.tokens?.completionTokens || 0,
+        cachedTokens: aiResult.tokens?.cachedTokens || 0,
         latencyMs: Date.now() - startTime,
         processedAt: new Date(),
       };
@@ -432,179 +463,115 @@ export class ContractorAgentService {
   /**
    * Executes Gemini LLM extraction pipeline with structured JSON schema
    */
-  async executeGeminiTenderAnalysis(tender) {
-    const tenderContext = `
-TENDER TITLE: ${tender.title}
-DEPARTMENT: ${tender.departmentName || tender.organisationChain || 'Public Works'}
-TENDER VALUE (INR): ${tender.estimatedValue || 'Not specified'}
-EMD AMOUNT: ${tender.emdAmount || 'Not specified'}
-TENDER FEE: ${tender.tenderFee || '0'}
-LOCATION: ${tender.location || 'North Zone'}
-DESCRIPTION: ${tender.workDescription || tender.title}
-CONTRACT TYPE: ${tender.contractType || 'Item Rate'}
-WORK PERIOD (DAYS): ${tender.periodOfWorkDays || '90'}
-SUBMISSION DEADLINE: ${tender.bidSubmissionEndDate || tender.closingDate || 'Standard deadline'}
-ORGANISATION CHAIN: ${tender.organisationChain || ''}
-COVERS INFO: ${JSON.stringify(tender.coversInfo || [])}
-OTHER DOCUMENTS: ${JSON.stringify(tender.otherImportantDocuments || [])}
-`;
+  async executeGeminiTenderAnalysis(tender, corpus) {
+    const prompt = buildDossierPrompt(tender, corpus);
 
-    // Try Gemini First if key exists
     if (geminiClient) {
+      const uploaded = [];
       try {
-        const model = geminiClient.getGenerativeModel({ 
-          model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+        const model = geminiClient.getGenerativeModel({
+          model: env.GEMINI_MODEL || 'gemini-2.5-flash',
           generationConfig: {
-            temperature: 0.2,
+            temperature: 0.1,
             responseMimeType: 'application/json',
+            maxOutputTokens: 32768,
           }
         });
 
-        const prompt = `You are TenderHub's Chief AI Quantity Surveyor and Senior Government Contracting Consultant.
-Analyze the following tender details thoroughly and generate a complete, high-fidelity engineering dossier.
-
-${tenderContext}
-
-Return strictly valid JSON with this exact schema:
-For BOQ line items, use numeric values for estimatedRate and estimatedAmount when an estimate is available. If the tender requires the bidder to quote a price and no estimate is available, use the string "To be quoted by bidder" for those fields instead of inventing an amount. Use a plain number for quantity (no units or commas); if the tender does not publish the quantity, use the string "As per BOQ". Use plain numbers for sNo, milestoneNo, targetDays and financialProgressPct.
-{
-  "summary": "Pointwise executive briefing (3-4 concise bullet points, each starting on a new line with '• ') highlighting: 1) Project Scope & Dept, 2) Budget & Execution Timeline, 3) Minimum Contractor Class & Solvency, 4) Strategic Recommendation",
-  "preBidAnalysis": {
-    "eligibilityCriteria": {
-      "requiredTurnover": "String with required turnover INR and criteria",
-      "solvencyRequired": "String with required solvency amount",
-      "experienceCriteria": "String explaining similar work criteria",
-      "minimumRegistrationClass": "String (e.g. Class A, Class 1 PWD)",
-      "jointVentureAllowed": true/false,
-      "emdExemptionPossible": true/false,
-      "keyRequirements": ["bullet point 1", "bullet point 2", "bullet point 3"]
-    },
-    "mandatoryDocumentChecklist": [
-      {
-        "sNo": 1,
-        "title": "Document Title",
-        "description": "Details of certificate, notary stamp or format",
-        "stage": "Technical Cover" or "Fee Cover" or "Financial Cover",
-        "isMandatory": true,
-        "complianceTip": "Crucial insider advice to prevent disqualification"
-      }
-    ],
-    "boqMaterialBreakdown": {
-      "summary": "Pointwise overview of raw materials (3-4 concise bullet points, each on a new line with '• ') with key quantities, budget share, and Phase 1 staging",
-      "materials": [
-        {
-          "name": "e.g. Portland Pozzolana Cement (PPC 43)",
-          "category": "Cement",
-          "estimatedQuantity": "e.g. 8,400 Bags",
-          "unit": "Bags",
-          "specCode": "IS 1489 Part 1",
-          "approxRateInr": "₹ 380 / bag",
-          "totalEstCost": "₹ 31,92,000"
-        },
-        {
-          "name": "e.g. TMT Steel Rebars (Fe 500D)",
-          "category": "Steel",
-          "estimatedQuantity": "e.g. 45 Metric Tonnes",
-          "unit": "MT",
-          "specCode": "IS 1786",
-          "approxRateInr": "₹ 54,000 / MT",
-          "totalEstCost": "₹ 24,30,000"
+        // Scanned PDFs have no text layer; Gemini reads their pages directly.
+        const fileParts = [];
+        if (corpus.scannedPdfs.length) {
+          const fileManager = new GoogleAIFileManager(env.GEMINI_API_KEY);
+          for (const doc of corpus.scannedPdfs) {
+            try {
+              const upload = await fileManager.uploadFile(doc.buffer, { mimeType: 'application/pdf', displayName: doc.name.slice(0, 100) });
+              let file = upload.file;
+              for (let i = 0; file.state === 'PROCESSING' && i < 30; i += 1) {
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                file = await fileManager.getFile(file.name);
+              }
+              uploaded.push(file.name);
+              if (file.state !== 'ACTIVE') throw new Error(`file state ${file.state}`);
+              fileParts.push({ text: `Scanned document "${doc.name}" (${doc.category}, ${doc.pages} pages) follows:` });
+              fileParts.push({ fileData: { mimeType: 'application/pdf', fileUri: file.uri } });
+            } catch (uploadErr) {
+              corpus.warnings.push(`${doc.name}: scanned PDF could not be sent to the AI (${uploadErr.message}).`);
+              const entry = corpus.summary.find((d) => d.name === doc.name && d.method === 'scanned-pdf');
+              if (entry) entry.method = 'skipped';
+            }
+          }
         }
-      ],
-      "boqLineItems": [
-        {
-          "itemNo": "1.01",
-          "description": "Excavation in ordinary soil including dressing and disposal",
-          "quantity": 1250,
-          "unit": "cum",
-          "estimatedRate": 185,
-          "estimatedAmount": 231250
-        }
-      ]
-    },
-    "riskAndRedFlags": [
-      {
-        "severity": "HIGH" or "MEDIUM" or "LOW",
-        "title": "Risk Name",
-        "clauseReference": "GCC Clause reference",
-        "riskSummary": "Detailed description of legal/financial risk",
-        "mitigationAction": "Step contractor should take to safeguard profits"
-      }
-    ]
-  },
-  "postAwardAnalysis": {
-    "procurementSchedule": [
-      {
-        "phase": "Mobilization & Foundation Phase (Month 1)",
-        "timeframe": "Days 1 to 30",
-        "materialsToMobilize": ["Cement 2000 bags", "Shuttering Ply", "Admixtures"],
-        "criticalPathItems": "Testing cube specimens and water test reports"
-      }
-    ],
-    "milestones": [
-      {
-        "milestoneNo": 1,
-        "description": "Completion of site clearance, foundation excavation, and first PCC layer",
-        "targetDays": 30,
-        "financialProgressPct": 25,
-        "penaltyIfDelayed": "0.5% per week up to 10% liquidated damages"
-      }
-    ],
-    "qualityAndSafetyCompliance": [
-      {
-        "standardCode": "IS 456 / MORTH Section 1000",
-        "title": "Concrete Compression Testing",
-        "testFrequency": "3 specimens per 50 cum batch",
-        "inspectingAuthority": "Executive Engineer Quality Control Cell"
-      }
-    ],
-    "penaltyClauses": [
-      {
-        "type": "Liquidated Damages for Delay",
-        "rate": "0.5% per week of contract value",
-        "maximumCap": "10% of total contract value",
-        "conditions": "Applicable if extension of time (EOT) is not sanctioned in writing."
-      }
-    ]
-  }
-}`;
 
-        const response = await model.generateContent(prompt);
-        const text = response.response.text();
-        const parsed = JSON.parse(text);
-        parsed.tokens = { promptTokens: 14200, completionTokens: 3100, cachedTokens: 9800 };
+        // Retry the brief 429/5xx "high demand" errors Gemini returns under load.
+        let response;
+        for (let attempt = 1; ; attempt += 1) {
+          try {
+            response = await model.generateContent([...fileParts, { text: prompt }]);
+            break;
+          } catch (err) {
+            const transient = /\[(429|500|502|503|504)\b/.test(err.message || '');
+            if (!transient || attempt >= 3) throw err;
+            logger.warn(`Gemini busy (attempt ${attempt}): ${err.message}`);
+            await new Promise((resolve) => setTimeout(resolve, attempt * 5000));
+          }
+        }
+        const parsed = JSON.parse(response.response.text());
+        const usage = response.response.usageMetadata || {};
+        parsed.tokens = {
+          promptTokens: usage.promptTokenCount || 0,
+          completionTokens: (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0),
+          cachedTokens: usage.cachedContentTokenCount || 0,
+        };
+        parsed.provider = env.GEMINI_MODEL || 'gemini-2.5-flash';
         return parsed;
       } catch (geminiErr) {
         logger.warn(`Gemini analysis failed (${geminiErr.message}), trying fallback...`);
+      } finally {
+        if (uploaded.length) {
+          const fileManager = new GoogleAIFileManager(env.GEMINI_API_KEY);
+          await Promise.all(uploaded.map((name) => fileManager.deleteFile(name).catch(() => {})));
+        }
       }
     }
 
-    // Try OpenAI fallback if Gemini didn't run
     if (openaiClient) {
       try {
+        // gpt-4o-mini cannot read scanned PDFs here and has a smaller context window.
+        const text = prompt.length > OPENAI_PROMPT_CHARS ? prompt.slice(0, OPENAI_PROMPT_CHARS - 2000) + prompt.slice(prompt.lastIndexOf('</tender-documents>')) : prompt;
+        if (corpus.scannedPdfs.length) {
+          corpus.warnings.push('Scanned PDFs were not analysed: the backup AI model cannot read them.');
+          for (const entry of corpus.summary) if (entry.method === 'scanned-pdf') entry.method = 'skipped';
+        }
+        if (text.length < prompt.length) corpus.warnings.push('The backup AI model received a shortened copy of the documents.');
         const completion = await openaiClient.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are an expert civil engineering tender quantity surveyor. Output strictly JSON.' },
-            { role: 'user', content: `Analyze this tender and return comprehensive JSON:\n${tenderContext}` }
+            { role: 'system', content: 'You analyse Indian public procurement tenders strictly from the documents provided. Output strictly JSON.' },
+            { role: 'user', content: text }
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.2
+          temperature: 0.1
         });
         const parsed = JSON.parse(completion.choices[0].message.content);
         parsed.tokens = {
-          promptTokens: completion.usage?.prompt_tokens || 8000,
-          completionTokens: completion.usage?.completion_tokens || 2000,
-          cachedTokens: 0
+          promptTokens: completion.usage?.prompt_tokens || 0,
+          completionTokens: completion.usage?.completion_tokens || 0,
+          cachedTokens: completion.usage?.prompt_tokens_details?.cached_tokens || 0
         };
+        parsed.provider = 'gpt-4o-mini';
         return parsed;
       } catch (openAiErr) {
         logger.warn(`OpenAI analysis fallback failed (${openAiErr.message})`);
       }
     }
 
-    // High-Fidelity Intelligent Deterministic Engine (Guarantees zero-failure operation)
-    return this.generateDeterministicEngineeringDossier(tender);
+    // No AI model answered. The template below is generic for the tender's
+    // domain and is flagged as TEMPLATE so the UI never presents it as analysis.
+    const template = this.generateDeterministicEngineeringDossier(tender);
+    template.isTemplate = true;
+    template.provider = 'template';
+    template.tokens = { promptTokens: 0, completionTokens: 0, cachedTokens: 0 };
+    return template;
   }
 
   /**
@@ -1383,8 +1350,8 @@ Machinery: ${profile.machineryInventory.map(m => m.name).join(', ')}
 
 TENDER DOSSIER SNAPSHOT:
 Title: ${dossier.executiveOverview?.title}
-Value: ₹${(dossier.executiveOverview?.estimatedValue / 1e5).toFixed(2)} Lakhs
-EMD: ₹${dossier.executiveOverview?.emdAmount}
+Value: ${dossier.executiveOverview?.estimatedValue ? `₹${(dossier.executiveOverview.estimatedValue / 1e5).toFixed(2)} Lakhs` : 'Not stated'}
+EMD: ${dossier.executiveOverview?.emdAmount ? `₹${dossier.executiveOverview.emdAmount}` : 'Not stated'}
 Eligibility Criteria: ${JSON.stringify(dossier.preBidAnalysis?.eligibilityCriteria)}
 BOQ Materials: ${JSON.stringify(dossier.preBidAnalysis?.boqMaterialBreakdown?.materials?.map(m => `${m.name}: ${m.estimatedQuantity}`) || [])}
 Risk Red Flags: ${JSON.stringify(dossier.preBidAnalysis?.riskAndRedFlags?.map(r => r.title) || [])}
@@ -1397,7 +1364,7 @@ RESPONSE RULES (STRICT):
 - Be strictly CONCISE and POINTWISE (maximum 3 to 5 short bullets).
 - Do NOT output long paragraphs or walls of text.
 - Use '• **[Topic]**: [Direct Fact / Rule / Number]' format.
-- Cite exact J&K PWD / CPWD / GeM clauses, amounts, and dates.
+- Use the dossier above for this tender's clauses, amounts and dates. If the dossier says something is not stated, say so instead of guessing.
 - Give immediate actionable next steps.
 - If asked in Hindi or Hinglish, reply with the same concise pointwise structure in Hindi/Hinglish.
 `;

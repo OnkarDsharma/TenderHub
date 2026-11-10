@@ -212,6 +212,17 @@ export function buildDossier(tender, profile) {
       `• Mandatory Financials: EMD ${lakh(emd)} (CDR/FDR), 40% banker solvency (${lakh(value * 0.4)}), 120% three-year average turnover`,
       `• Winning Recommendation: ${isRoad ? 'Secure a hot-mix plant tie-up within 60 km before bidding' : 'Confirm site access and material lead times before pricing'}; quote within the L1 corridor of -4% to -8%.`,
     ].join('\n'),
+    grounding: {
+      mode: 'DOCUMENTS',
+      provider: 'gemini-2.5-flash',
+      documents: [
+        { name: 'Tendernotice_1.pdf', category: 'NIT', kind: 'pdf', method: 'text', pages: 12, chars: 38412, truncated: false },
+        { name: `BOQ_${String(tender.sourceTenderId || '1').replace(/\W+/g, '_')}.xls`, category: 'BOQ', kind: 'spreadsheet', method: 'text', chars: 9611, truncated: false },
+        { name: 'SBD.pdf', category: 'Work item archive', kind: 'pdf', method: 'scanned-pdf', pages: 64, chars: 0, truncated: false },
+      ],
+      warnings: [],
+      missingInformation: ['Performance security percentage is not stated in the NIT.'],
+    },
     executiveOverview: {
       title, department: dept, estimatedValue: value, emdAmount: emd, tenderFee: tender.tenderFee || 0,
       submissionDeadline: tender.closingDate, location: tender.location, contractType: isGem ? 'GeM Bid / Reverse Auction' : 'Item Rate Contract', completionPeriodDays: days,
