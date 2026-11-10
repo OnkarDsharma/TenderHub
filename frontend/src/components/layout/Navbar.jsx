@@ -130,7 +130,7 @@ export function Navbar() {
 
       {/* Main Navigation Bar */}
       <div className="bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-[#262832] shadow-xs">
-        <div className="navbar-main-row max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
+        <div className="navbar-main-row max-w-7xl mx-auto flex lg:grid lg:grid-cols-[1fr_auto_1fr] items-center justify-between h-16 sm:h-20 px-4 sm:px-6 lg:px-8 gap-4">
           
           {/* Brand wordmark */}
           <div className="flex items-center shrink-0">
@@ -147,7 +147,7 @@ export function Navbar() {
           </div>
 
           {/* Desktop Nav Links (Clean, Spacious & No Wrapping) */}
-          <nav aria-label="Main navigation" className="navbar-glass-nav hidden lg:flex items-center justify-center gap-0.5 flex-1">
+          <nav aria-label="Main navigation" className="navbar-glass-nav hidden lg:flex items-center justify-center gap-0.5">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
               const Icon = link.icon;
@@ -179,7 +179,7 @@ export function Navbar() {
           </nav>
 
           {/* Right Action: Clean Profile / Auth */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          <div className="flex items-center justify-end justify-self-end gap-3 sm:gap-4 shrink-0">
             {/* Auth Buttons / Profile Dropdown */}
             {isAuthenticated ? (
               <div className="relative" ref={profileDropdownRef}>
