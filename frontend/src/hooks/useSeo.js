@@ -20,6 +20,21 @@ export const DEFAULT_DESCRIPTION =
   'Every tender. One search. Public procurement intelligence and government tender analytics across J&K, Ladakh, Punjab, and Himachal Pradesh.';
 
 const DEFAULT_IMAGE = '/tndrr-logo.png';
+
+/**
+ * Closed-tender policy, mirrored in backend/src/services/prerender.service.js:
+ * a tender stays indexable after it closes (it shows a Closed notice and keeps
+ * its ranking value) until STALE_DAYS have passed, or immediately if delisted.
+ */
+export const STALE_DAYS = 90;
+export const isStaleTender = (tender, now = Date.now()) => {
+  if (!tender) return false;
+  if (tender.isDelisted) return true;
+  const closes = tender.bidSubmissionEndDate || tender.closingDate;
+  if (!closes) return false;
+  const t = new Date(closes).getTime();
+  return !Number.isNaN(t) && now - t > STALE_DAYS * 24 * 60 * 60 * 1000;
+};
 const MAX_DESCRIPTION = 160;
 const MAX_TITLE = 60;
 

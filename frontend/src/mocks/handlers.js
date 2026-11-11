@@ -7,8 +7,10 @@
 import { httpError, MOCK_OTP } from './mockApi';
 import {
   STATE_TENDERS, GEM_BIDS, ALL_TENDERS, findTender, toSummary, filterTenders, paginate, tenderCounts,
-  tenderStats, organisations, gemStats, relatedTendersFor,
+  tenderStats, organisations, gemStats, relatedTendersFor, statusBucket,
 } from './fixtures/tenders';
+import { slugify } from '@/utils/tenderUrl';
+import { LANDING_STATES } from '@/utils/landingStates';
 import {
   TEST_ACCOUNT, buildUser, fakeJwt, getState, saveState, AI_PLANS, buildDossier, copilotReply, evaluateBid,
 } from './fixtures/account';
@@ -106,6 +108,18 @@ export function buildHandlers() {
           : { viewsUsed: 1, viewsLimit: 3, viewsRemaining: 2, resetsAt: iso(1), date: iso(0).slice(0, 10) },
       };
     }],
+
+    /* ---------------------------- SEO ----------------------------- */
+    // Mirrors backend/src/routes/seo.routes.js (landing pages, similar tenders).
+    ['get', '/seo/similar/:id', ({ params }) => {
+      const t = findTender(params.id);
+      if (!t) throw httpError(404, { error: 'Tender not found' });
+      const pool = (GEM_BIDS.includes(t) ? GEM_BIDS : STATE_TENDERS).filter((x) => x !== t && statusBucket(x) === 'active');
+      const same = pool.filter((x) => x.departmentName === t.departmentName || x.state === t.state);
+      return { data: same.slice(0, 6).map(toSummary) };
+    }],
+    ['get', '/seo/landing/:kind/:state', ({ params }) => mockLanding(params.kind, params.state)],
+    ['get', '/seo/landing/:kind/:state/:dept', ({ params }) => mockLanding(params.kind, params.state, params.dept)],
 
     /* ---------------------------- GeM ----------------------------- */
     ['get', '/gem/stats', ({ query }) => ({ success: true, stats: gemStats(query) })],
@@ -304,4 +318,31 @@ export function buildHandlers() {
       return { success: true, message: `Test alert dispatched to ${body.phone || getState().notificationPrefs.whatsappPhone} (mock, nothing was sent).`, result: { success: true, isMock: true } };
     }],
   ];
+}
+
+/** Dev mock of GET /seo/landing/:kind/:state[/:dept] (see backend landing.service.js). */
+function mockLanding(kind, stateSlug, deptSlug) {
+  const state = LANDING_STATES.find((s) => s.slug === stateSlug);
+  if (!state || (kind === 'gem' && deptSlug)) throw httpError(404, { error: 'Page not found' });
+  const gem = kind === 'gem';
+  const inState = (gem ? GEM_BIDS : STATE_TENDERS).filter((t) => statusBucket(t) === 'active'
+    && (gem ? (t.consigneeStates || []).includes(state.name) || t.state === state.name : t.state === state.name));
+  const counts = new Map();
+  for (const t of inState) if (t.departmentName) counts.set(t.departmentName, (counts.get(t.departmentName) || 0) + 1);
+  const departments = gem ? [] : [...counts].map(([name, count]) => ({ slug: slugify(name), name, count })).sort((a, b) => b.count - a.count);
+  const department = deptSlug ? departments.find((d) => d.slug === deptSlug) : null;
+  if (deptSlug && !department) throw httpError(404, { error: 'Page not found' });
+  const tenders = department ? inState.filter((t) => t.departmentName === department.name) : inState;
+  const heading = gem ? `GeM Bids in ${state.name}` : department ? `${department.name} Tenders in ${state.name}` : `Government Tenders in ${state.name}`;
+  return {
+    kind: gem ? 'gem' : 'tenders',
+    state,
+    department,
+    total: tenders.length,
+    tenders: tenders.map(toSummary),
+    departments: departments.filter((d) => d.slug !== deptSlug),
+    categories: gem ? [...new Set(inState.map((t) => t.productCategory).filter(Boolean))].map((name) => ({ name, count: inState.filter((t) => t.productCategory === name).length })) : undefined,
+    seo: { heading, title: heading, description: `${tenders.length} open ${heading.toLowerCase()} (mock data).` },
+    path: `/${gem ? 'gem-tenders' : 'tenders'}/in/${state.slug}${department ? `/${department.slug}` : ''}`,
+  };
 }

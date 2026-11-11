@@ -18,6 +18,7 @@ import { tenderQueue } from '../workers/queue.js';
 import { retentionService } from './retention.service.js';
 import { backupService } from './backup.service.js';
 import { reconciliationService } from './reconciliation.service.js';
+import { submitNewTenders } from './indexNow.service.js';
 import Subscription from '../modules/billing/models/Subscription.js';
 import ContractorPreference from '../modules/notifications/models/ContractorPreference.js';
 import { matchingEngine } from '../modules/notifications/services/matching.engine.js';
@@ -90,6 +91,15 @@ export class SchedulerService {
     cron.schedule('*/15 * * * *', async () => {
       await retentionService.markExpiredTenders().catch(err => {
         logger.error(`[Scheduler] Real-time expiry check failed: ${err.message}`);
+      });
+    }, {
+      timezone: 'Asia/Kolkata'
+    });
+
+    // 6b. IndexNow: notify Bing & co. about newly scraped tenders (every 30 mins)
+    cron.schedule('*/30 * * * *', async () => {
+      await submitNewTenders().catch(err => {
+        logger.error(`[Scheduler] IndexNow submission failed: ${err.message}`);
       });
     }, {
       timezone: 'Asia/Kolkata'

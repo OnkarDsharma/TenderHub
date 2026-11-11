@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Search, 
   RotateCcw, 
@@ -25,6 +25,7 @@ import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal'
 import { TenderCard } from '@/components/shared/TenderCard';
 import { SearchBeam } from '@/components/ui/search-beam';
 import { useSeo } from '@/hooks/useSeo';
+import { tenderPath } from '@/utils/tenderUrl';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
@@ -168,17 +169,21 @@ const cleanDisplayText = (value, fallback = '—') =>
 export default function GeMTenders() {
   useSeo({ title: 'GeM Bids by State: J&K, Punjab, Himachal, Ladakh', description: 'Find active Government e-Marketplace (GeM) bids for Jammu & Kashmir, Ladakh, Punjab, Himachal Pradesh, Haryana, and Delhi. Filter by category, value, and deadline.', path: '/gem-tenders' });
   const navigate = useNavigate();
+  // Deep links from landing pages: /gem-tenders?state=Punjab&search=Cement
+  const [searchParams] = useSearchParams();
+  const initialGemState = STATE_TABS.some((o) => o.value && o.value === searchParams.get('state')) ? searchParams.get('state') : '';
+  const initialGemSearch = (searchParams.get('search') || '').slice(0, 200);
   const [tenders, setTenders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Filters & Pagination State
-  const [selectedState, setSelectedState] = useState('');
+  const [selectedState, setSelectedState] = useState(initialGemState);
   const [pdfStatus, setPdfStatus] = useState('');
   const [tenderStatusFilter, setTenderStatusFilter] = useState('active');
-  const [search, setSearch] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [search, setSearch] = useState(initialGemSearch);
+  const [appliedSearch, setAppliedSearch] = useState(initialGemSearch);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [sortBy, setSortBy] = useState('arrival');
   const [closingDays, setClosingDays] = useState('');
@@ -701,7 +706,7 @@ export default function GeMTenders() {
                   key={item._id || item.sourceTenderId}
                   tender={item}
                   locationLabel={locationLabel}
-                  onViewDetails={() => navigate(`/gem-tenders/${item._id || encodeURIComponent(item.sourceTenderId)}`)}
+                  onViewDetails={() => navigate(tenderPath(item))}
                 />
               );
             })}

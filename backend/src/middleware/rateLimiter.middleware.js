@@ -17,6 +17,8 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     if (req.path === '/health') return true;
+    // Verified search-engine crawlers (DNS-checked in utils/crawlerVerify.js) are never throttled.
+    if (req.verifiedCrawler) return true;
     // Never throttle during development or for local development requests
     if (process.env.NODE_ENV === 'development') return true;
     const ip = req.ip || req.connection?.remoteAddress || '';

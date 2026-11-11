@@ -41,6 +41,7 @@ import { Reveal } from '@/components/shared/Reveal';
 import { useTenderStats } from '@/hooks/useTenders';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
 import { useSeo } from '@/hooks/useSeo';
+import { tenderPath } from '@/utils/tenderUrl';
 
 // Common regional sectors and districts for quick access
 const quickLocations = [
@@ -68,17 +69,16 @@ export default function Home() {
 
   const handleTenderClick = (tender) => {
     if (!tender) return;
-    const tenderId = tender._id || tender.id || '';
     if (!isAuthenticated) {
       setAuthModalConfig({
         title: 'Sign In to View Full Tender Details',
         subtitle: `Notice ${tender.sourceTenderId || ''}: ${tender.title?.slice(0, 80) || ''}...`,
-        redirectUrl: `/tenders/${tenderId}`
+        redirectUrl: tenderPath(tender)
       });
       setAuthModalOpen(true);
       return;
     }
-    navigate(`/tenders/${tenderId}`);
+    navigate(tenderPath(tender));
   };
 
   // Fetch real aggregated database statistics from backend

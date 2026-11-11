@@ -5,6 +5,7 @@
  */
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, ExternalLink } from 'lucide-react';
+import { LANDING_STATES } from '@/utils/landingStates';
 
 export function Footer() {
   return (
@@ -135,6 +136,26 @@ export function Footer() {
             </div>
           </div>
         </div>
+
+        {/* Browse by state: crawlable links to the state landing pages */}
+        <nav aria-label="Tenders by state" className="mt-10 space-y-2 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="font-display font-bold uppercase tracking-wider text-slate-300">Tenders by state</span>
+            {LANDING_STATES.map((s) => (
+              <Link key={s.slug} to={`/tenders/in/${s.slug}`} className="hover:text-white transition-colors">
+                {s.name} tenders
+              </Link>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="font-display font-bold uppercase tracking-wider text-slate-300">GeM bids by state</span>
+            {LANDING_STATES.map((s) => (
+              <Link key={s.slug} to={`/gem-tenders/in/${s.slug}`} className="hover:text-white transition-colors">
+                GeM bids {s.name}
+              </Link>
+            ))}
+          </div>
+        </nav>
 
         {/* Bottom Legal Bar */}
         <div className="mt-10 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-3 text-center sm:text-left">

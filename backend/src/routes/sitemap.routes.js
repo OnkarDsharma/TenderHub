@@ -15,6 +15,7 @@ import {
   generateSitemapIndex,
   generateStaticSitemap,
   generateSectionSitemap,
+  generateLandingSitemap,
 } from '../services/sitemap.service.js';
 
 const router = express.Router();
@@ -63,6 +64,14 @@ router.get('/sitemap.xml', async (req, res, next) => {
 router.get('/sitemap-static.xml', async (req, res, next) => {
   try {
     sendXml(res, await cached('static', async () => generateStaticSitemap()));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/sitemap-landing.xml', async (req, res, next) => {
+  try {
+    sendXml(res, await cached('landing', generateLandingSitemap));
   } catch (err) {
     next(err);
   }

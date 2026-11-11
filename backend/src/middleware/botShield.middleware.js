@@ -43,6 +43,8 @@ export const getClientIp = (req) => {
  * Global middleware checking whether the incoming IP is blacklisted.
  */
 export const checkIpBlacklist = async (req, res, next) => {
+  // Verified search-engine crawlers (see utils/crawlerVerify.js) are never blocked.
+  if (req.verifiedCrawler) return next();
   try {
     const ip = getClientIp(req);
     if (ip && ip !== '127.0.0.1' && ip !== '::1') {
@@ -68,6 +70,8 @@ export const checkIpBlacklist = async (req, res, next) => {
 export const blockScraperUserAgents = (req, res, next) => {
   // Never block during local testing or health checks
   if (req.path === '/health') return next();
+  // Verified search-engine crawlers render pages with headless Chrome; let them through.
+  if (req.verifiedCrawler) return next();
 
   const userAgent = req.headers['user-agent'] || '';
   const hasScraperUA = SCRAPER_UA_PATTERNS.some((pattern) => pattern.test(userAgent));
@@ -93,8 +97,10 @@ export const handleHoneypotTrap = async (req, res) => {
     const ip = getClientIp(req);
     const userAgent = req.headers['user-agent'] || 'unknown';
     
-    // Blacklist IP for 24 hours (86,400 seconds) in Redis
-    if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+    // Blacklist IP for 24 hours (86,400 seconds) in Redis.
+    // Verified search-engine crawlers are never blacklisted: they may follow
+    // any link, and banning Googlebot's shared IPs would hide the whole site.
+    if (ip && ip !== '127.0.0.1' && ip !== '::1' && !req.verifiedCrawler) {
       await redis.setex(`blacklist:ip:${ip}`, 86400, `Trapped in honeypot: ${userAgent}`);
       logger.error(`[BotShield] 🚨 BOT TRAPPED: IP ${ip} touched honeypot endpoint! Blacklisted for 24 hours.`);
     }

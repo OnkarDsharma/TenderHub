@@ -21,6 +21,7 @@ import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { gemApi } from '@/services/gemApi';
 import { API_BASE_URL } from '@/services/api';
+import { tenderPath } from '@/utils/tenderUrl';
 
 const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
@@ -92,9 +93,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
 
   // Real URL for the detail page. Rendered as <a href> so search engines can
   // follow it and users can open it in a new tab.
-  const detailHref = isGeM
-    ? `/gem-tenders/${tender._id || encodeURIComponent(tender.sourceTenderId || '')}`
-    : `/tenders/${encodeURIComponent(tenderId || '')}`;
+  const detailHref = tenderPath(tender);
 
   const handleCardClick = () => {
     if (onViewDetails) {

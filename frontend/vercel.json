@@ -32,11 +32,66 @@
   ],
   "rewrites": [
     {
+      "source": "/tenders/in/:state",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/tenders/:state"
+    },
+    {
+      "source": "/tenders/in/:state/:dept",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/tenders/:state/:dept"
+    },
+    {
+      "source": "/gem-tenders/in/:state",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/gem/:state"
+    },
+    {
+      "source": "/tenders/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/tenders/:id"
+    },
+    {
+      "source": "/gem-tenders/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/gem-tenders/:id"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "https://tenderhub-4nbc.onrender.com/sitemap.xml"
     },
     {
-      "source": "/:file(sitemap-[a-z]+-[0-9]+\\.xml|sitemap-static\\.xml)",
+      "source": "/:file(sitemap-[a-z]+-[0-9]+\\.xml|sitemap-static\\.xml|sitemap-landing\\.xml)",
       "destination": "https://tenderhub-4nbc.onrender.com/:file"
     },
     {

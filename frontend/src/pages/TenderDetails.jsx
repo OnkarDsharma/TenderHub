@@ -4,7 +4,7 @@
  * portal data structure with clean typography, high-contrast light mode, and official portal helper.
  */
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -34,7 +34,6 @@ import {
   ShieldCheck,
   Calculator
 } from 'lucide-react';
-import JSZip from 'jszip';
 
 import { useTender } from '@/hooks/useTenders';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -42,9 +41,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
-import { useSeo } from '@/hooks/useSeo';
+import { useSeo, isStaleTender } from '@/hooks/useSeo';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Modal';
 import { api } from '@/services/api';
+import { tenderPath, idFromParam } from '@/utils/tenderUrl';
+import { SimilarTenders } from '@/components/tenders/SimilarTenders';
 
 // Helper to handle MongoDB's {"$date": "..."} format, raw strings, and "NA" fallbacks
 const parseDate = (dateField) => {
@@ -123,7 +124,9 @@ const getOfficialPortal = (tender) => {
 };
 
 export default function TenderDetails() {
-  const { id } = useParams();
+  const { id: routeParam } = useParams();
+  const id = idFromParam(routeParam);
+  const routerLocation = useLocation();
   const [nowMs] = useState(() => Date.now());
   const navigate = useNavigate();
   const { isAuthenticated, isPro, isLoading: authLoading, updateDailyViews } = useAuthStore();
@@ -142,15 +145,28 @@ export default function TenderDetails() {
       tender.bidSubmissionEndDate ? `· Closes ${formatDateDisplay(tender.bidSubmissionEndDate)}` : '',
       `· ${seoTitle || ''}. View documents, BOQ, and eligibility on tndrr.`,
     ].filter(Boolean).join(' '),
-    path: `/tenders/${encodeURIComponent(id)}`,
+    // Canonical always uses the database id, matching the sitemap and crawler HTML,
+    // even when the page was opened by its tender number.
+    path: tenderPath(tender),
     type: 'article',
+    noindex: isStaleTender(tender),
   } : {
     // Only a real 404 is noindexed; a transient API error (e.g. backend cold start)
     // must never tell Google to drop a valid page.
     title: is404 ? 'Tender Not Found' : 'Tender Details',
-    path: `/tenders/${encodeURIComponent(id)}`,
+    path: `/tenders/${encodeURIComponent(routeParam)}`,
     noindex: is404,
   });
+
+  // Keep one official URL per tender: an old id-only link, an outdated slug, a
+  // tender number, or a GeM bid opened under /tenders/ is swapped in place
+  // (no extra history entry) for the canonical readable URL.
+  const canonicalPath = tender ? tenderPath(tender) : null;
+  useEffect(() => {
+    if (canonicalPath && decodeURIComponent(routerLocation.pathname) !== decodeURIComponent(canonicalPath)) {
+      navigate(`${canonicalPath}${routerLocation.search}${routerLocation.hash}`, { replace: true });
+    }
+  }, [canonicalPath, routerLocation.pathname, routerLocation.search, routerLocation.hash, navigate]);
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
@@ -176,6 +192,8 @@ export default function TenderDetails() {
       const tenderId = tender?._id || id;
       const response = await api.get(`/tenders/${tenderId}/zip`, { responseType: 'blob' });
       const blob = response.data;
+      // jszip is only needed when someone unzips documents, so load it on demand.
+      const { default: JSZip } = await import('jszip');
       const zip = await JSZip.loadAsync(blob);
       const files = [];
 
@@ -463,7 +481,7 @@ export default function TenderDetails() {
                   {tender.relatedTenders.map((sibling) => (
                     <div 
                       key={sibling._id || sibling.sourceTenderId}
-                      onClick={() => navigate(`/tenders/${sibling._id || sibling.sourceTenderId}`)}
+                      onClick={() => navigate(tenderPath(sibling))}
                       className="group/work flex flex-col justify-between p-3.5 bg-white dark:bg-slate-800/90 border border-amber-200/80 dark:border-slate-700 rounded-xl hover:border-dalBlue dark:hover:border-blue-400 hover:shadow-sm transition-all cursor-pointer"
                     >
                       <div>
@@ -1318,6 +1336,9 @@ export default function TenderDetails() {
 
           </div>
         </div>
+
+        {/* Related open tenders: internal links for visitors and crawlers */}
+        <SimilarTenders tender={tender} isClosed={Boolean((tender.bidSubmissionEndDate || tender.closingDate) && new Date(tender.bidSubmissionEndDate || tender.closingDate).getTime() < nowMs)} />
       </div>
 
       {/* Official Portal Helper Dialog */}

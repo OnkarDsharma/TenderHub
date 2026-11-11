@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   Building2,
@@ -18,9 +18,11 @@ import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateTimeDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
-import { useSeo } from '@/hooks/useSeo';
+import { useSeo, isStaleTender } from '@/hooks/useSeo';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { cleanGemText, parseConsigneeRows } from '@/utils/gemDelivery';
+import { tenderPath, idFromParam } from '@/utils/tenderUrl';
+import { SimilarTenders } from '@/components/tenders/SimilarTenders';
 
 const display = (value, fallback = 'Not specified') => {
   const cleaned = String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -57,7 +59,9 @@ const Field = ({ label, children, big = false, wide = false }) => (
 
 
 export default function GeMBidDetails() {
-  const { id } = useParams();
+  const { id: routeParam } = useParams();
+  const id = idFromParam(routeParam);
+  const routerLocation = useLocation();
   const [nowMs] = useState(() => Date.now());
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -79,15 +83,27 @@ export default function GeMBidDetails() {
       seoBidState && `in ${seoBidState}`,
       `· ${bid.productCategory || seoBidTitle || ''}. View delivery locations, EMD, and bid documents on tndrr.`,
     ].filter(Boolean).join(' '),
-    path: `/gem-tenders/${encodeURIComponent(id)}`,
+    // Canonical always uses the database id, matching the sitemap and crawler HTML.
+    path: tenderPath(bid),
     type: 'article',
+    noindex: isStaleTender(bid),
   } : {
     // Only a real 404 is noindexed; a transient API error (e.g. backend cold start)
     // must never tell Google to drop a valid page.
     title: is404 ? 'GeM Bid Not Found' : 'GeM Bid Details',
-    path: `/gem-tenders/${encodeURIComponent(id)}`,
+    path: `/gem-tenders/${encodeURIComponent(routeParam)}`,
     noindex: is404,
   });
+
+  // Keep one official URL per tender: an old id-only link, an outdated slug, a
+  // tender number, or a GeM bid opened under /tenders/ is swapped in place
+  // (no extra history entry) for the canonical readable URL.
+  const canonicalPath = bid ? tenderPath(bid) : null;
+  useEffect(() => {
+    if (canonicalPath && decodeURIComponent(routerLocation.pathname) !== decodeURIComponent(canonicalPath)) {
+      navigate(`${canonicalPath}${routerLocation.search}${routerLocation.hash}`, { replace: true });
+    }
+  }, [canonicalPath, routerLocation.pathname, routerLocation.search, routerLocation.hash, navigate]);
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
 
   if (isLoading) {
@@ -333,6 +349,9 @@ export default function GeMBidDetails() {
             </Tile>
           </aside>
         </div>
+
+        {/* Related open bids: internal links for visitors and crawlers */}
+        <SimilarTenders tender={bid} isClosed={Boolean(bid.closingDate && new Date(bid.closingDate).getTime() < nowMs)} />
       </div>
     </div>
   );

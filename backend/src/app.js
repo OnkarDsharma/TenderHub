@@ -21,6 +21,8 @@ import servicesRoutes from './routes/services.routes.js';
 import gemRoutes from './routes/gem.routes.js';
 import waitlistRoutes from './routes/waitlist.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
+import prerenderRoutes from './routes/prerender.routes.js';
+import seoRoutes from './routes/seo.routes.js';
 import { keepAliveService } from './services/keepAlive.service.js';
 import { globalErrorHandler } from './middleware/errorHandler.middleware.js';
 
@@ -30,6 +32,7 @@ import {
   blockScraperUserAgents, 
   handleHoneypotTrap 
 } from './middleware/botShield.middleware.js';
+import { identifyCrawler } from './utils/crawlerVerify.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -113,6 +116,14 @@ app.use(pinoHttp({ logger }));
 // Redis-cached, so this adds no meaningful load.
 app.use(sitemapRoutes);
 
+// Crawler-only HTML for tender pages, proxied from the frontend host by User-Agent.
+// Same reasoning as sitemaps: arrives via the proxy's shared IPs, Redis-cached.
+app.use(prerenderRoutes);
+
+// Flag genuine search-engine crawlers (reverse + forward DNS verified) so the
+// blacklist, rate limiter and scraper filter below never block them.
+app.use(identifyCrawler);
+
 // Apply BotShield IP Blacklist globally
 app.use(checkIpBlacklist);
 
@@ -147,6 +158,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/services', servicesRoutes);
 app.use('/api/v1/gem', gemRoutes);
 app.use('/api/v1/waitlist', waitlistRoutes);
+app.use('/api/v1/seo', seoRoutes);
 
 // Fallback aliases (ensures frontend works whether VITE_API_URL includes /api/v1 or just the domain)
 app.use('/auth', authRoutes);
@@ -160,6 +172,7 @@ app.use('/admin', adminRoutes);
 app.use('/services', servicesRoutes);
 app.use('/gem', gemRoutes);
 app.use('/waitlist', waitlistRoutes);
+app.use('/seo', seoRoutes);
 
 // 4. 404 Handler
 app.use((req, res, next) => {

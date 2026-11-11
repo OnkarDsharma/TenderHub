@@ -19,6 +19,8 @@
 import Tender from '../models/Tender.js';
 import { env } from '../config/env.js';
 import { confirmedActiveFilter } from '../routes/gem.routes.js';
+import { tenderSegment } from '../utils/tenderUrl.js';
+import { allLandingPaths } from './landing.service.js';
 
 /** URLs per child sitemap. Google allows 50,000; smaller files keep each query light. */
 export const CHUNK_SIZE = 10000;
@@ -112,9 +114,9 @@ export const activeGemFilter = (now = new Date()) => ({
   ...confirmedActiveFilter(now),
 });
 
-/** Frontend detail paths; must match detailHref in frontend TenderCard.jsx. */
-export const tenderPath = (doc) => `/tenders/${encodeURIComponent(String(doc._id))}`;
-export const gemPath = (doc) => `/gem-tenders/${encodeURIComponent(String(doc._id))}`;
+/** Frontend detail paths ("<id>-<slug>"); same helper the frontend uses (utils/tenderUrl.js). */
+export const tenderPath = (doc) => `/tenders/${tenderSegment(doc)}`;
+export const gemPath = (doc) => `/gem-tenders/${tenderSegment(doc)}`;
 
 const SECTIONS = {
   tenders: { filter: activeTenderFilter, path: tenderPath },
@@ -139,7 +141,7 @@ export async function generateSectionSitemap(section, page) {
   if (!cfg || !Number.isInteger(page) || page < 1) return null;
 
   const docs = await Tender.find(cfg.filter())
-    .select({ _id: 1, publishedDate: 1, createdAt: 1 })
+    .select({ _id: 1, title: 1, publishedDate: 1, createdAt: 1 })
     .sort({ _id: 1 })
     .skip((page - 1) * CHUNK_SIZE)
     .limit(CHUNK_SIZE)
@@ -155,11 +157,25 @@ export async function generateSectionSitemap(section, page) {
   );
 }
 
-/** Sitemap index pointing at the static file and every tender/GeM chunk. */
+/** State, department and GeM state landing pages that currently have content. */
+export async function generateLandingSitemap() {
+  const base = siteUrl();
+  const paths = await allLandingPaths();
+  return buildUrlset(paths.map((p) => ({
+    loc: `${base}${p}`,
+    changefreq: 'daily',
+    priority: p.split('/').length > 4 ? '0.7' : '0.8',
+  })));
+}
+
+/** Sitemap index pointing at the static file, landing pages and every tender/GeM chunk. */
 export async function generateSitemapIndex() {
   const base = siteUrl();
   const now = new Date();
-  const entries = [{ loc: `${base}/sitemap-static.xml`, lastmod: now }];
+  const entries = [
+    { loc: `${base}/sitemap-static.xml`, lastmod: now },
+    { loc: `${base}/sitemap-landing.xml`, lastmod: now },
+  ];
 
   for (const [section, cfg] of Object.entries(SECTIONS)) {
     const filter = cfg.filter(now);

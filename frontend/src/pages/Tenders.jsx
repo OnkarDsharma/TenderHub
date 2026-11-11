@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/Button';
 import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
 import { SearchBeam } from '@/components/ui/search-beam';
 import { useSeo } from '@/hooks/useSeo';
+import { tenderPath } from '@/utils/tenderUrl';
 
 // Northern Region State Options matching GeM portal
 const STATE_OPTIONS = [
@@ -212,8 +213,7 @@ export default function Tenders() {
   };
 
   const handleViewDetails = (tender) => {
-    const tenderId = tender._id || tender.sourceTenderId;
-    navigate(`/tenders/${tenderId}`);
+    navigate(tenderPath(tender));
   };
 
   // Initial State from URL params

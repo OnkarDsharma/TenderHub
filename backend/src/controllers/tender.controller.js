@@ -4,6 +4,7 @@
  */
 
 import mongoose from 'mongoose';
+import { idFromParam } from '../utils/tenderUrl.js';
 import { Readable } from 'stream';
 import Tender from '../models/Tender.js';
 import AiAnalysis from '../models/AiAnalysis.js';
@@ -653,7 +654,8 @@ export const getTenderOrganisations = async (req, res, next) => {
  */
 export const getTenderById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    // Accepts "<id>", "<id>-<readable-slug>" or a tender number.
+    const id = idFromParam(req.params.id);
     let tender = null;
     if (mongoose.Types.ObjectId.isValid(id)) {
       tender = await Tender.findById(id).lean();
