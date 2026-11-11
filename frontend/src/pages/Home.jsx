@@ -16,7 +16,6 @@ import {
   Search, 
   ArrowRight, 
   ArrowUpRight, 
-  ArrowUp,
   Landmark, 
   Building2, 
   Calendar, 
@@ -95,10 +94,6 @@ export default function Home() {
 
   const handleQuickClick = (query) => {
     navigate(`/tenders?search=${encodeURIComponent(query)}`);
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Construct dynamic department cards from real live database metrics safely
@@ -241,8 +236,7 @@ export default function Home() {
 
             {/* Subtitle */}
             <p className="home-hero-sub mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
-              <span className="home-hero-full">Active civil, road, water and electrical contracts, synced daily from official portals.</span>
-              <span className="home-hero-short hidden">Civil, road, water &amp; electrical tenders, synced daily.</span>
+              All tenders synced daily.
             </p>
 
             {/* Search Console & CTA */}
@@ -383,14 +377,6 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* Scroll up floating orange button */}
-              <button
-                onClick={scrollToTop}
-                className="w-10 h-10 rounded-sm bg-techCoral hover:bg-techCoral-dark text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-auto md:ml-0"
-                aria-label="Scroll to top"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
             </div>
 
           </div>

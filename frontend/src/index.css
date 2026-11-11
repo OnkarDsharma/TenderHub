@@ -3235,7 +3235,7 @@ body { background-color: #f7faff; }
   .home-statbar-stats {
     display: grid;
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1rem .875rem;
     align-items: start;
   }
@@ -3246,9 +3246,6 @@ body { background-color: #f7faff; }
     gap: .25rem;
     min-width: 0;
   }
-  .home-statbar-stats > div:nth-child(3) { grid-column: 1; grid-row: 2; }
-  .home-statbar-stats > div:nth-child(4) { grid-column: 2; grid-row: 2; }
-  .home-statbar-stats > button { grid-column: 3; grid-row: 1; margin-left: 0; width: 44px; height: 44px; }
   .home-statbar-stats > div > span:first-child { font-size: 1.5rem; line-height: 1.1; }
   .home-statbar-stats > div > div:first-child {
     max-width: 100%;
@@ -3436,4 +3433,141 @@ body { background-color: #f7faff; }
   .ai-mascot-body svg { width: 36px; height: 36px; }
   .ai-mascot-status { width: 11px; height: 11px; right: 0; bottom: 1px; }
   .ai-mascot-pulse { border-color: rgba(37, 99, 235, .35); }
+}
+
+/* ===========================================================================
+   BROWSE TENDERS + GeM BIDS — PHONE-ONLY (max-width: 767px)
+   Desktop and tablet keep the existing sidebar layout untouched.
+   =========================================================================== */
+
+/* New phone-only controls; inert everywhere else */
+.gem-filter-toggle,
+.gem-filter-done { display: none; }
+
+@media (max-width: 767px) {
+  .gem-page { padding-top: 1rem; padding-bottom: 2rem; }
+  .gem-page > .gem-container { gap: .875rem; }
+  .gem-page > .gem-container > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
+
+  /* ---------- Header card ---------- */
+  .gem-page > .gem-container > :first-child {
+    padding: 1rem;
+    gap: .875rem;
+    border-radius: 14px;
+  }
+  .gem-page > .gem-container > :first-child > div:first-child > :not([hidden]) ~ :not([hidden]) { margin-top: .5rem; }
+  .gem-page > .gem-container > :first-child > div:first-child .rounded-full {
+    white-space: normal;
+    line-height: 1.35;
+    border-radius: 10px;
+    padding-top: .25rem;
+    padding-bottom: .25rem;
+    font-size: .6875rem;
+  }
+  .gem-page h1 { font-size: 1.3125rem; line-height: 1.25; }
+  .gem-page > .gem-container > :first-child > div:first-child .rounded-full { align-items: flex-start; }
+  .gem-page > .gem-container > :first-child > div:first-child .rounded-full > svg { margin-top: .1rem; flex-shrink: 0; }
+  .gem-summary > div { padding: .625rem .5rem; }
+  .gem-summary > div > span:last-child { display: block; margin-top: .125rem; line-height: 1.3; }
+  .gem-page > .gem-container > :first-child > div:first-child > p { font-size: .8125rem; line-height: 1.55; }
+
+  /* ---------- Sticky search + filter button ---------- */
+  .gem-search-sticky { padding: .5rem; border-radius: 14px; }
+  .gem-filter-toggle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #0f172a;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .gem-filter-toggle[aria-expanded="true"] { background: #2563eb; color: #fff; }
+  .dark .gem-filter-toggle { background: #1e293b; color: #f1f5f9; }
+  .dark .gem-filter-toggle[aria-expanded="true"] { background: #2563eb; color: #fff; }
+  .gem-filter-toggle-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    border: 2px solid #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+  }
+  .gem-filter-toggle[aria-expanded="true"] .gem-filter-toggle-count { background: #fff; color: #2563eb; border-color: #2563eb; }
+
+  /* ---------- Filters: folded until the button is tapped ---------- */
+  .gem-filter-panel:not(.is-open) { display: none; }
+  .gem-filter-panel.is-open { padding: 1rem; }
+  .gem-filter-panel > div:last-child { gap: .75rem; }
+  .gem-filter-panel select { min-height: 44px; font-size: .875rem; }
+  .gem-filter-panel > div:first-child > button,
+  .gem-filter-panel > div:nth-child(2) > button { min-height: 36px; }
+
+  .gem-filter-done {
+    display: block;
+    width: 100%;
+    position: sticky;
+    bottom: calc(.75rem + env(safe-area-inset-bottom));
+    z-index: 15;
+  }
+  .gem-filter-done button {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 12px;
+    background: #2563eb;
+    color: #fff;
+    font-size: .9375rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, .3);
+    cursor: pointer;
+  }
+
+  /* ---------- Active / Archived / Expired tabs ---------- */
+  .gem-status-tabs > button {
+    flex-direction: column;
+    gap: .25rem;
+    min-height: 52px;
+    padding: .375rem .25rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .gem-status-tabs > button > svg { display: none; }
+
+  /* ---------- Result cards ---------- */
+  .gem-results-column .tender-card { padding: 1rem; }
+  .gem-results-column .tender-card h2 { -webkit-line-clamp: 4; line-clamp: 4; }
+  .gem-results-column .tender-card-meta { flex-direction: column; align-items: flex-start; gap: .375rem; }
+  .gem-results-column .tender-card-meta > span { align-items: flex-start; max-width: 100%; }
+  .gem-results-column .tender-card-meta svg { margin-top: .15rem; }
+  .gem-results-column .tender-card-meta .truncate {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+  .gem-results-column .tender-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    width: 100%;
+  }
+  .gem-results-column .tender-card-actions > * { min-height: 42px; }
+
+  /* ---------- Pagination ---------- */
+  .gem-pagination { flex-direction: column; gap: .75rem; }
+  .gem-pagination button,
+  .gem-pagination input { height: 40px !important; }
+  .gem-pagination > div > button { width: 40px; }
 }

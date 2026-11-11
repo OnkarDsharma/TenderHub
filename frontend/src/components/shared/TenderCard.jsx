@@ -247,7 +247,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
       </h2>
 
       {/* Department and location */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-500 dark:text-slate-400">
+      <div className="tender-card-meta mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-500 dark:text-slate-400">
         <span className="inline-flex items-center gap-1.5 min-w-0" title={fullOrganisation}>
           <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
           <span className="truncate">{cleanDepartment}</span>
@@ -304,7 +304,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
           </div>
         </dl>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="tender-card-actions flex items-center gap-2 shrink-0">
           <Link
             to={detailHref}
             onClick={handleDetailLinkClick}

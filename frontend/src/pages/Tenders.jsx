@@ -367,6 +367,16 @@ export default function Tenders() {
     handlePageChange(requestedPage);
   };
 
+  // Phone-only: filters fold away behind a button next to search.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const mobileFilterCount = [state, category, organization, location, closingDays, procurementType, tenderAmountRange !== 'any', feePreference !== 'any', publishedRange && publishedRange !== 'all'].filter(Boolean).length + activeAdvancedCount;
+  const closeMobileFilters = () => {
+    setMobileFiltersOpen(false);
+    requestAnimationFrame(() => {
+      document.querySelector('.gem-results-column')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   return (
     <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
       <div className="gem-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -421,11 +431,15 @@ export default function Tenders() {
               </div>
             </SearchBeam>
             <button type="submit" aria-label={isSearching ? 'Searching bids' : 'Search bids'} aria-busy={isSearching} title="Search bids" className="grid place-items-center w-11 h-11 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer">{isSearching ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.25} /> : <Search className="w-5 h-5" strokeWidth={2.25} />}</button>
+            <button type="button" onClick={() => setMobileFiltersOpen((open) => !open)} aria-expanded={mobileFiltersOpen} aria-controls="listing-filter-panel" aria-label={mobileFiltersOpen ? 'Hide filters' : `Show filters${mobileFilterCount ? ` (${mobileFilterCount} active)` : ''}`} title="Filters" className="gem-filter-toggle">
+              <SlidersHorizontal className="w-5 h-5" strokeWidth={2.25} aria-hidden="true" />
+              {mobileFilterCount > 0 && <span className="gem-filter-toggle-count">{mobileFilterCount}</span>}
+            </button>
           </form>
         </div>
 
         {/* 2. Left Filter Panel (Sticky Sidebar) */}
-        <div className="gem-filter-panel bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-3.5">
+        <div id="listing-filter-panel" className={`gem-filter-panel${mobileFiltersOpen ? ' is-open' : ''} bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-3.5`}>
           {/* State Filter Navigation Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0 flex items-center gap-1">
@@ -775,11 +789,17 @@ export default function Tenders() {
         </div>
 
         {/* 3. Results Column */}
+        {mobileFiltersOpen && (
+          <div className="gem-filter-done">
+            <button type="button" onClick={closeMobileFilters}>Show {totalCount.toLocaleString('en-IN')} results</button>
+          </div>
+        )}
+
         <div className="gem-results-column space-y-4">
           
           {/* Status Tabs: Active, Archived, Expired */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs">
-            <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 w-full sm:w-auto">
+            <div className="gem-status-tabs grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => {
@@ -898,7 +918,7 @@ export default function Tenders() {
 
           {/* 4. Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-800 text-xs">
+            <div className="gem-pagination flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-800 text-xs">
               <span className="text-slate-500">
                 Page <span className="font-bold text-slate-800 dark:text-slate-200">{currentPage}</span> of{' '}
                 <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalCount} total bids)
