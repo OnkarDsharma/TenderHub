@@ -4,8 +4,10 @@
  */
 import { useState } from 'react';
 import { Mail, MapPin, Send, CheckCircle2, Clock, HelpCircle, Landmark } from 'lucide-react';
+import { useSeo } from '@/hooks/useSeo';
 
 export default function Contact() {
+  useSeo({ title: 'Contact', description: 'Get in touch with the tndrr team for support, partnerships, or questions about government tender search and bid analytics.', path: '/contact' });
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e) => {

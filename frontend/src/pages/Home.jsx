@@ -40,6 +40,7 @@ import { CopilotMascot } from '@/components/shared/CopilotMascot';
 import { Reveal } from '@/components/shared/Reveal';
 import { useTenderStats } from '@/hooks/useTenders';
 import { formatCurrencyINR, formatDateDisplay } from '@/utils/formatters';
+import { useSeo } from '@/hooks/useSeo';
 
 // Common regional sectors and districts for quick access
 const quickLocations = [
@@ -52,6 +53,7 @@ const quickLocations = [
 ];
 
 export default function Home() {
+  useSeo({ title: 'Government Tenders in J&K, Ladakh, Punjab & Himachal', description: 'Search every live government tender and GeM bid across Jammu & Kashmir, Ladakh, Punjab, and Himachal Pradesh in one place. Daily updates, documents, deadlines, and bid analytics.', path: '/' });
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

@@ -32,6 +32,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
 import { SearchBeam } from '@/components/ui/search-beam';
+import { useSeo } from '@/hooks/useSeo';
 
 // Northern Region State Options matching GeM portal
 const STATE_OPTIONS = [
@@ -192,6 +193,7 @@ const FEE_PREFERENCES_OPTIONS = [
 ];
 
 export default function Tenders() {
+  useSeo({ title: 'Live Government Tenders: J&K, Ladakh, Punjab, Himachal', description: 'Browse and filter live e-procurement tenders from J&K, Ladakh, Punjab, and Himachal Pradesh by department, location, value, and closing date. Updated daily.', path: '/tenders' });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, user, isPro } = useAuthStore();

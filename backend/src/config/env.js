@@ -20,6 +20,7 @@ const envVarsSchema = Joi.object({
   UPLOAD_DIR: Joi.string().default('uploads'),
   CORS_ORIGIN: Joi.string().default('http://localhost:5173'),
   FRONTEND_URL: Joi.string().default('http://localhost:5173'),
+  SITE_URL: Joi.string().allow('').optional().description('Public frontend origin used in sitemaps, e.g. https://www.tndrr.com (falls back to FRONTEND_URL)'),
   BACKEND_URL: Joi.string().default('https://tenderhub-4nbc.onrender.com'),
   GOOGLE_CLIENT_ID: Joi.string().allow('').optional(),
   GOOGLE_CLIENT_SECRET: Joi.string().allow('').optional(),

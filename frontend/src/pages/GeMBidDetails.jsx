@@ -18,6 +18,7 @@ import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateTimeDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
+import { useSeo } from '@/hooks/useSeo';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { cleanGemText, parseConsigneeRows } from '@/utils/gemDelivery';
 
@@ -63,7 +64,30 @@ export default function GeMBidDetails() {
   const [reportField, setReportField] = useState('officialState');
   const [reportNote, setReportNote] = useState('');
   const [reportMessage, setReportMessage] = useState('');
-  const { data: bid, isLoading, isError } = useTender(id);
+  const { data: bid, isLoading, isError, error } = useTender(id);
+
+  // Per-bid SEO tags: called before any early return so hook order stays stable.
+  const is404 = isError && error?.response?.status === 404;
+  const seoBidTitle = bid?.title?.replace(/\s+/g, ' ').trim();
+  const seoBidState = bid?.officialState || bid?.state;
+  useSeo(bid ? {
+    title: [seoBidTitle, seoBidState && `GeM Bid ${seoBidState}`].filter(Boolean).join(' | '),
+    description: [
+      'GeM bid',
+      bid.sourceTenderId && bid.sourceTenderId,
+      bid.departmentName && `by ${bid.departmentName}`,
+      seoBidState && `in ${seoBidState}`,
+      `· ${bid.productCategory || seoBidTitle || ''}. View delivery locations, EMD, and bid documents on tndrr.`,
+    ].filter(Boolean).join(' '),
+    path: `/gem-tenders/${encodeURIComponent(id)}`,
+    type: 'article',
+  } : {
+    // Only a real 404 is noindexed; a transient API error (e.g. backend cold start)
+    // must never tell Google to drop a valid page.
+    title: is404 ? 'GeM Bid Not Found' : 'GeM Bid Details',
+    path: `/gem-tenders/${encodeURIComponent(id)}`,
+    noindex: is404,
+  });
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
 
   if (isLoading) {

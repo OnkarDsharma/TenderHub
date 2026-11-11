@@ -5,8 +5,10 @@
 import { Link } from 'react-router-dom';
 import { Database, ArrowRight, Landmark, FileText, MapPin, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useSeo } from '@/hooks/useSeo';
 
 export default function About() {
+  useSeo({ title: 'About', description: 'tndrr aggregates public procurement data from official e-tender and GeM portals so contractors can find and evaluate government tenders faster.', path: '/about' });
   return (
     <div className="min-h-screen bg-paper dark:bg-slate-900 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-4xl mx-auto space-y-6">

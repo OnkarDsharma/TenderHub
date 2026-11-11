@@ -28,6 +28,20 @@
         "--strictPort"
       ],
       "port": 5175
+    },
+    {
+      "name": "frontend-seo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev:test",
+        "--",
+        "--port",
+        "5176"
+      ],
+      "port": 5176
     }
   ]
 }

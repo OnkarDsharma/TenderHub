@@ -26,6 +26,7 @@ import {
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useSeo } from '@/hooks/useSeo';
 
 const REGISTRATION_CLASSES = [
   'Class A Works',
@@ -56,6 +57,7 @@ const PREF_SECTOR_OPTIONS = [
 ];
 
 export default function Login({ defaultMode }) {
+  useSeo({ title: defaultMode === 'signup' ? 'Sign Up' : 'Log In', noindex: true });
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();

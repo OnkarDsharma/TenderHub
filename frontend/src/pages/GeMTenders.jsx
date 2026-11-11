@@ -24,6 +24,7 @@ import { gemApi } from '@/services/gemApi';
 import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { SearchBeam } from '@/components/ui/search-beam';
+import { useSeo } from '@/hooks/useSeo';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
@@ -165,6 +166,7 @@ const cleanDisplayText = (value, fallback = '—') =>
   String(value ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
 
 export default function GeMTenders() {
+  useSeo({ title: 'GeM Bids by State: J&K, Punjab, Himachal, Ladakh', description: 'Find active Government e-Marketplace (GeM) bids for Jammu & Kashmir, Ladakh, Punjab, Himachal Pradesh, Haryana, and Delhi. Filter by category, value, and deadline.', path: '/gem-tenders' });
   const navigate = useNavigate();
   const [tenders, setTenders] = useState([]);
   const [stats, setStats] = useState(null);

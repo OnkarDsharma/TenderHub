@@ -20,6 +20,7 @@ import notificationRoutes from './modules/notifications/notification.routes.js';
 import servicesRoutes from './routes/services.routes.js';
 import gemRoutes from './routes/gem.routes.js';
 import waitlistRoutes from './routes/waitlist.routes.js';
+import sitemapRoutes from './routes/sitemap.routes.js';
 import { keepAliveService } from './services/keepAlive.service.js';
 import { globalErrorHandler } from './middleware/errorHandler.middleware.js';
 
@@ -105,6 +106,12 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(pinoHttp({ logger }));
+
+// Public XML sitemaps for search engines. Mounted before the IP blacklist and
+// rate limiter so crawlers (and the frontend proxy, whose IPs many visitors
+// share) are never throttled or banned when fetching them. Responses are
+// Redis-cached, so this adds no meaningful load.
+app.use(sitemapRoutes);
 
 // Apply BotShield IP Blacklist globally
 app.use(checkIpBlacklist);

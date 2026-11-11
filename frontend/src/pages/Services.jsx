@@ -27,6 +27,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { CopilotComposer } from '@/components/services/CopilotComposer';
 import { SearchBeam } from '@/components/ui/search-beam';
 import { Tile } from '@/components/shared/BentoTile';
+import { useSeo } from '@/hooks/useSeo';
 
 function renderCopilotText(content) {
   const parts = String(content || '').split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
@@ -227,6 +228,7 @@ function DossierSources({ grounding }) {
 }
 
 export default function Services() {
+  useSeo({ title: 'Bid Services & Tender Score', description: 'Check your eligibility score for a tender, estimate bids, and get expert help preparing government tender submissions.', path: '/services' });
   const { tenderId: paramTenderId } = useParams();
   const [searchParams] = useSearchParams();
   const location = useLocation();

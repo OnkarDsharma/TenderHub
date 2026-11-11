@@ -32,6 +32,14 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://tenderhub-4nbc.onrender.com/sitemap.xml"
+    },
+    {
+      "source": "/:file(sitemap-[a-z]+-[0-9]+\\.xml|sitemap-static\\.xml)",
+      "destination": "https://tenderhub-4nbc.onrender.com/:file"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

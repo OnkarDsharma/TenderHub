@@ -5,6 +5,7 @@ import { WaitlistModal } from '@/components/modals/WaitlistModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import { billingApi } from '@/services/billingApi';
+import { useSeo } from '@/hooks/useSeo';
 
 export const UNIFIED_PLANS = [
   {
@@ -25,6 +26,7 @@ export const UNIFIED_PLANS = [
 ];
 
 export default function Pricing() {
+  useSeo({ title: 'Pricing', description: 'Simple plans for contractors and suppliers: unlimited tender views, document downloads, bid scoring, and alerts for government tenders across North India.', path: '/pricing' });
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState(null);

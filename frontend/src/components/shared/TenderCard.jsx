@@ -4,7 +4,7 @@
  * featuring View bid, AI analysis, and Download PDF options at one place.
  */
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   MapPin, 
@@ -90,12 +90,27 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
     ? (tender.consigneeStates?.length ? tender.consigneeStates.join(' · ') : null)
     : tender.state;
 
+  // Real URL for the detail page. Rendered as <a href> so search engines can
+  // follow it and users can open it in a new tab.
+  const detailHref = isGeM
+    ? `/gem-tenders/${tender._id || encodeURIComponent(tender.sourceTenderId || '')}`
+    : `/tenders/${encodeURIComponent(tenderId || '')}`;
+
   const handleCardClick = () => {
     if (onViewDetails) {
       onViewDetails(tender);
       return;
     }
-    navigate(`/tenders/${tenderId}`);
+    navigate(detailHref);
+  };
+
+  // Plain left-clicks go through onViewDetails when a page supplies one; modified
+  // clicks (Ctrl/Cmd/Shift/middle) keep the browser's default new-tab behaviour.
+  const handleDetailLinkClick = (e) => {
+    if (!onViewDetails) return;
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onViewDetails(tender);
   };
 
   const handleAiAnalysis = (e) => {
@@ -224,11 +239,12 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
 
       {/* Title */}
       <h2
-        onClick={handleCardClick}
-        className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-slate-900 dark:text-white line-clamp-2 break-words cursor-pointer group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors"
+        className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-slate-900 dark:text-white line-clamp-2 break-words group-hover:text-dalBlue dark:group-hover:text-blue-300 transition-colors"
         title={cleanTitle}
       >
-        {cleanTitle}
+        <Link to={detailHref} onClick={handleDetailLinkClick} className="cursor-pointer">
+          {cleanTitle}
+        </Link>
       </h2>
 
       {/* Department and location */}
@@ -290,13 +306,14 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
         </dl>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleCardClick}
+          <Link
+            to={detailHref}
+            onClick={handleDetailLinkClick}
+            aria-label={`View bid: ${cleanTitle}`}
             className="inline-flex items-center justify-center h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-dalBlue hover:bg-dalBlue-700 active:scale-[0.98] transition-[background-color,transform] duration-150 cursor-pointer"
           >
             View bid
-          </button>
+          </Link>
           <button
             type="button"
             onClick={handleAiAnalysis}
@@ -307,7 +324,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
             AI analysis
           </button>
           <a
-            href={docUrl || `/tenders/${tenderId}`}
+            href={docUrl || detailHref}
             target={isGeM || !isArchivedR2Document ? (docUrl ? "_blank" : undefined) : undefined}
             download={isGeM || isArchivedR2Document ? true : undefined}
             rel="noopener noreferrer"

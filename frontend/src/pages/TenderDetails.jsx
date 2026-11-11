@@ -42,6 +42,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
 import { Tile } from '@/components/shared/BentoTile';
+import { useSeo } from '@/hooks/useSeo';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Modal';
 import { api } from '@/services/api';
 
@@ -127,6 +128,29 @@ export default function TenderDetails() {
   const navigate = useNavigate();
   const { isAuthenticated, isPro, isLoading: authLoading, updateDailyViews } = useAuthStore();
   const { data: tender, isLoading, isError, error } = useTender(id);
+
+  // Per-tender SEO tags: called before any early return so hook order stays stable.
+  const is404 = isError && error?.response?.status === 404;
+  const seoTitle = tender?.title?.replace(/[[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const seoOrg = (tender?.organisationChain || '').split('||')[0]?.trim() || tender?.department;
+  useSeo(tender ? {
+    title: [seoTitle, seoOrg && `${seoOrg} Tender`].filter(Boolean).join(' | '),
+    description: [
+      seoOrg && `${seoOrg} tender`,
+      (tender.location || tender.state) && `in ${tender.location || tender.state}`,
+      tender.estimatedValue ? `· Value ${formatCurrencyINR(tender.estimatedValue)}` : '',
+      tender.bidSubmissionEndDate ? `· Closes ${formatDateDisplay(tender.bidSubmissionEndDate)}` : '',
+      `· ${seoTitle || ''}. View documents, BOQ, and eligibility on tndrr.`,
+    ].filter(Boolean).join(' '),
+    path: `/tenders/${encodeURIComponent(id)}`,
+    type: 'article',
+  } : {
+    // Only a real 404 is noindexed; a transient API error (e.g. backend cold start)
+    // must never tell Google to drop a valid page.
+    title: is404 ? 'Tender Not Found' : 'Tender Details',
+    path: `/tenders/${encodeURIComponent(id)}`,
+    noindex: is404,
+  });
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState(null);

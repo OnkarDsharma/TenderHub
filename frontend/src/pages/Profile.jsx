@@ -29,6 +29,7 @@ import { contractorService } from '@/services/contractor.service';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useSeo } from '@/hooks/useSeo';
 
 const PREF_SECTOR_OPTIONS = [
   'Civil Works',
@@ -62,6 +63,7 @@ const REGISTRATION_CLASSES = [
 ];
 
 export default function Profile() {
+  useSeo({ title: 'Your Profile', noindex: true });
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
 
