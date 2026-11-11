@@ -9,9 +9,9 @@ import { LANDING_STATES } from '@/utils/landingStates';
 
 export function Footer() {
   return (
-    <footer className="bg-blue-950 text-white pt-12 pb-8 border-t border-blue-900 mt-auto">
+    <footer className="site-footer bg-blue-950 text-white pt-12 pb-8 border-t border-blue-900 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 lg:gap-8">
+        <div className="site-footer-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 lg:gap-8">
           
           {/* Brand & Description */}
           <div className="space-y-3">
@@ -138,7 +138,7 @@ export function Footer() {
         </div>
 
         {/* Browse by state: crawlable links to the state landing pages */}
-        <nav aria-label="Tenders by state" className="mt-10 space-y-2 text-xs text-slate-400">
+        <nav aria-label="Tenders by state" className="site-footer-states mt-10 space-y-2 text-xs text-slate-400">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="font-display font-bold uppercase tracking-wider text-slate-300">Tenders by state</span>
             {LANDING_STATES.map((s) => (
@@ -158,7 +158,7 @@ export function Footer() {
         </nav>
 
         {/* Bottom Legal Bar */}
-        <div className="mt-10 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-3 text-center sm:text-left">
+        <div className="site-footer-bottom mt-10 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-3 text-center sm:text-left">
           <p>© {new Date().getFullYear()} tndrr. Official tender notices remain the copyright of their respective issuing government authorities.</p>
           <div className="flex gap-4">
             <Link to="/about" className="hover:text-slate-300 transition-colors">Privacy</Link>

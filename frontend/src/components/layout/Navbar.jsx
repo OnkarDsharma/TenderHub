@@ -146,7 +146,7 @@ export function Navbar() {
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                  className={`w-9 h-9 rounded-full border flex items-center justify-center overflow-hidden transition-all cursor-pointer focus:outline-hidden ${
+                  className={`navbar-avatar-btn w-9 h-9 rounded-full border flex items-center justify-center overflow-hidden transition-all cursor-pointer focus:outline-hidden ${
                     profileDropdownOpen
                       ? 'border-techCoral ring-2 ring-techCoral/30 shadow-xs'
                       : 'border-slate-200 dark:border-slate-700 hover:border-techCoral'
@@ -253,8 +253,10 @@ export function Navbar() {
             {/* Mobile Menu Icon */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded text-slate-700 dark:text-slate-300 hover:text-techCoral cursor-pointer"
-              aria-label="Toggle menu"
+              className="navbar-menu-toggle lg:hidden p-2 rounded text-slate-700 dark:text-slate-300 hover:text-techCoral cursor-pointer"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -264,28 +266,38 @@ export function Navbar() {
       </div>
 
       {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div
+          className="navbar-mobile-backdrop"
+          aria-hidden="true"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
+            id="mobile-navigation"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-3 shadow-lg"
+            className="navbar-mobile-drawer lg:hidden bg-white dark:bg-[#18191E] border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-3 shadow-lg"
           >
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-techCoral py-1.5"
+                aria-current={location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path)) ? 'page' : undefined}
+                className="navbar-mobile-link block text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-techCoral py-1.5"
               >
                 {link.label}
               </Link>
             ))}
 
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
+            <div className="navbar-mobile-theme pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
               <button
                 onClick={toggleTheme}
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
               >
                 {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}

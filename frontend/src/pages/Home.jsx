@@ -228,12 +228,12 @@ export default function Home() {
             </div>
 
             {/* Primary Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-[-0.035em] leading-[1.04] font-display">
+            <h1 className="home-hero-title text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-[-0.035em] leading-[1.04] font-display">
               Government tenders across J&amp;K, Ladakh, Punjab &amp; Himachal
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
+            <p className="home-hero-sub mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
               Active civil, road, water and electrical contracts, synced daily from official portals.
             </p>
 
@@ -241,7 +241,7 @@ export default function Home() {
             <div className="mt-7 sm:mt-8 space-y-4">
               <form 
                 onSubmit={handleSearch}
-                className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white border border-slate-200 rounded-xl p-1.5 shadow-lg shadow-slate-900/5 focus-within:border-techCoral transition-colors max-w-2xl gap-2"
+                className="home-hero-search flex flex-col sm:flex-row items-stretch sm:items-center bg-white border border-slate-200 rounded-xl p-1.5 shadow-lg shadow-slate-900/5 focus-within:border-techCoral transition-colors max-w-2xl gap-2"
               >
                 <div className="flex items-center flex-1 px-3 py-1.5 min-w-0">
                   <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
@@ -262,7 +262,7 @@ export default function Home() {
               </form>
 
               {/* Popular Quick Filter Chips */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              <div className="home-hero-chips flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <span className="font-semibold text-slate-500">Popular:</span>
                 {quickLocations.map((item, idx) => (
                   <button
@@ -277,7 +277,7 @@ export default function Home() {
               </div>
 
               {/* AI Estimator Link */}
-              <div className="flex items-center gap-4 text-xs pt-1">
+              <div className="home-hero-ai flex items-center gap-4 text-xs pt-1">
                 <Link 
                   to="/services" 
                   className="inline-flex items-center gap-1.5 font-bold text-techCoral hover:text-techCoral-dark transition-colors"
@@ -292,7 +292,7 @@ export default function Home() {
 
           <div className="home-hero-preview relative mx-auto w-full max-w-[540px]">
             <div className="home-preview-document rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl shadow-slate-900/10">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="home-brief-head flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <span className="text-[10px] uppercase tracking-[.16em] text-slate-500">tndrr intelligence</span>
                   <h2 className="mt-1 text-base font-bold text-slate-900">Regional opportunity brief</h2>
@@ -308,10 +308,10 @@ export default function Home() {
                 <div className="mb-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500"><span>Active authorities</span><span>Live pipeline</span></div>
                 <div className="space-y-3">
                   {activeSectorCards.slice(0, 3).map((item, index) => (
-                    <div key={`${item.title}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(60px,.9fr)_auto] items-center gap-3 text-xs">
-                      <span className="truncate font-medium text-slate-700" title={item.title}>{item.title}</span>
-                      <span className="h-1.5 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-techCoral" style={{ width: `${100 - index * 22}%` }} /></span>
-                      <span className="font-mono text-slate-500">{item.count.replace(' Active Notices', '')}</span>
+                    <div key={`${item.title}-${index}`} className="home-brief-row grid grid-cols-[minmax(0,1fr)_minmax(60px,.9fr)_auto] items-center gap-3 text-xs">
+                      <span className="home-brief-name truncate font-medium text-slate-700" title={item.title}>{item.title}</span>
+                      <span className="home-brief-bar h-1.5 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-techCoral" style={{ width: `${100 - index * 22}%` }} /></span>
+                      <span className="home-brief-count font-mono text-slate-500">{item.count.replace(' Active Notices', '')}</span>
                     </div>
                   ))}
                 </div>
@@ -332,7 +332,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             
             {/* Real Procurement Counters */}
-            <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+            <div className="home-statbar-stats flex flex-wrap items-center gap-6 sm:gap-10">
               {/* Stat 1: Active Notices */}
               <div className="flex items-center gap-3">
                 <span className="text-2xl sm:text-3xl font-black font-display text-slate-900 dark:text-white">
@@ -395,7 +395,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Heading & Link */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8">
+          <div className="home-section-head flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8">
             <div>
               <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-2">Active pipeline</p>
               <h2 className="text-xl sm:text-3xl font-bold tracking-[-0.025em] font-display text-slate-900 dark:text-white">
@@ -439,7 +439,7 @@ export default function Home() {
                           <span className="text-xs font-medium text-dalBlue dark:text-blue-400 whitespace-nowrap shrink-0">
                             {item.count}
                           </span>
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug truncate min-w-0" title={item.subtitle}>
+                          <span className="home-pipeline-sub text-[11px] text-slate-400 dark:text-slate-500 text-right leading-snug truncate min-w-0" title={item.subtitle}>
                             {item.subtitle}
                           </span>
                         </div>
@@ -472,7 +472,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Centered Pill Badge & Heading */}
-          <Reveal className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
+          <Reveal className="home-domains-head text-center max-w-3xl mx-auto mb-14 sm:mb-16">
             <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-3">Classified sectors</p>
 
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-[-0.025em] text-slate-900 dark:text-white font-display tracking-tight leading-tight">
@@ -484,37 +484,37 @@ export default function Home() {
           </Reveal>
 
           {/* 6 Work Domain Cards Grid (Screenshot 3) */}
-          <Reveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <Reveal className="home-domains-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {workDomains.map((domain, i) => {
               const IconComp = domain.icon;
               return (
                 <div
                   key={i}
                   onClick={() => navigate(`/tenders?search=${encodeURIComponent(domain.query)}`)}
-                  className="relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 sm:p-8 shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                  className="home-domain-card relative bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 sm:p-8 shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
                 >
                   {/* Top Right Corner Peach Accent Square */}
-                  <div className="absolute top-5 right-5 w-2.5 h-2.5 bg-techCoral/90" />
+                  <div className="home-domain-accent absolute top-5 right-5 w-2.5 h-2.5 bg-techCoral/90" />
                   
-                  <div>
+                  <div className="home-domain-head">
                     {/* Icon container */}
-                    <div className="w-12 h-12 rounded-xl bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center mb-5">
+                    <div className="home-domain-icon w-12 h-12 rounded-xl bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center mb-5">
                       <IconComp className="w-5 h-5" />
                     </div>
 
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="home-domain-title flex items-center justify-between mb-2">
                       <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors">
                         {domain.title}
                       </h3>
                       <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+                    <p className="home-domain-desc text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
                       {domain.desc}
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-sm font-semibold text-techCoral">
+                  <div className="home-domain-cta mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-sm font-semibold text-techCoral">
                     <span className="group-hover:underline underline-offset-4">Explore notices</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -532,11 +532,11 @@ export default function Home() {
           ========================================================================= */}
       <section className="home-integrity py-20 sm:py-28 bg-slate-50/70 dark:bg-[#141519] border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          <div className="home-integrity-grid grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* Left Column: Image TenderHub2.jpg in elegant rounded frame */}
             <Reveal className="lg:col-span-5 relative flex justify-center">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 max-w-[440px] w-full">
+              <div className="home-integrity-media relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 max-w-[440px] w-full">
                 <img 
                   src="/images/TenderHub2.jpg" 
                   alt="Contractor reviewing public procurement documentation"
@@ -558,7 +558,7 @@ export default function Home() {
               </h2>
 
               {/* Subtitle */}
-              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
+              <p className="home-integrity-sub text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
                 Synced directly from state eProcurement portals and GeM, for contractors, engineering firms and suppliers who need accurate official bidding data.
               </p>
 
@@ -566,7 +566,7 @@ export default function Home() {
               <Reveal className="space-y-4 pt-2">
                 
                 {/* Point 1: Official NIC Portal Direct */}
-                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="home-integrity-point flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <Landmark className="w-4 h-4" />
                   </div>
@@ -581,7 +581,7 @@ export default function Home() {
                 </div>
 
                 {/* Point 2: Permanent Document Archives */}
-                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="home-integrity-point flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <FileText className="w-4 h-4" />
                   </div>
@@ -596,7 +596,7 @@ export default function Home() {
                 </div>
 
                 {/* Point 3: Clear Work Site Locations */}
-                <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="home-integrity-point flex items-start gap-3.5 p-4 rounded-xl bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 shadow-xs">
                   <div className="w-9 h-9 rounded bg-techCoral-50 dark:bg-techCoral/15 text-techCoral flex items-center justify-center shrink-0 mt-0.5">
                     <MapPin className="w-4 h-4" />
                   </div>
@@ -635,7 +635,7 @@ export default function Home() {
       {stats?.latestTenders && stats.latestTenders.length > 0 && (
         <section className="home-latest py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           
-          <Reveal className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <Reveal className="home-section-head flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
               <p className="text-[13px] font-medium text-dalBlue dark:text-blue-400 mb-2">Latest notices</p>
               <h2 className="text-xl sm:text-3xl font-bold tracking-[-0.025em] font-display text-slate-900 dark:text-white">
@@ -656,7 +656,7 @@ export default function Home() {
           </Reveal>
 
           {/* Grid matching user's exact Screenshot 2 */}
-          <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Reveal className="home-latest-grid grid grid-cols-1 md:grid-cols-2 gap-5">
             {(stats?.latestTenders || []).slice(0, 6).filter(Boolean).map((tender, index) => {
               const cleanTitle = tender?.title?.replace(/[[\]]/g, '') || 'Tender Notice';
               const orgParts = String(tender?.organisationChain || '').split('||').map((p) => p.trim());
@@ -672,12 +672,12 @@ export default function Home() {
                 <div
                   key={tenderKey}
                   onClick={() => handleTenderClick(tender)}
-                  className="bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-sm p-5 sm:p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+                  className="home-tender-card bg-white dark:bg-[#1A1B22] border border-slate-200 dark:border-slate-800 rounded-sm p-5 sm:p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
                 >
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate max-w-[190px]">
+                    <div className="home-tender-top flex items-center justify-between gap-2">
+                      <div className="home-tender-ids flex items-center gap-2 min-w-0">
+                        <span className="home-tender-id font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 truncate max-w-[190px]">
                           {tender.sourceTenderId}
                         </span>
                         {tenderStateLabel && (
@@ -691,14 +691,14 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <h3 className="text-sm sm:text-base font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors line-clamp-2 leading-snug">
+                    <h3 className="home-tender-title text-sm sm:text-base font-bold font-display text-slate-900 dark:text-white group-hover:text-techCoral transition-colors line-clamp-2 leading-snug">
                       {cleanTitle}
                     </h3>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1">
-                      <div className="flex items-center gap-1.5 truncate max-w-[220px]">
+                    <div className="home-tender-meta flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1">
+                      <div className="home-tender-dept flex items-center gap-1.5 truncate max-w-[220px]">
                         <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{primaryDept}</span>
+                        <span className="home-tender-dept-name truncate">{primaryDept}</span>
                       </div>
                       {(tender.publishedDateStr || tender.publishedDate) && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-mono text-slate-500">
