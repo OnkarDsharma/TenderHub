@@ -164,36 +164,42 @@ export default function Home() {
     {
       title: 'Civil Works',
       desc: 'Road construction, building works, bridges, slope stabilization, and concrete infrastructure.',
+      short: 'Buildings & structures',
       query: 'Civil Works',
       icon: HardHat
     },
     {
       title: 'Water Supply & Jal Shakti',
       desc: 'Borewells, pump machinery, water filtration plants, distribution networks, and PHE pipelines.',
+      short: 'Water & PHE',
       query: 'Water',
       icon: Droplets
     },
     {
       title: 'Electrical & Power Works',
       desc: 'Transformer installations, HT/LT transmission lines, campus electrification, and grid substations.',
+      short: 'Power & lines',
       query: 'Electrical Works',
       icon: Zap
     },
     {
       title: 'Roads & Bridges (PMGSY/PWD)',
       desc: 'Rural road connectivity, macadamization, blacktopping, retaining walls, and culverts.',
+      short: 'Rural roads & culverts',
       query: 'Roads',
       icon: Truck
     },
     {
       title: 'Mechanical & Transport',
       desc: 'Heavy machinery hiring, fleet maintenance, fabrication works, and mechanical spares.',
+      short: 'Machinery & fleet',
       query: 'Mechanical',
       icon: Wrench
     },
     {
       title: 'General Supplies & Services',
       desc: 'Departmental store supplies, medical goods, logistics, and institutional service contracts.',
+      short: 'Goods & services',
       query: 'Services',
       icon: Boxes
     }
@@ -509,6 +515,7 @@ export default function Home() {
                       <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-techCoral transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
 
+                    <p className="home-domain-short hidden">{domain.short}</p>
                     <p className="home-domain-desc text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
                       {domain.desc}
                     </p>

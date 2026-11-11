@@ -3279,26 +3279,51 @@ body { background-color: #f7faff; }
   }
   .home-pipeline-card .font-mono { font-size: .8125rem; }
 
-  /* ---------- Browse by work domain ---------- */
-  .home-domains-head { margin-bottom: 2rem; }
+  /* ---------- Browse by work domain: compact 2-column tiles ---------- */
+  .home-domains-head { margin-bottom: 1.75rem; }
   .home-domains-head h2 { font-size: clamp(1.75rem, 7.6vw, 2rem); line-height: 1.12; }
   .home-domains-head h2 + p { font-size: .875rem; line-height: 1.55; }
-  .home-domains-grid { gap: 1rem; }
-  .home-domains .home-domain-card { padding: 1.25rem; border-radius: 16px; }
-  .home-domain-accent { top: .625rem; right: .625rem; width: .5rem; height: .5rem; }
+  .home-domains-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .home-domains .home-domain-card {
+    justify-content: flex-start;
+    padding: 1.25rem .75rem 1.125rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(16, 34, 54, .04);
+  }
+  .home-domains .home-domain-card:hover { transform: none; }
+  .home-domain-accent { display: none; }
   .home-domain-head {
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
-    column-gap: .875rem;
-    row-gap: .75rem;
+    display: flex;
+    flex-direction: column;
     align-items: center;
   }
-  .home-domain-icon { width: 44px; height: 44px; margin-bottom: 0; }
-  .home-domain-title { margin-bottom: 0; gap: .5rem; padding-right: .5rem; }
-  .home-domain-title h3 { font-size: 1rem; line-height: 1.3; }
-  .home-domain-title svg { flex-shrink: 0; }
-  .home-domain-desc { grid-column: 1 / -1; font-size: .875rem; line-height: 1.6; }
-  .home-domain-cta { margin-top: 1rem; padding-top: .875rem; font-size: .875rem; }
+  .home-domain-icon {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto .75rem;
+    border-radius: 14px;
+  }
+  .home-domain-icon svg { width: 22px; height: 22px; }
+  .home-domain-title { justify-content: center; margin-bottom: .25rem; }
+  .home-domain-title h3 {
+    font-size: .9063rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .home-domain-title > svg { display: none; }
+  /* Phone shows a short category label; full description stays on desktop */
+  .home-domain-desc { display: none; }
+  .home-domain-short {
+    display: block;
+    font-size: .75rem;
+    line-height: 1.4;
+    color: #64748b;
+  }
+  .dark .home-domain-short { color: #94a3b8; }
+  .home-domain-cta { display: none; }
 
   /* ---------- Verified public procurement ---------- */
   .home-integrity-grid { gap: 2rem; }
