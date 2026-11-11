@@ -1350,11 +1350,29 @@ html:not(.dark) [role="dialog"] > div {
 .gem-page > .gem-container > :first-child { grid-column: 1 / -1; }
 
 .gem-search-sticky {
+  /* Sits just under the navbar (h-16 → h-20 at sm). */
+  --gem-sticky-gap: .5rem;
   position: sticky;
-  top: 7rem;
+  top: calc(4rem + var(--gem-sticky-gap));
   z-index: 20;
   grid-column: 1 / -1;
   grid-row: 2;
+}
+@media (min-width: 640px) {
+  .gem-search-sticky { top: calc(5rem + var(--gem-sticky-gap)); }
+}
+/* Page-coloured mask filling the strip between navbar and search bar (and
+   behind its rounded top corners) so scrolled results never show through. */
+.gem-search-sticky::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: calc(-1 * var(--gem-sticky-gap) - 1px);
+  bottom: 50%;
+  left: -1.25rem;
+  right: -1.25rem;
+  background-color: var(--th-canvas);
+  pointer-events: none;
 }
 
 .gem-filter-panel {
@@ -1757,7 +1775,6 @@ body { background-color: #f7faff; }
   .gem-filter-panel, .gem-results-column { grid-column: 1; }
   .gem-results-column { grid-row: 4; }
   .gem-filter-panel { grid-row: 3; }
-  .gem-search-sticky { top: 6.5rem; }
 }
 
 @media (max-width: 640px) {
