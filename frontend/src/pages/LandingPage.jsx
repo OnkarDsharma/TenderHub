@@ -10,7 +10,8 @@
  * Data, title and description come from GET /seo/landing/... so the page and
  * the crawler HTML (backend prerender) always say the same thing.
  */
-import { Link, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Landmark, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -38,6 +39,15 @@ export default function LandingPage({ kind = 'tenders' }) {
     staleTime: 5 * 60 * 1000,
     retry: (count, err) => err?.response?.status !== 404 && count < 2,
   });
+
+  // Earlier or alternative department URLs (e.g. /haudd) swap in place for the readable one.
+  const routerLocation = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (data?.path && routerLocation.pathname.toLowerCase() !== data.path) {
+      navigate(`${data.path}${routerLocation.search}`, { replace: true });
+    }
+  }, [data?.path, routerLocation.pathname, routerLocation.search, navigate]);
 
   const is404 = isError && error?.response?.status === 404;
   useSeo(data ? {

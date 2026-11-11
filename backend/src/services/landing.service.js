@@ -16,6 +16,7 @@
 import Tender from '../models/Tender.js';
 import { activeTenderFilter, activeGemFilter } from './sitemap.service.js';
 import { slugify } from '../utils/tenderUrl.js';
+import { displayDepartmentName } from '../utils/departmentNames.js';
 
 export const MIN_DEPARTMENT_TENDERS = 3;
 export const LIST_LIMIT = 50;
@@ -57,13 +58,18 @@ export async function departmentsInState(state, now = new Date()) {
     { $group: { _id: '$departmentName', count: { $sum: 1 } } },
   ]).option({ maxTimeMS: 15000 });
 
+  // Group by the readable name's slug ("HAUDD" and "Housing and Urban
+  // Development Department" become one page); remember each raw name's own
+  // slug as an alias so earlier URLs (/.../haudd) still resolve and redirect.
   const bySlug = new Map();
   for (const { _id: rawName, count: n } of rows) {
-    const name = String(rawName).replace(/\s+/g, ' ').trim();
+    const name = displayDepartmentName(state.slug, rawName);
     const slug = slugify(name);
     if (!slug) continue;
-    const entry = bySlug.get(slug) || { slug, name, names: [], count: 0 };
+    const entry = bySlug.get(slug) || { slug, name, names: [], aliases: new Set(), count: 0 };
     entry.names.push(rawName);
+    const rawSlug = slugify(String(rawName).replace(/\s+/g, ' ').trim());
+    if (rawSlug && rawSlug !== slug) entry.aliases.add(rawSlug);
     entry.count += n;
     bySlug.set(slug, entry);
   }
@@ -112,7 +118,8 @@ export async function getLanding(kind, stateSlug, deptSlug, now = new Date()) {
     return { kind, state: { slug: state.slug, name: state.name }, department: null, total, tenders, departments: departments.map(publicDepartment) };
   }
 
-  const dept = departments.find((d) => d.slug === String(deptSlug).toLowerCase());
+  const wanted = String(deptSlug).toLowerCase();
+  const dept = departments.find((d) => d.slug === wanted || d.aliases.has(wanted));
   if (!dept) return null;
   const filter = { ...activeTenderFilter(now), state: stateMatch(state.name), departmentName: { $in: dept.names } };
   const tenders = await listTenders(filter);

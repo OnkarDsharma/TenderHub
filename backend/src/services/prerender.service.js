@@ -306,15 +306,22 @@ ${similar.map(listItem).join('\n')}
   });
 }
 
-/** Real 404 page (sent with HTTP 404) for unknown tender IDs. */
-export function renderNotFound(path) {
+/**
+ * Real 404 page (sent with HTTP 404).
+ * @param {string} path requested public path
+ * @param {'tender'|'page'} [kind] 'tender' for unknown tender IDs, 'page' for unknown landing pages
+ */
+export function renderNotFound(path, kind = 'tender') {
   const base = siteUrl();
+  const copy = kind === 'page'
+    ? { heading: 'Page not found', text: 'There is no page for this state or department, or it has no open tenders right now.' }
+    : { heading: 'Tender not found', text: 'This tender does not exist or has been removed.' };
   return layout({
-    title: `Tender not found | ${SITE_NAME}`,
-    description: 'This tender does not exist or has been removed. Browse live government tenders on tndrr.',
+    title: `${copy.heading} | ${SITE_NAME}`,
+    description: `${copy.text} Browse live government tenders on tndrr.`,
     canonical: `${base}${path}`,
     robots: 'noindex, follow',
-    body: `<h1>Tender not found</h1><p>This tender does not exist or has been removed.</p><p><a href="${base}/tenders">Browse live tenders</a> · <a href="${base}/gem-tenders">Browse GeM bids</a></p>`,
+    body: `<h1>${copy.heading}</h1><p>${copy.text}</p><p><a href="${base}/tenders">Browse live tenders</a> · <a href="${base}/gem-tenders">Browse GeM bids</a></p>`,
   });
 }
 

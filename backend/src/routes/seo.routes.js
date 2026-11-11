@@ -16,7 +16,7 @@ import { findTender, findSimilarOpen } from '../services/prerender.service.js';
 
 const router = express.Router();
 const logger = pino();
-const CACHE_PREFIX = 'seo:v1:';
+const CACHE_PREFIX = 'seo:v2:'; // bump when landing data shape or names change
 
 async function cachedJson(key, ttlSeconds, build) {
   try {

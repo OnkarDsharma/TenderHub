@@ -19,7 +19,7 @@ const router = express.Router();
 const logger = pino();
 
 const CACHE_TTL_SECONDS = 60 * 60;
-const CACHE_PREFIX = 'prerender:v1:';
+const CACHE_PREFIX = 'prerender:v2:'; // bump when crawler HTML changes
 const MAX_ID_LENGTH = 120;
 
 async function readCache(key) {
@@ -94,7 +94,9 @@ const landingHandler = (kind) => async (req, res, next) => {
     const { state, dept } = req.params;
     const requested = `/${kind === 'gem' ? 'gem-tenders' : 'tenders'}/in/${state}${dept ? `/${dept}` : ''}`;
     const data = await landingWithSeo(kind, String(state).slice(0, 60), dept ? String(dept).slice(0, 120) : undefined);
-    if (!data) return sendHtml(res, 404, renderNotFound(requested));
+    if (!data) return sendHtml(res, 404, renderNotFound(requested, 'page'));
+    // Earlier or alternative department URLs (e.g. /haudd) 301 to the readable one.
+    if (requested.toLowerCase() !== data.path) return res.redirect(301, `${siteUrl()}${data.path}`);
     return sendHtml(res, 200, renderLandingPage(data, data.seo, data.path));
   } catch (err) {
     return next(err);

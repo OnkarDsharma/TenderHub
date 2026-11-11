@@ -22,7 +22,7 @@ const router = express.Router();
 const logger = pino();
 
 const CACHE_TTL_SECONDS = 60 * 60;
-const CACHE_PREFIX = 'sitemap:v1:';
+const CACHE_PREFIX = 'sitemap:v2:'; // bump when URLs change
 
 async function cached(key, build) {
   const cacheKey = `${CACHE_PREFIX}${key}`;

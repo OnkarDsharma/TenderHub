@@ -181,3 +181,68 @@ test('submitNewTenders only runs in production and advances the marker only on s
     env.NODE_ENV = saved;
   }
 });
+
+// --- Readable department names ------------------------------------------------
+import { displayDepartmentName } from '../src/utils/departmentNames.js';
+
+test('department codes expand per state; unknown names are tidied, not invented', () => {
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'HAUDD'), 'Housing and Urban Development Department');
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'DC-PDD'), 'Power Development Department');
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'I and FC'), 'Irrigation and Flood Control Department');
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'PWD'), 'Public Works (R&B) Department');
+  assert.equal(displayDepartmentName('himachal-pradesh', 'PWD'), 'Public Works Department', 'same code, different state');
+  assert.equal(displayDepartmentName('punjab', 'CE-PWD(B and R)'), 'Public Works Department (B&R)');
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'FOREST DEPARTMENT'), 'Forest Department');
+  assert.equal(displayDepartmentName('jammu-and-kashmir', 'SHRI MATA VAISHNO DEVI SHRINE BOARD'), 'Shri Mata Vaishno Devi Shrine Board');
+  assert.equal(displayDepartmentName('punjab', 'Deptt of School Education'), 'Department of School Education');
+  assert.equal(displayDepartmentName('haryana', 'Haryana Government'), 'Haryana Government');
+  assert.equal(displayDepartmentName('delhi', 'DTTDC'), 'Delhi Tourism and Transportation Development Corporation (DTTDC)');
+  assert.equal(displayDepartmentName('ladakh', 'XYZ'), 'XYZ', 'short unknown codes are left alone');
+});
+
+test('department pages use readable names, merge code + full name, and accept the old code URL', async () => {
+  deptRows.push({ _id: 'HAUDD', count: 5 }, { _id: 'Housing and Urban Development Department', count: 2 });
+  try {
+    const state = await getLanding('tenders', 'jammu-and-kashmir');
+    const housing = state.departments.find((d) => d.slug === 'housing-and-urban-development-department');
+    assert.deepEqual(housing, { slug: 'housing-and-urban-development-department', name: 'Housing and Urban Development Department', count: 7 });
+    assert.ok(!state.departments.some((d) => d.slug === 'haudd'));
+
+    const viaOldUrl = await getLanding('tenders', 'jammu-and-kashmir', 'haudd');
+    assert.equal(viaOldUrl.department.slug, 'housing-and-urban-development-department', 'old /haudd URL resolves');
+    assert.deepEqual(lastFindFilter.departmentName, { $in: ['HAUDD', 'Housing and Urban Development Department'] });
+    assert.equal(landingSeo(viaOldUrl).title, 'Housing and Urban Development Department Tenders in Jammu & Kashmir');
+  } finally {
+    deptRows.splice(-2, 2);
+  }
+});
+
+test('crawler routes: old department URL 301s, unknown landing page says "Page not found" with 404', async () => {
+  const express = (await import('express')).default;
+  const prerenderRoutes = (await import('../src/routes/prerender.routes.js')).default;
+  mock.method(redis, 'get', async () => null);
+  mock.method(redis, 'setex', async () => 'OK');
+  deptRows.push({ _id: 'HAUDD', count: 5 });
+  const app = express();
+  app.use(prerenderRoutes);
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const old = await fetch(`${base}/prerender/landing/tenders/jammu-and-kashmir/haudd`, { redirect: 'manual' });
+    assert.equal(old.status, 301);
+    assert.equal(old.headers.get('location'), 'https://www.tndrr.com/tenders/in/jammu-and-kashmir/housing-and-urban-development-department');
+
+    const current = await fetch(`${base}/prerender/landing/tenders/jammu-and-kashmir/housing-and-urban-development-department`);
+    assert.equal(current.status, 200);
+    assert.match(await current.text(), /<h1>Housing and Urban Development Department Tenders in Jammu &amp; Kashmir<\/h1>/);
+
+    const missing = await fetch(`${base}/prerender/landing/tenders/goa`);
+    assert.equal(missing.status, 404);
+    const html = await missing.text();
+    assert.match(html, /<h1>Page not found<\/h1>/);
+    assert.match(html, /noindex/);
+  } finally {
+    server.close();
+    deptRows.pop();
+  }
+});
