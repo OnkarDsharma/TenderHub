@@ -280,7 +280,7 @@ export default function Login({ defaultMode }) {
             {step === 'otp'
               ? `We sent a 6-digit verification code to ${email}`
               : mode === 'signup'
-                ? 'Register your profile to track civil works, set alert radars, and bookmark tenders across J&K, Punjab and Himachal.'
+                ? 'Register your profile to track civil works, set alert radars, and bookmark tenders across J&K, Ladakh, Punjab, Himachal, Haryana and Delhi.'
                 : 'Access your saved tenders, alerts, and verified northern states public works procurement.'}
           </p>
         </div>

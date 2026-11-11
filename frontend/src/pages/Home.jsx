@@ -54,7 +54,7 @@ const quickLocations = [
 ];
 
 export default function Home() {
-  useSeo({ title: 'Government Tenders in J&K, Ladakh, Punjab & Himachal', description: 'Search every live government tender and GeM bid across Jammu & Kashmir, Ladakh, Punjab, and Himachal Pradesh in one place. Daily updates, documents, deadlines, and bid analytics.', path: '/' });
+  useSeo({ title: 'Tenders in J&K, Ladakh, Punjab, Himachal, Haryana & Delhi', description: 'Search every live government tender and GeM bid in J&K, Ladakh, Punjab, Himachal, Haryana and Delhi. Daily updates, documents, deadlines and bid analytics.', path: '/' });
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -236,7 +236,7 @@ export default function Home() {
 
             {/* Primary Headline */}
             <h1 className="home-hero-title text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-[-0.035em] leading-[1.04] font-display">
-              Government tenders across J&amp;K, Ladakh, Punjab &amp; Himachal
+              Government tenders across J&amp;K, Ladakh, Punjab, Himachal, Haryana &amp; Delhi
             </h1>
 
             {/* Subtitle */}
@@ -263,9 +263,11 @@ export default function Home() {
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-techCoral hover:bg-techCoral-dark text-white font-bold text-xs sm:text-sm rounded-lg transition-colors shrink-0 shadow-sm cursor-pointer"
+                  aria-label="Search tenders"
+                  title="Search tenders"
+                  className="home-hero-search-btn inline-flex items-center justify-center w-12 h-11 bg-techCoral hover:bg-techCoral-dark text-white rounded-lg transition-colors shrink-0 shadow-sm cursor-pointer"
                 >
-                  Search Tenders
+                  <Search className="w-5 h-5" strokeWidth={2.4} aria-hidden="true" />
                 </button>
               </form>
 

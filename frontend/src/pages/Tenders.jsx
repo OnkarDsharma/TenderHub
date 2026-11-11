@@ -194,7 +194,7 @@ const FEE_PREFERENCES_OPTIONS = [
 ];
 
 export default function Tenders() {
-  useSeo({ title: 'Live Government Tenders: J&K, Ladakh, Punjab, Himachal', description: 'Browse and filter live e-procurement tenders from J&K, Ladakh, Punjab, and Himachal Pradesh by department, location, value, and closing date. Updated daily.', path: '/tenders' });
+  useSeo({ title: 'Live Tenders: J&K, Ladakh, Punjab, Himachal, Haryana, Delhi', description: 'Browse live e-procurement tenders from J&K, Ladakh, Punjab, Himachal Pradesh, Haryana and Delhi by department, location, value and closing date. Updated daily.', path: '/tenders' });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, user, isPro } = useAuthStore();

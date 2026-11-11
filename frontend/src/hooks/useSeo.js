@@ -17,7 +17,7 @@ export const SITE_NAME = 'tndrr';
 export const SITE_URL = (import.meta.env.VITE_SITE_URL || window.location.origin).replace(/\/+$/, '');
 
 export const DEFAULT_DESCRIPTION =
-  'Every tender. One search. Public procurement intelligence and government tender analytics across J&K, Ladakh, Punjab, and Himachal Pradesh.';
+  'Every tender. One search. Public procurement intelligence and government tender analytics across J&K, Ladakh, Punjab, Himachal Pradesh, Haryana, and Delhi.';
 
 const DEFAULT_IMAGE = '/tndrr-logo.png';
 

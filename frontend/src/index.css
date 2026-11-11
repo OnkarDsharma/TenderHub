@@ -3163,10 +3163,17 @@ body { background-color: #f7faff; }
   .home-hero-sub + div { margin-top: 1.25rem; }
   .home-hero-sub + div > :not([hidden]) ~ :not([hidden]) { margin-top: .875rem; }
 
-  .home-hero form.home-hero-search { padding: .375rem; gap: .375rem; text-align: left; }
-  .home-hero-search > div { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+  /* Input and icon button share one row */
+  .home-hero form.home-hero-search {
+    flex-direction: row;
+    align-items: center;
+    padding: .3125rem;
+    gap: .375rem;
+    text-align: left;
+  }
+  .home-hero-search > div { min-height: 44px; padding: 0 .375rem 0 .625rem; }
   .home-hero-search input { font-size: .875rem; }
-  .home-hero form.home-hero-search button { min-height: 44px; font-size: .875rem; }
+  .home-hero form.home-hero-search .home-hero-search-btn { width: 44px; height: 44px; padding: 0; }
 
   .home-hero-chips { justify-content: center; gap: .5rem; }
   .home-hero-chips > span { width: 100%; text-align: center; }

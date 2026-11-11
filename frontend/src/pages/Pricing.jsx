@@ -44,7 +44,7 @@ export default function Pricing() {
             <Shield className="w-3.5 h-3.5" /> ✨ ALL-IN-ONE PROCUREMENT SUITE
           </div>
           <h1 className="text-2xl sm:text-4xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Simple, Unified Plans for Government Contractors</h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">Everything you need in one place: live tender indexing across northern states (J&amp;K, Punjab, and Himachal), automated WhatsApp alerts, and instant AI Bill of Quantities (BOQ) estimation.</p>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">Everything you need in one place: live tender indexing across northern states (J&amp;K, Ladakh, Punjab, Himachal, Haryana, and Delhi), automated WhatsApp alerts, and instant AI Bill of Quantities (BOQ) estimation.</p>
         </header>
 
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 max-w-6xl mx-auto gap-8 items-stretch">
