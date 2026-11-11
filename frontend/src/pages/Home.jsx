@@ -230,7 +230,8 @@ export default function Home() {
             {/* Official Procurement Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold tracking-wide mb-5 shadow-sm">
               <Landmark className="w-3.5 h-3.5 text-techCoral shrink-0" />
-              <span>Northern States Public Works &amp; Procurement</span>
+              <span className="home-hero-full">Northern States Public Works &amp; Procurement</span>
+              <span className="home-hero-short hidden">Public Works &amp; Procurement</span>
             </div>
 
             {/* Primary Headline */}
@@ -240,7 +241,8 @@ export default function Home() {
 
             {/* Subtitle */}
             <p className="home-hero-sub mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
-              Active civil, road, water and electrical contracts, synced daily from official portals.
+              <span className="home-hero-full">Active civil, road, water and electrical contracts, synced daily from official portals.</span>
+              <span className="home-hero-short hidden">Civil, road, water &amp; electrical tenders, synced daily.</span>
             </p>
 
             {/* Search Console & CTA */}

@@ -3132,35 +3132,52 @@ body { background-color: #f7faff; }
     background: rgba(15, 23, 42, .32);
   }
 
-  /* ---------- Hero ---------- */
+  /* ---------- Hero: centered and compact ---------- */
   .home-hero .home-hero-main {
     min-height: 0;
-    gap: 2rem;
-    padding-top: 2.25rem;
-    padding-bottom: 2.25rem;
+    gap: 1.75rem;
+    padding-top: 1.75rem;
+    padding-bottom: 2rem;
   }
+  .home-hero-main > div:first-child {
+    max-width: 100%;
+    text-align: center;
+  }
+  .home-hero-main > div:first-child > div:first-child { margin-bottom: 1rem; }
+  .home-hero-full { display: none; }
+  .home-hero-short { display: inline; }
+
   .home-hero h1.home-hero-title {
-    font-size: clamp(2rem, 8.6vw, 2.375rem);
+    font-size: clamp(1.875rem, 8.2vw, 2.25rem);
     line-height: 1.08;
     letter-spacing: -.03em;
+    margin-left: auto;
+    margin-right: auto;
   }
-  .home-hero-sub { font-size: .9688rem; line-height: 1.55; }
+  .home-hero-sub {
+    margin: .75rem auto 0;
+    font-size: .9375rem;
+    line-height: 1.5;
+    max-width: 20rem;
+  }
+  .home-hero-sub + div { margin-top: 1.25rem; }
+  .home-hero-sub + div > :not([hidden]) ~ :not([hidden]) { margin-top: .875rem; }
 
-  .home-hero form.home-hero-search { padding: .375rem; gap: .375rem; }
+  .home-hero form.home-hero-search { padding: .375rem; gap: .375rem; text-align: left; }
   .home-hero-search > div { min-height: 44px; padding-top: 0; padding-bottom: 0; }
   .home-hero-search input { font-size: .875rem; }
-  .home-hero form.home-hero-search button { min-height: 46px; font-size: .875rem; }
+  .home-hero form.home-hero-search button { min-height: 44px; font-size: .875rem; }
 
-  .home-hero-chips { gap: .5rem; }
-  .home-hero-chips > span { width: 100%; }
+  .home-hero-chips { justify-content: center; gap: .5rem; }
+  .home-hero-chips > span { width: 100%; text-align: center; }
   .home-hero-chips button {
-    min-height: 34px;
-    padding: .375rem .75rem;
+    min-height: 32px;
+    padding: .3125rem .6875rem;
     font-size: .75rem;
     white-space: nowrap;
   }
-  .home-hero-ai { padding-top: .5rem; }
-  .home-hero-ai a { min-height: 40px; font-size: .8125rem; }
+  .home-hero-ai { justify-content: center; padding-top: 0; }
+  .home-hero-ai a { min-height: 36px; font-size: .8125rem; }
 
   /* ---------- Regional opportunity brief ---------- */
   .home-hero-preview { margin-top: 0; max-width: 100%; }
@@ -3244,6 +3261,8 @@ body { background-color: #f7faff; }
   .home-section-head h2 { font-size: clamp(1.625rem, 7vw, 1.875rem); line-height: 1.15; }
   .home-section-head h2 + p { margin-top: .5rem; font-size: .875rem; line-height: 1.55; }
   .home-section-head > a { min-height: 40px; }
+  .home-pipeline .home-section-head { align-items: center; text-align: center; }
+  .home-pipeline .home-section-head h2 + p { max-width: 22rem; margin-left: auto; margin-right: auto; }
 
   /* ---------- Active pipeline: one readable card at a time ---------- */
   .home-pipeline-marquee {
