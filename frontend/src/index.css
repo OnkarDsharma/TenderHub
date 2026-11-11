@@ -3071,3 +3071,31 @@ body { background-color: #f7faff; }
 /* Border beam around the AI analysis prompt pill: the wrapper takes the pill's width and spacing. */
 .ai-hero-beam { width: 100%; max-width: 680px; margin: 2rem auto 0; }
 .ai-hero-beam .ai-hero-pill { margin: 0; }
+
+/* ---------------------------------------------------------------------------
+   Home hero — phone-only cleanup (desktop untouched)
+   --------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .home-hero .home-hero-main {
+    min-height: 0;
+    gap: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  /* Brief card: tighter, calmer */
+  .home-preview-document { padding: 1rem; }
+  .home-brief-stats { padding-top: .875rem; padding-bottom: .875rem; }
+  .home-brief-stats > div { padding-left: .375rem; padding-right: .375rem; }
+  .home-brief-value { font-size: 1.25rem; line-height: 1.2; white-space: nowrap; }
+  .home-brief-money { font-size: .875rem; line-height: 1.5rem; letter-spacing: -.01em; }
+  .home-brief-label {
+    display: block;
+    margin-top: .25rem;
+    font-size: 9px;
+    line-height: 1.25;
+    letter-spacing: .04em;
+  }
+
+  /* Stat bar repeats the card's numbers — hide it on phones */
+  .home-statbar { display: none; }
+}

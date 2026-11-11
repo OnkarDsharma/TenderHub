@@ -299,10 +299,10 @@ export default function Home() {
                 </div>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Updated daily</span>
               </div>
-              <div className="grid grid-cols-3 divide-x divide-slate-100 py-4 text-center">
-                <div className="px-2"><span className="block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.activeTendersCount ?? 29)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Active notices</span></div>
-                <div className="px-2"><span className="block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.authoritiesCount ?? 13)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Authorities</span></div>
-                <div className="px-2"><span className="block text-lg sm:text-xl font-bold text-techCoral">{isStatsLoading ? '—' : formatCurrencyINR(stats?.totalValue ?? 30146323)}</span><span className="text-[10px] uppercase tracking-wide text-slate-500">Estimated value</span></div>
+              <div className="home-brief-stats grid grid-cols-3 divide-x divide-slate-100 py-4 text-center">
+                <div className="px-2"><span className="home-brief-value block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.activeTendersCount ?? 29)}</span><span className="home-brief-label text-[10px] uppercase tracking-wide text-slate-500">Active notices</span></div>
+                <div className="px-2"><span className="home-brief-value block text-2xl font-bold text-slate-900">{isStatsLoading ? '—' : (stats?.authoritiesCount ?? 13)}</span><span className="home-brief-label text-[10px] uppercase tracking-wide text-slate-500">Authorities</span></div>
+                <div className="px-2"><span className="home-brief-value home-brief-money block text-lg sm:text-xl font-bold text-techCoral">{isStatsLoading ? '—' : formatCurrencyINR(stats?.totalValue ?? 30146323)}</span><span className="home-brief-label text-[10px] uppercase tracking-wide text-slate-500">Estimated value</span></div>
               </div>
               <div className="border-t border-slate-100 pt-4">
                 <div className="mb-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500"><span>Active authorities</span><span>Live pipeline</span></div>
