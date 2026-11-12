@@ -26,6 +26,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/context/ThemeProvider';
+import { AlertsBell } from '@/components/layout/AlertsBell';
 
 export function Navbar() {
   const location = useLocation();
@@ -139,6 +140,9 @@ export function Navbar() {
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
+
+            {/* Saved-tender updates (stage changes, awards, cancellations) */}
+            {isAuthenticated && <AlertsBell />}
 
             {/* Auth Buttons / Profile Dropdown */}
             {isAuthenticated ? (

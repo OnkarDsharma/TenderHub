@@ -41,11 +41,56 @@ const oid = () => {
 /* State portal tenders                                                */
 /* ------------------------------------------------------------------ */
 
+// Mirrors a real J&K tender in Financial Evaluation: 4 of 5 stages done, AOC pending.
+const MANDI_STATUS_INFO = {
+  currentStage: 'Financial Evaluation',
+  isAocDone: false,
+  fetchStatus: 'COMPLETED',
+  checkedAt: at(0, 5, 23).toISOString(),
+  stages: [
+    { process: 'Process 1', name: 'Technical Bid Opening', completed: true },
+    { process: 'Process 1', name: 'Technical Evaluation', completed: true },
+    { process: 'Process 2', name: 'Financial Bid Opening', completed: true },
+    { process: 'Process 2', name: 'Financial Evaluation', completed: false },
+    { process: 'Process 3', name: 'AOC', completed: false },
+  ],
+  documents: [
+    { documentName: 'technicalsummary_874512.pdf', source: 'STAGE_SUMMARY', documentSizeKb: 412, fileUrl: 'mock://status/0' },
+    { documentName: 'boqcomparativechart.xlsx', source: 'STAGE_SUMMARY', documentSizeKb: 38, fileUrl: 'mock://status/1' },
+    { documentName: 'finsummary_874512.pdf', source: 'STAGE_PAGE', documentSizeKb: 1650, fileUrl: 'mock://status/2' },
+    { documentName: 'Committee_Minutes.pdf', source: 'EMBEDDED_IN_PDF', parentDocument: 'finsummary_874512.pdf', documentSizeKb: 96, fileUrl: 'mock://status/3' },
+  ],
+  stageDetails: [
+    { stage: 'Stage summary', content: 'Bids List\nS.No  Bidder Name                         Status\n1     M/S Poonch Builders                 Admitted\n2     M/S Mendhar Constructions           Admitted\n3     M/S Pir Panjal Infra                Rejected\n\nBid Opening Committee\nExecutive Engineer, PWD (R&B) Division Poonch\nAssistant Executive Engineer, Sub-Division Mandi' },
+    { stage: 'Financial Bid Opening', content: 'Financial bids opened on portal.\nL1: M/S Mendhar Constructions — 8.4% below estimate\nL2: M/S Poonch Builders — 3.1% below estimate' },
+  ],
+};
+
+const AWARDED_STATUS_INFO = {
+  ...MANDI_STATUS_INFO,
+  currentStage: 'AOC',
+  isAocDone: true,
+  stages: MANDI_STATUS_INFO.stages.map((st) => ({ ...st, completed: true })),
+};
+
+const CANCELLED_STATUS_INFO = {
+  currentStage: 'Cancelled',
+  isAocDone: false,
+  fetchStatus: 'COMPLETED',
+  checkedAt: at(0, 5, 23).toISOString(),
+  stages: [
+    { process: 'Process 1', name: 'Technical Bid Opening', completed: false },
+    { process: 'Process 1', name: 'Technical Evaluation', completed: false },
+  ],
+  documents: [{ documentName: 'Corrigendum.pdf', source: 'STAGE_PAGE', documentSizeKb: 629, fileUrl: 'mock://status/0' }],
+  stageDetails: [],
+};
+
 function buildTender(spec) {
   const {
     dept, deptName, chain, state, title, location, pincode, value, emd, fee = 1000,
     category = 'Civil Works', publishedDaysAgo, closingInDays, tendererClass = 'Class A',
-    workDays = 365, authority, address, multi = false, status = 'ACTIVE', seqNo,
+    workDays = 365, authority, address, multi = false, status = 'ACTIVE', seqNo, statusInfo,
   } = spec;
 
   const published = at(-publishedDaysAgo, 18, 30);
@@ -61,6 +106,8 @@ function buildTender(spec) {
   return {
     _id,
     sourceTenderId,
+    // Post-closing progress from the portal's Tenders Status page (backend: JKTenderStatusAdapter).
+    ...(statusInfo ? { tenderStatusInfo: statusInfo } : {}),
     baseTenderId: `2026_${dept}_${seqNo}`,
     tenderReferenceNumber: refNo,
     title: `[${title}]`,
@@ -224,7 +271,9 @@ const SPECS = [
   { ...HP_JSV, seqNo: 512344, title: 'Providing sewerage scheme to Nalagarh town Phase II including STP of 4 MLD', location: 'Nalagarh, Solan', pincode: '174101', value: 176000000, emd: 3520000, fee: 5000, publishedDaysAgo: 7, closingInDays: 22, category: 'Sewerage', workDays: 720 },
   { ...LA_PWD, seqNo: 610120, title: 'Construction of pre-fabricated insulated school building at Nyoma', location: 'Nyoma, Leh', pincode: '194404', value: 23400000, emd: 468000, publishedDaysAgo: 3, closingInDays: 13, category: 'Buildings', workDays: 300 },
   // Archived / expired examples
-  { ...JK_PWD, seqNo: 318811, title: 'Improvement of Mandi-Loran road by way of CC pavement in slide-prone stretches', location: 'Mandi, Poonch', pincode: '185101', value: 12900000, emd: 258000, publishedDaysAgo: 48, closingInDays: -20, status: 'EXPIRED' },
+  { ...JK_PWD, seqNo: 318811, title: 'Improvement of Mandi-Loran road by way of CC pavement in slide-prone stretches', location: 'Mandi, Poonch', pincode: '185101', value: 12900000, emd: 258000, publishedDaysAgo: 48, closingInDays: -20, status: 'EXPIRED', statusInfo: MANDI_STATUS_INFO },
+  { ...JK_JSD, seqNo: 317920, title: 'Augmentation of WSS Achabal by laying 200 mm DI rising main and pump house', location: 'Achabal, Anantnag', pincode: '192201', value: 15800000, emd: 316000, publishedDaysAgo: 70, closingInDays: -45, category: 'Water Supply', status: 'EXPIRED', statusInfo: AWARDED_STATUS_INFO },
+  { ...JK_HUDD, seqNo: 319204, title: 'Development of park and walking track at Rajbagh including landscaping', location: 'Rajbagh, Srinagar', pincode: '190008', value: 6200000, emd: 124000, publishedDaysAgo: 40, closingInDays: -12, category: 'Civil Works', status: 'EXPIRED', statusInfo: CANCELLED_STATUS_INFO },
   { ...PB_PWD, seqNo: 407750, title: 'Construction of boundary wall and approach road for new bus stand Khanna', location: 'Khanna, Ludhiana', pincode: '141401', value: 8100000, emd: 162000, publishedDaysAgo: 60, closingInDays: -31, status: 'ARCHIVED' },
 ];
 
@@ -363,7 +412,12 @@ const LIST_FIELDS = [
   'sourcePortal', 'scheme', 'tenderFee', 'tenderFeeExemptionAllowed', 'tenderType', 'pdfUrls', 'nitDocuments', 'detailsUrl', 'tendererClass',
   'consigneeStates', 'pdfParseStatus', 'gemStatus',
 ];
-export const toSummary = (t) => Object.fromEntries(LIST_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
+export const toSummary = (t) => {
+  const row = Object.fromEntries(LIST_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
+  // Like the backend list projection: only the stage + award flag, not the full status payload.
+  if (t.tenderStatusInfo) row.tenderStatusInfo = { currentStage: t.tenderStatusInfo.currentStage, isAocDone: t.tenderStatusInfo.isAocDone };
+  return row;
+};
 
 const daysUntil = (iso) => (new Date(iso).getTime() - NOW) / DAY;
 
@@ -403,6 +457,15 @@ export function filterTenders(source, q = {}) {
   if (q.minAmount) rows = rows.filter((t) => t.estimatedValue >= Number(q.minAmount));
   if (q.maxAmount) rows = rows.filter((t) => t.estimatedValue <= Number(q.maxAmount));
   if (q.closingDays) rows = rows.filter((t) => daysUntil(t.closingDate) <= Number(q.closingDays));
+  if (q.progress) {
+    const cancelled = (t) => /cancel|retender/i.test(t.tenderStatusInfo?.currentStage || '');
+    const test = {
+      awarded: (t) => t.tenderStatusInfo?.isAocDone === true,
+      cancelled,
+      evaluation: (t) => Boolean(t.tenderStatusInfo?.stages?.length) && !t.tenderStatusInfo.isAocDone && !cancelled(t),
+    }[q.progress];
+    if (test) rows = rows.filter(test);
+  }
   if (q.hasPreBid === 'true') rows = rows.filter((t) => Boolean(t.preBidMeetingDate));
   if (q.feePreference === 'freeFee' || q.feePreference === 'bothFree') rows = rows.filter((t) => !t.tenderFee);
   if (q.feePreference === 'freeEmd' || q.feePreference === 'bothFree') rows = rows.filter((t) => !t.emdAmount);

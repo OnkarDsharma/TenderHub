@@ -46,6 +46,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { api } from '@/services/api';
 import { tenderPath, idFromParam } from '@/utils/tenderUrl';
 import { SimilarTenders } from '@/components/tenders/SimilarTenders';
+import { TenderProgress } from '@/components/tenders/TenderProgress';
 
 // Helper to handle MongoDB's {"$date": "..."} format, raw strings, and "NA" fallbacks
 const parseDate = (dateField) => {
@@ -551,6 +552,9 @@ export default function TenderDetails() {
               })}
           </ol>
         </Tile>
+
+        {/* Post-closing progress: bid opening → evaluation → award, from the portal's Tenders Status page */}
+        <TenderProgress tender={tender} nowMs={nowMs} />
 
         {/* Content Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">

@@ -13,6 +13,7 @@ import {
   toggleSavedTender,
   syncSavedTenders,
 } from '../controllers/contractor.controller.js';
+import { getTenderAlerts, markTenderAlertsRead } from '../controllers/tenderAlert.controller.js';
 import { optionalAuth, verifyToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -27,5 +28,9 @@ router.put('/preferences', verifyToken, updateContractorPreferences);
 router.get('/saved-tenders', optionalAuth, getSavedTenders);
 router.post('/saved-tenders/toggle', verifyToken, toggleSavedTender);
 router.post('/saved-tenders/sync', verifyToken, syncSavedTenders);
+
+// Alerts when a saved tender moves on the portal (new stage, awarded, cancelled)
+router.get('/alerts', optionalAuth, getTenderAlerts);
+router.post('/alerts/read', verifyToken, markTenderAlertsRead);
 
 export default router;

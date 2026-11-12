@@ -234,6 +234,8 @@ export default function Tenders() {
   const [location, setLocation] = useState(searchParams.get('location') || '');
   const [closingDays, setClosingDays] = useState(searchParams.get('closingDays') || '');
   const [status, setStatus] = useState('active');
+  // Post-closing result filter (Expired tab only): '' | 'evaluation' | 'awarded' | 'cancelled'.
+  const [progress, setProgress] = useState('');
   const [sortBy, setSortBy] = useState('arrival');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -294,6 +296,7 @@ export default function Tenders() {
     tendererClass: advancedFilters.tendererClass || undefined,
     closingDays: closingDays,
     status: status,
+    progress: status === 'expired' && progress ? progress : undefined,
     sortBy: sortBy,
     page: currentPage,
     limit: queryLimit,
@@ -903,6 +906,36 @@ export default function Tenders() {
               )}
             </div>
           </div>
+
+          {/* Result filter for closed tenders, from the portal's Tenders Status page */}
+          {status === 'expired' && (
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by tender result">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mr-1">Result</span>
+              {[
+                { value: '', label: 'All' },
+                { value: 'evaluation', label: 'Under evaluation' },
+                { value: 'awarded', label: 'Awarded' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ].map((opt) => (
+                <button
+                  key={opt.value || 'all'}
+                  type="button"
+                  aria-pressed={progress === opt.value}
+                  onClick={() => {
+                    setProgress(opt.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                    progress === opt.value
+                      ? 'bg-dalBlue text-white border-dalBlue dark:bg-blue-600 dark:border-blue-600 font-semibold'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Loading State */}
           {isLoading && (

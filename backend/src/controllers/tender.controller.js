@@ -92,6 +92,7 @@ export const getTenders = async (req, res, next) => {
       preferentialBidder,
       closingDays,
       status = 'active', // 'active' | 'archived' | 'all'
+      progress, // post-closing result from the portal's Tenders Status page: 'evaluation' | 'awarded' | 'cancelled'
       sortBy = 'arrival' // 'arrival' | 'closingAsc' | 'closingDesc' | 'valueDesc' | 'valueAsc'
     } = req.query;
     
@@ -519,6 +520,19 @@ export const getTenders = async (req, res, next) => {
       }
     }
 
+    // Post-closing result (filled daily by the tender status scraper).
+    const CANCELLED_STAGE = /cancel|retender/i;
+    const progressFilter = {
+      awarded: { 'tenderStatusInfo.isAocDone': true },
+      cancelled: { 'tenderStatusInfo.currentStage': CANCELLED_STAGE },
+      evaluation: {
+        'tenderStatusInfo.stages.0': { $exists: true },
+        'tenderStatusInfo.isAocDone': { $ne: true },
+        'tenderStatusInfo.currentStage': { $not: CANCELLED_STAGE },
+      },
+    }[progress];
+    if (progressFilter) queryConditions.push(progressFilter);
+
     const query = queryConditions.length > 0 ? { $and: queryConditions } : {};
 
     // 6. Sort Configuration: Default to Most Recent Published Date First
@@ -585,6 +599,9 @@ export const getTenders = async (req, res, next) => {
       'pdfUrls',
       'nitDocuments',
       'detailsUrl',
+      // Post-closing portal progress, for the stage badge on archived cards (full detail is on the detail page).
+      'tenderStatusInfo.currentStage',
+      'tenderStatusInfo.isAocDone',
     ].join(' ');
 
     const tendersPromise = Tender.find(query)
@@ -603,6 +620,7 @@ export const getTenders = async (req, res, next) => {
     else if (status === 'expired') totalTab = 2;
     else if (status === 'cancelled' || status === 'all') totalTab = null;
     if (closingDays && status !== 'archived' && status !== 'expired') totalTab = null;
+    if (progressFilter) totalTab = null;
     const totalPromise = totalTab === null ? countQuery(query) : null;
 
     const [tenders, [activeCount, archivedCount, expiredCount, closingSoonCount], separateTotal] = await Promise.all([
@@ -966,7 +984,7 @@ export const downloadZipEntryCsv = async (req, res, next) => {
   }
 };
 
-/** Stream a tender notice or work document through private R2 credentials. */
+/** Stream a tender notice, work or post-closing status document through private R2 credentials. */
 export const streamTenderDocument = async (req, res, next) => {
   try {
     const { id, kind, index } = req.params;
@@ -975,7 +993,7 @@ export const streamTenderDocument = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid tender document request' });
     }
 
-    const tender = await Tender.findById(id).select('nitDocuments pdfUrls workItemDocuments boqFileUrl').lean();
+    const tender = await Tender.findById(id).select('nitDocuments pdfUrls workItemDocuments boqFileUrl tenderStatusInfo.documents').lean();
     if (!tender) return res.status(404).json({ message: 'Tender not found' });
 
     let document;
@@ -991,6 +1009,10 @@ export const streamTenderDocument = async (req, res, next) => {
       const legacyUrl = tender.boqFileUrl && !tender.boqFileUrl.toLowerCase().endsWith('.zip') ? tender.boqFileUrl : null;
       if (!legacyUrl) return res.status(404).json({ message: 'Tender document not found' });
       document = { fileUrl: legacyUrl, documentName: 'BOQ_Schedule.xls' };
+    } else if (kind === 'status') {
+      // Bid-opening / evaluation files scraped from the portal's Tenders Status page.
+      document = tender.tenderStatusInfo?.documents?.[itemIndex];
+      if (!document?.fileUrl) return res.status(404).json({ message: 'Status document not found' });
     } else {
       return res.status(400).json({ message: 'Unsupported tender document type' });
     }

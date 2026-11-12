@@ -33,4 +33,7 @@ const contractorProfileSchema = new mongoose.Schema({
   savedTenders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tender' }],
 }, { timestamps: true });
 
+// Finds who saved a tender when its portal stage changes (tender status alerts).
+contractorProfileSchema.index({ savedTenders: 1 });
+
 export default mongoose.model('ContractorProfile', contractorProfileSchema);

@@ -13,7 +13,10 @@ import {
   Heart, 
   Sparkles, 
   Download,
-  Check
+  Check,
+  Award,
+  Ban,
+  Hourglass
 } from 'lucide-react';
 
 import { formatCurrencyINR, formatDateDisplay, extractFamousLocation } from '@/utils/formatters';
@@ -183,6 +186,15 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
   const closingText = daysLeft === null
     ? null
     : daysLeft < 0 ? 'Closed' : daysLeft === 0 ? 'Closes today' : daysLeft === 1 ? '1 day left' : `${daysLeft} days left`;
+  // Post-closing result from the portal's Tenders Status page (only on closed tenders the scraper has checked).
+  const statusInfo = tender.tenderStatusInfo;
+  const progressBadge = daysLeft !== null && daysLeft < 0 && (statusInfo?.isAocDone || statusInfo?.currentStage)
+    ? statusInfo.isAocDone
+      ? { label: 'Awarded', Icon: Award, tone: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10' }
+      : /cancel|retender/i.test(statusInfo.currentStage)
+        ? { label: statusInfo.currentStage, Icon: Ban, tone: 'text-rose-700 dark:text-rose-300 bg-rose-500/10' }
+        : { label: statusInfo.currentStage.replace(/_/g, ' '), Icon: Hourglass, tone: 'text-amber-700 dark:text-amber-300 bg-amber-500/10' }
+    : null;
   const valueLabel = tender.estimatedValue ? 'Estimated value' : 'EMD';
   const valueText = tender.estimatedValue
     ? formatCurrencyINR(tender.estimatedValue)
@@ -219,6 +231,15 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {progressBadge && (
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-px rounded text-[11px] font-semibold max-w-[11rem] ${progressBadge.tone}`}
+              title={`Portal status: ${progressBadge.label}`}
+            >
+              <progressBadge.Icon className="w-3 h-3 shrink-0" />
+              <span className="truncate">{progressBadge.label}</span>
+            </span>
+          )}
           {isUrgent && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400">
               <Clock className="w-3.5 h-3.5" />

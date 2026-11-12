@@ -28,6 +28,8 @@ import path from 'path';
 import crypto from 'crypto';
 import pino from 'pino';
 import Tender from '../../models/Tender.js';
+import TenderAlert from '../../models/TenderAlert.js';
+import ContractorProfile from '../../models/ContractorProfile.js';
 import { captchaService } from '../captcha.service.js';
 import { uploadFileToR2, formatTenderStorageKey } from '../../utils/r2Storage.js';
 import { withDbRetry } from '../../config/db.js';
@@ -65,7 +67,7 @@ export class JKTenderStatusAdapter {
 
   emptyStats() {
     return {
-      checked: 0, updated: 0, unchanged: 0, notFound: 0, failed: 0, aocReached: 0,
+      checked: 0, updated: 0, unchanged: 0, notFound: 0, failed: 0, aocReached: 0, alerts: 0,
       filesSaved: 0, captchaAttempts: 0, captchaSolved: 0
     };
   }
@@ -192,6 +194,7 @@ export class JKTenderStatusAdapter {
     console.log(`❓ Not found on portal:     ${s.notFound}`);
     console.log(`❌ Failed:                  ${s.failed}`);
     console.log(`📄 Files saved:            ${s.filesSaved}`);
+    console.log(`🔔 Saved-tender alerts:     ${s.alerts}`);
     console.log(`🔐 Captchas tried / solved: ${s.captchaAttempts} / ${s.captchaSolved}`);
     console.log(`⏱️ Duration:                ${Math.round((Date.now() - startedAt) / 1000)}s`);
     console.log(`======================================================================\n`);
@@ -270,6 +273,10 @@ export class JKTenderStatusAdapter {
 
       this.stats.updated++;
       if (isAocDone) this.stats.aocReached++;
+
+      if (previous.stageSignature !== stageSignature) {
+        await this.alertSavers(tender, { previous, currentStage: result.currentStage, completed, isAocDone, stageSignature });
+      }
       console.log(`   💾 Saved: ${ctx.documents.length} file(s), ${ctx.stageDetails.length} detail page(s)${isFinal ? ` — ${isAocDone ? 'AOC reached' : result.currentStage}, will stop tracking` : ''}`);
     } catch (err) {
       await this.dumpDebug(page, tender.sourceTenderId, 'error');
@@ -786,6 +793,52 @@ export class JKTenderStatusAdapter {
       if (data[key] !== undefined) set[`tenderStatusInfo.${key}`] = data[key];
     }
     await withDbRetry(() => Tender.updateOne({ _id: tender._id }, update));
+  }
+
+  /**
+   * In-app alert for every user who saved this tender, once per portal state. The first check of a tender
+   * only alerts when something already happened (a stage done or a cancellation), not for "To be Opened".
+   */
+  async alertSavers(tender, { previous, currentStage, completed, isAocDone, stageSignature }) {
+    if (!tender._id) return;
+    const cancelled = /cancel|retender/i.test(currentStage || '');
+    const previouslyDone = new Set((previous.stages || []).filter((s) => s.completed).map((s) => s.name));
+    const newlyDone = completed.filter((name) => !previouslyDone.has(name));
+    if (!previous.stageSignature && !newlyDone.length && !cancelled) return;
+    if (!newlyDone.length && !cancelled && previous.currentStage === currentStage) return;
+
+    try {
+      const savers = await withDbRetry(() => ContractorProfile.find({ savedTenders: tender._id, userId: { $ne: null } })
+        .select('userId').lean());
+      const userIds = [...new Set(savers.map((p) => String(p.userId)))];
+      if (!userIds.length) return;
+
+      const kind = isAocDone ? 'AWARDED' : cancelled ? 'CANCELLED' : 'STAGE';
+      const alert = {
+        tenderId: tender._id,
+        sourceTenderId: tender.sourceTenderId,
+        title: String(tender.title || '').replace(/[[\]]/g, '').trim().slice(0, 300),
+        kind,
+        previousStage: previous.currentStage || null,
+        currentStage: currentStage || null,
+        completedStages: newlyDone,
+        signature: stageSignature,
+      };
+      const ops = userIds.map((userId) => ({
+        updateOne: {
+          filter: { userId, tenderId: tender._id, signature: stageSignature },
+          update: { $setOnInsert: { ...alert, userId, isRead: false } },
+          upsert: true,
+        },
+      }));
+      const res = await withDbRetry(() => TenderAlert.bulkWrite(ops, { ordered: false }));
+      const created = res.upsertedCount || 0;
+      this.stats.alerts = (this.stats.alerts || 0) + created;
+      if (created) console.log(`   🔔 Alerted ${created} user(s) who saved this tender (${kind.toLowerCase()}).`);
+    } catch (err) {
+      // Alerts are best effort: never fail the status scrape over them.
+      logger.error(`[TenderStatus] Could not create alerts for ${tender.sourceTenderId}: ${err.message}`);
+    }
   }
 
   async markFailure(tender, message) {

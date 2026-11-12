@@ -24,6 +24,30 @@ const bearer = (headers) => {
   if (typeof headers.get === 'function') return headers.get('Authorization') || headers.get('authorization') || '';
   return headers.Authorization || headers.authorization || '';
 };
+// Mirrors backend TenderAlert rows for saved tenders that moved on the portal.
+const mockTenderAlerts = () => {
+  const { savedTenderIds = [], readAlertIds = [] } = getState();
+  return savedTenderIds
+    .map((id) => STATE_TENDERS.find((t) => t._id === id))
+    .filter((t) => t?.tenderStatusInfo?.currentStage)
+    .map((t, i) => {
+      const info = t.tenderStatusInfo;
+      const cancelled = /cancel|retender/i.test(info.currentStage);
+      const _id = `alert_${t._id}`;
+      return {
+        _id,
+        tenderId: t._id,
+        sourceTenderId: t.sourceTenderId,
+        title: t.title.replace(/[[\]]/g, ''),
+        kind: info.isAocDone ? 'AWARDED' : cancelled ? 'CANCELLED' : 'STAGE',
+        previousStage: 'To_be_Opened',
+        currentStage: info.currentStage,
+        completedStages: info.stages.filter((st) => st.completed).slice(-1).map((st) => st.name),
+        isRead: readAlertIds.includes(_id),
+        createdAt: new Date(Date.now() - (i * 26 + 5) * 60 * 60 * 1000).toISOString(),
+      };
+    });
+};
 const isAuthed = (headers) => Boolean(getState().session) && Boolean(bearer(headers));
 const requireAuth = (headers) => {
   if (!isAuthed(headers)) throw httpError(401, { error: 'Please sign in to continue.' });
@@ -245,6 +269,20 @@ export function buildHandlers() {
       });
       const rows = savedTenders();
       return { success: true, count: rows.length, data: rows };
+    }],
+
+    // Saved-tender updates: in mock mode every saved tender with portal status data has one alert.
+    ['get', '/contractor/alerts', ({ headers }) => {
+      if (!isAuthed(headers)) return { success: true, unreadCount: 0, data: [] };
+      const data = mockTenderAlerts();
+      return { success: true, unreadCount: data.filter((a) => !a.isRead).length, data };
+    }],
+    ['post', '/contractor/alerts/read', ({ headers, body }) => {
+      requireAuth(headers);
+      const ids = Array.isArray(body?.ids) ? body.ids : mockTenderAlerts().map((a) => a._id);
+      saveState((st) => { st.readAlertIds = [...new Set([...(st.readAlertIds || []), ...ids])]; });
+      const data = mockTenderAlerts();
+      return { success: true, updated: ids.length, unreadCount: data.filter((a) => !a.isRead).length };
     }],
 
     /* --------------------------- billing -------------------------- */

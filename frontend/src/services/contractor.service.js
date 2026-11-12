@@ -56,4 +56,20 @@ export const contractorService = {
     const res = await api.post('/contractor/saved-tenders/sync', { tenderIds });
     return res.data?.data || [];
   },
+
+  /**
+   * Alerts for saved tenders that moved on the portal (new stage, awarded, cancelled)
+   */
+  getTenderAlerts: async () => {
+    const res = await api.get('/contractor/alerts');
+    return { unreadCount: res.data?.unreadCount || 0, alerts: res.data?.data || [] };
+  },
+
+  /**
+   * Mark alerts as read; without ids, marks all of them
+   */
+  markTenderAlertsRead: async (ids) => {
+    const res = await api.post('/contractor/alerts/read', ids ? { ids } : {});
+    return res.data;
+  },
 };
