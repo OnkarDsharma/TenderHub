@@ -157,6 +157,8 @@ jobs:
       - name: Sweep Portal (Fix Extended Dates + Ingest Missing Tenders)
         id: run-scraper
         run: |
+          # Without pipefail, `| tee` hides the script's exit code and a crashed sweep shows as green.
+          set -o pipefail
           cd backend
           # Reads every organisation's full listing, corrects corrigendum-extended dates, then ingests
           # tenders live on the portal but missing from the DB (newest first, incl. today's), capped per run.

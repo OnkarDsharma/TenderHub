@@ -212,7 +212,35 @@ const tenderSchema = new mongoose.Schema({
   isDelisted: { type: Boolean, default: false, index: true },
   cancelledAt: { type: Date, index: true },
   delistReason: { type: String },
-  archivedAt: { type: Date, index: true }
+  archivedAt: { type: Date, index: true },
+
+  // --- Post-closing Tender Status (portal "Tenders Status" page, NIC portals) ---
+  // Scraped by JKTenderStatusAdapter after bidding closes; re-checked daily until AOC is reached.
+  tenderStatusInfo: {
+    currentStage: { type: String },          // "Tender Stage" column on the search result, e.g. "Financial Bid Opening"
+    stages: [{
+      process: { type: String },             // e.g. "Process 1"
+      name: { type: String },                // e.g. "Technical Bid Opening"
+      completed: { type: Boolean, default: false }
+    }],
+    isAocDone: { type: Boolean, default: false, index: true },
+    stageDetails: [{                         // Text of each stage's "View" page and the "View More Details" page
+      stage: { type: String },
+      content: { type: String }
+    }],
+    documents: [{
+      documentName: { type: String },
+      source: { type: String, enum: ['STAGE_SUMMARY', 'EMBEDDED_IN_PDF', 'LINKED_IN_PDF', 'STAGE_PAGE'] },
+      parentDocument: { type: String },      // For files found inside another PDF
+      documentSizeKb: { type: Number },
+      fileUrl: { type: String }              // R2 URL
+    }],
+    stageSignature: { type: String },        // Completed-stage fingerprint; documents are re-downloaded only when it changes
+    fetchStatus: { type: String, enum: ['COMPLETED', 'NOT_FOUND', 'FAILED'] },
+    lastError: { type: String },
+    failCount: { type: Number, default: 0 },
+    checkedAt: { type: Date, index: true }
+  }
 }, { timestamps: true });
 
 tenderSchema.index({ sourcePortal: 1, gemStatus: 1, lastCheckedAt: 1 });

@@ -512,9 +512,18 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       await page.waitForSelector(directorySelector, { timeout: 35000 }).catch(() => {});
     }
-    let orgRow = page.locator(directorySelector).filter({ hasText: org.orgName }).first();
+    const rowByName = () => page.locator(directorySelector).filter({ hasText: org.orgName }).first();
+    let orgRow = rowByName();
     if ((await orgRow.count().catch(() => 0)) === 0) {
-      orgRow = page.locator(directorySelector).nth(org.index);
+      // "Back" can leave the session on a filtered directory (PMGSY then lists only the host state's
+      // organisations, even on reload). A fresh session restores the full list the row index came from.
+      await page.context().clearCookies().catch(() => {});
+      await page.goto(this.departmentRootUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await page.waitForSelector(directorySelector, { timeout: 35000 }).catch(() => {});
+      orgRow = rowByName();
+      if ((await orgRow.count().catch(() => 0)) === 0) {
+        orgRow = page.locator(directorySelector).nth(org.index);
+      }
     }
     const countLink = orgRow.locator("td:nth-child(3) a, a.link2, a").first();
     await Promise.all([
@@ -729,7 +738,14 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       for (const { org, rows } of byOrg.values()) {
         if (stats.totalIngested >= maxNew) break;
         if (outOfTime()) { summary.stoppedForTime = true; break; }
-        await this.openOrganisationListing(page, org);
+        try {
+          await this.openOrganisationListing(page, org);
+        } catch (err) {
+          // One unreachable organisation must not abort the backfill of the others.
+          console.warn(`   ⚠️ Could not open ${org.orgName} listing (${err.message.split('\n')[0]}). Skipping ${rows.length} tender(s) this run.`);
+          await this.returnToOrganisationDirectory(page);
+          continue;
+        }
 
         for (const row of rows) {
           if (stats.totalIngested >= maxNew) break;

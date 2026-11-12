@@ -1,0 +1,108 @@
+name: Daily Tender Status Tracking (J&K)
+
+# Checks the portal "Tenders Status" page for closed tenders until their AOC stage is complete:
+# stage table, stage summary PDF (+ files inside it) and per-stage detail pages.
+on:
+  schedule:
+    # Two runs a day (~110 tenders each within the 85-min budget) to work through the closed-tender backlog.
+    # Both sit outside the 6 ingestion slots (08:24 AM – ~10:50 PM IST); the concurrency group stops overlap.
+    - cron: '17 18 * * *'   # 11:47 PM IST — after the 6 ingestion slots
+    - cron: '53 23 * * *'   # 05:23 AM IST — early morning, ends before the 08:24 AM ingestion slot
+  workflow_dispatch:
+    inputs:
+      tender_id:
+        description: 'Check a single tender ID (optional)'
+        required: false
+        default: ''
+      limit:
+        description: 'Max tenders this run'
+        required: false
+        default: '250'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tender-status
+  cancel-in-progress: false
+
+env:
+  NODE_ENV: production
+  TZ: Asia/Kolkata
+  MONGO_URI: ${{ secrets.MONGO_URI }}
+  REDIS_URL: ${{ secrets.REDIS_URL || 'redis://127.0.0.1:6379' }}
+  JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'github-actions-scraper-ci-access-secret' }}
+  JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'github-actions-scraper-ci-refresh-secret' }}
+  ADMIN_SECRET_KEY: ${{ secrets.ADMIN_SECRET_KEY || 'github-actions-scraper-ci-admin-secret' }}
+  ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || 'scraper-ci@example.com' }}
+  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+  SCRAPER_HEADLESS: 'true'
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+jobs:
+  tender-status:
+    name: Track J&K Tender Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Install Dependencies & Headless Chromium
+        run: |
+          cd backend
+          npm ci --include=dev
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Scrape Tender Status
+        env:
+          TENDER_ID: ${{ github.event.inputs.tender_id }}
+          LIMIT: ${{ github.event.inputs.limit || '250' }}
+        run: |
+          set -o pipefail
+          cd backend
+          if [ -n "$TENDER_ID" ]; then
+            node src/scripts/fetchTenderStatus.js --state jk --id "$TENDER_ID" 2>&1 | tee ../tender_status.log
+          else
+            node src/scripts/fetchTenderStatus.js --state jk --limit "$LIMIT" --max-minutes 85 2>&1 | tee ../tender_status.log
+          fi
+
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          echo "### J&K Tender Status Report" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f tender_status.log ]; then
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            grep -A 12 "TENDER STATUS METRICS" tender_status.log >> "$GITHUB_STEP_SUMMARY" || echo "No metrics block." >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tender-status-logs
+          path: |
+            tender_status.log
+            backend/logs/tender-status/
+          retention-days: 3
+          if-no-files-found: ignore
