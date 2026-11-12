@@ -8,7 +8,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, MapPin, Clock } from 'lucide-react';
+import { Building2, MapPin, Clock, Sparkles } from 'lucide-react';
 
 import { api } from '@/services/api';
 import { tenderPath } from '@/utils/tenderUrl';
@@ -32,11 +32,14 @@ export function SimilarTenders({ tender, isClosed = false }) {
   return (
     <section aria-labelledby="similar-tenders-heading" className="td-scope td-card">
       <header className="td-card-head">
-        <div className="min-w-0">
+        <div className="td-card-heading">
+          <span className="td-card-icon" aria-hidden="true"><Sparkles /></span>
+          <div className="min-w-0">
           <h2 id="similar-tenders-heading" className="td-card-title">
             {isClosed ? 'Open tenders you can still bid on' : 'Similar open tenders'}
           </h2>
-          <p className="td-card-desc">Open tenders from the same department, state or category</p>
+            <p className="td-card-desc">Open tenders from the same department, state or category</p>
+          </div>
         </div>
       </header>
       <ul className="td-similar">
@@ -46,13 +49,19 @@ export function SimilarTenders({ tender, isClosed = false }) {
           return (
             <li key={t._id}>
               <Link to={tenderPath(t)} className="td-similar-card">
+                {(t.estimatedValue > 0 || closes) && (
+                  <span className="td-similar-top">
+                    <span className="td-similar-value">{t.estimatedValue > 0 ? formatCurrencyINR(t.estimatedValue) : ''}</span>
+                    {closes && <span className="td-similar-close"><Clock />Closes {formatDateDisplay(closes)}</span>}
+                  </span>
+                )}
                 <span className="td-similar-title">{cleanTitle(t.title) || t.sourceTenderId}</span>
-                <span className="td-similar-meta">
-                  {dept && <span><Building2 />{dept}</span>}
-                  {t.location && <span><MapPin />{t.location}</span>}
-                  {closes && <span><Clock />Closes {formatDateDisplay(closes)}</span>}
-                  {t.estimatedValue > 0 && <span className="td-similar-value">{formatCurrencyINR(t.estimatedValue)}</span>}
-                </span>
+                {(dept || t.location) && (
+                  <span className="td-similar-meta">
+                    {dept && <span><Building2 />{dept}</span>}
+                    {t.location && <span><MapPin />{t.location}</span>}
+                  </span>
+                )}
               </Link>
             </li>
           );
