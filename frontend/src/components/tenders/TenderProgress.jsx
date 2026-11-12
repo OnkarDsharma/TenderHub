@@ -161,7 +161,7 @@ export function TenderProgress({ tender, nowMs }) {
 
   if (!hasData) {
     return (
-      <Tile tone="light" order={0} className="ai-tile--full mb-2">
+      <Tile tone="light" order={0} grid={false} className="ai-tile--full">
         <div className="ai-tile-head">
           <p className="ai-tile-kicker">Tender progress</p>
         </div>
@@ -180,7 +180,7 @@ export function TenderProgress({ tender, nowMs }) {
   const awarded = Boolean(info.isAocDone);
 
   return (
-    <Tile tone="light" order={0} className="ai-tile--full mb-2">
+    <Tile tone="light" order={0} grid={false} className="ai-tile--full">
       <div className="ai-tile-head">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="ai-tile-kicker">Tender progress</p>

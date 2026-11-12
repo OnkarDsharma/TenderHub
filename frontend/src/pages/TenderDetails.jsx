@@ -27,12 +27,7 @@ import {
   Eye, 
   FolderArchive, 
   Loader2, 
-  Lock,
-  Clock,
-  Sparkles,
-  AlertTriangle,
-  ShieldCheck,
-  Calculator
+  Sparkles
 } from 'lucide-react';
 
 import { useTender } from '@/hooks/useTenders';
@@ -40,7 +35,9 @@ import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
-import { Tile } from '@/components/shared/BentoTile';
+import { Section, FieldGroup, Fields, Field, Badge, DocRow } from '@/components/tenders/detail/TenderDetailUI';
+import { formatSizeKb } from '@/components/tenders/detail/detailFormat';
+import '@/components/tenders/detail/tender-details.css';
 import { useSeo, isStaleTender } from '@/hooks/useSeo';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Modal';
 import { api } from '@/services/api';
@@ -56,16 +53,6 @@ const parseDate = (dateField) => {
   if (isNaN(parsed.getTime())) return null; 
   return dateStr;
 };
-
-// Reusable Data Row for standardized tables
-const DataRow = ({ label, value }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 py-2 border-b border-slate-100 dark:border-slate-700/60 last:border-0 gap-1 sm:gap-3 text-xs">
-    <span className="font-semibold text-slate-500 dark:text-slate-400">{label}</span>
-    <span className="font-medium text-slate-800 dark:text-slate-200 break-words">
-      {value === 'NA' || !value ? 'N/A' : value}
-    </span>
-  </div>
-);
 
 const OFFICIAL_TENDER_PORTALS = {
   'Jammu & Kashmir': {
@@ -361,995 +348,658 @@ export default function TenderDetails() {
     return true;
   });
 
+  const docsPending = totalDocsCount === 0 || tender.isDocumentAvailable === false;
+  const docsAvailableAt = tender.documentDownloadStartDateStr || tender.documentDownloadStartDate;
+  const docBase = `${api.defaults.baseURL}/tenders/${tender._id || id}/documents`;
+  const workDocPath = (doc, index) => `${docBase}/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`;
+  const zipName = tender.zipFileName || 'Work_Documents_and_BOQ.zip';
+
+  const criticalDates = [
+    { label: 'Published', raw: tender.publishedDate, str: tender.publishedDateStr },
+    { label: 'Download Start', raw: tender.documentDownloadStartDate, str: tender.documentDownloadStartDateStr },
+    { label: 'Download End', raw: tender.documentDownloadEndDate, str: tender.documentDownloadEndDateStr },
+    { label: 'Clarification Start', raw: tender.clarificationStartDate, str: tender.clarificationStartDateStr, optional: true },
+    { label: 'Clarification End', raw: tender.clarificationEndDate, str: tender.clarificationEndDateStr, optional: true },
+    { label: 'Bid Start', raw: tender.bidSubmissionStartDate, str: tender.bidSubmissionStartDateStr, tone: 'is-start' },
+    { label: 'Bid End', raw: tender.bidSubmissionEndDate, str: tender.bidSubmissionEndDateStr, tone: 'is-end' },
+    { label: 'Bid Opening', raw: tender.bidOpeningDate, str: tender.bidOpeningDateStr, tone: 'is-open' },
+  ].filter((d) => !d.optional || ((d.str || d.raw) && d.raw !== 'NA'));
+
   return (
-    <div className="min-h-screen bg-paper dark:bg-slate-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="td-page min-h-screen py-6 sm:py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
-        
-        {/* Navigation & Header */}
-        <div>
-          <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-dalBlue dark:hover:text-white mb-3 sm:mb-4 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Directory
-          </button>
 
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xs relative">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-              <div className="space-y-2 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-dalBlue dark:text-blue-300 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                    ID: {tender.sourceTenderId}
-                  </span>
-                  <span className="text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                    {tender.status || 'Active'}
-                  </span>
-                  {(totalDocsCount === 0 || tender.isDocumentAvailable === false) && (
-                    <span className="text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 flex items-center gap-1" title={(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate) ? `Documents available on ${formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate)}` : 'Pending portal release'}>
-                      <FileClock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                      <span>Docs Available: {(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate) ? formatDateTimeDisplay(tender.documentDownloadStartDateStr || tender.documentDownloadStartDate) : 'Pending Release'}</span>
-                    </span>
-                  )}
-                </div>
-                
-                <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 dark:text-white leading-snug">
-                  {tender.title?.replace(/[[\]]/g, '')}
-                </h1>
+        <button type="button" onClick={() => navigate(-1)} className="td-back cursor-pointer">
+          <ArrowLeft className="w-4 h-4" /> Back to Directory
+        </button>
 
-                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium">
-                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="truncate max-w-[320px]">{primaryOrg}</span>
-                  </div>
-
-                  {/* Specific Work Location Badge in Header */}
-                  <div className="inline-flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-900 px-2.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                    <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0" />
-                    <span>Site: <strong>{workLoc.famousLocation}</strong></span>
-                    {workLoc.pincode && workLoc.pincode !== 'N/A' && (
-                      <span className="font-mono text-[10px] text-slate-500">PIN {workLoc.pincode}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tender inviting authority */}
-                <dl className="tender-authority">
-                  <div>
-                    <dt>Inviting officer</dt>
-                    <dd>{tender.invitingAuthorityName || 'Competent Authority / Executive Engineer'}</dd>
-                  </div>
-                  <div>
-                    <dt>Office address</dt>
-                    <dd>{tender.invitingAuthorityAddress || tender.location || 'As specified in tender notice'}</dd>
-                  </div>
-                </dl>
+        {/* ── Tender summary ─────────────────────────────────────────── */}
+        <header className="td-card">
+          <div className="td-hero">
+            <div className="min-w-0">
+              <div className="td-hero-badges">
+                <Badge tone="accent" className="td-badge-id">ID: {tender.sourceTenderId}</Badge>
+                <Badge tone="success">{tender.status || 'Active'}</Badge>
+                {docsPending && (
+                  <Badge tone="warning" title={docsAvailableAt ? `Documents available on ${formatDateTimeDisplay(docsAvailableAt)}` : 'Pending portal release'}>
+                    <FileClock className="w-3.5 h-3.5" />
+                    Docs Available: {docsAvailableAt ? formatDateTimeDisplay(docsAvailableAt) : 'Pending Release'}
+                  </Badge>
+                )}
               </div>
 
-              <div className="flex flex-col sm:flex-row md:flex-col gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
-                <Button 
-                  onClick={() => toggleBookmark(tender)}
-                  variant={bookmarked ? "outline" : "primary"}
-                  className={`w-full text-xs font-semibold py-2 sm:py-2.5 ${
-                    bookmarked 
-                      ? 'border-rose-200 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40' 
-                      : ''
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 mr-1.5 ${bookmarked ? 'fill-current text-rose-600' : ''}`} />
-                  {bookmarked ? 'Saved in Watchlist' : 'Save Tender'}
-                </Button>
+              <h1 className="td-hero-title">{tender.title?.replace(/[[\]]/g, '')}</h1>
 
-                <Button 
-                  onClick={() => navigate(`/services/${tender._id || tender.sourceTenderId}`)}
-                  variant="outline"
-                  className="w-full text-xs font-semibold py-2 sm:py-2.5 border-blue-200 dark:border-blue-800 text-dalBlue dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5 text-dalBlue dark:text-blue-400" />
-                  Contractor AI Dossier
-                </Button>
-                
-                <Button 
-                  onClick={handleOpenPortalModal}
-                  variant="outline" 
-                  className="w-full gap-1.5 text-xs font-semibold py-2 sm:py-2.5 text-slate-600 dark:text-slate-300"
-                >
-                  Original Portal <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                </Button>
+              <div className="td-hero-meta">
+                <span><Building2 />{primaryOrg}</span>
+                <span>
+                  <MapPin />
+                  <span>Site: <strong>{workLoc.famousLocation}</strong>
+                    {workLoc.pincode && workLoc.pincode !== 'N/A' && <span className="td-mono"> · PIN {workLoc.pincode}</span>}
+                  </span>
+                </span>
               </div>
+
+              <dl className="td-hero-authority">
+                <div>
+                  <dt>Inviting officer</dt>
+                  <dd>{tender.invitingAuthorityName || 'Competent Authority / Executive Engineer'}</dd>
+                </div>
+                <div>
+                  <dt>Office address</dt>
+                  <dd>{tender.invitingAuthorityAddress || tender.location || 'As specified in tender notice'}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="td-hero-actions">
+              <button
+                type="button"
+                onClick={() => toggleBookmark(tender)}
+                aria-pressed={bookmarked}
+                className={`td-btn ${bookmarked ? 'td-btn--saved' : 'td-btn--primary'}`}
+              >
+                <Heart className={bookmarked ? 'fill-current' : ''} />
+                {bookmarked ? 'Saved in Watchlist' : 'Save Tender'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/services/${tender._id || tender.sourceTenderId}`)}
+                className="td-btn td-btn--accent"
+              >
+                <Sparkles /> Contractor AI Dossier
+              </button>
+              <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--secondary">
+                Original Portal <ExternalLink />
+              </button>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Multi-Work Tenders Alert & Navigation */}
+        {/* ── Multi-work NIT notice ──────────────────────────────────── */}
         {tender.relatedTenders && tender.relatedTenders.length > 0 && (
-          <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl p-4 sm:p-5 shadow-xs mb-6">
-            <div className="flex items-start gap-3 sm:gap-3.5">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded-lg shrink-0 mt-0.5 shadow-xs">
-                <Layers className="w-4 h-4" />
+          <section className="td-notice" aria-labelledby="multi-work-heading">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                <h2 id="multi-work-heading" className="td-card-title">Multiple Works Detected for this NIT</h2>
+                <Badge tone="warning">{tender.relatedTenders.length + 1} Total Works</Badge>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                      Multiple Works Detected for this NIT
-                    </h3>
-                    <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/80 px-2 py-0.5 rounded-full">
-                      {tender.relatedTenders.length + 1} Total Works
-                    </span>
-                  </div>
-                  {(tender.tenderReferenceNumber || tender.baseTenderId) && (
-                    <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-slate-800/90 px-2.5 py-0.5 rounded border border-amber-200 dark:border-amber-700/80">
-                      Ref: {tender.tenderReferenceNumber || tender.baseTenderId}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 mb-3.5">
-                  This tender is part of a multi-work contract notice issued by the department. Each work item has its own distinct scope, BOQ, and estimated budget. Explore the other works under this notice below:
-                </p>
-
-                {/* Sibling Works Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {tender.relatedTenders.map((sibling) => (
-                    <div 
-                      key={sibling._id || sibling.sourceTenderId}
-                      onClick={() => navigate(tenderPath(sibling))}
-                      className="group/work flex flex-col justify-between p-3.5 bg-white dark:bg-slate-800/90 border border-amber-200/80 dark:border-slate-700 rounded-xl hover:border-dalBlue dark:hover:border-blue-400 hover:shadow-sm transition-all cursor-pointer"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="font-mono text-xs font-bold text-dalBlue dark:text-blue-300 group-hover/work:underline">
-                            {sibling.sourceTenderId}
-                          </span>
-                          <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">
-                            {sibling.estimatedValue ? formatCurrencyINR(sibling.estimatedValue) : 'Value N/A'}
-                          </span>
-                        </div>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
-                          {sibling.title}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                        <span>Pub: {formatDateDisplay(sibling.publishedDate || sibling.publishedDateStr)}</span>
-                        <span className="flex items-center gap-1 text-xs font-bold text-dalBlue dark:text-blue-400 group-hover/work:translate-x-0.5 transition-transform">
-                          View Work <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {(tender.tenderReferenceNumber || tender.baseTenderId) && (
+                <Badge tone="neutral" className="td-badge-id">Ref: {tender.tenderReferenceNumber || tender.baseTenderId}</Badge>
+              )}
             </div>
-          </div>
+            <p className="td-card-desc mt-2 mb-4 max-w-3xl">
+              This tender is part of a multi-work contract notice issued by the department. Each work item has its own distinct scope, BOQ, and estimated budget. Explore the other works under this notice below:
+            </p>
+            <ul className="td-similar">
+              {tender.relatedTenders.map((sibling) => (
+                <li key={sibling._id || sibling.sourceTenderId}>
+                  <button type="button" onClick={() => navigate(tenderPath(sibling))} className="td-similar-card w-full text-left cursor-pointer">
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="td-mono text-xs font-semibold text-dalBlue dark:text-blue-300">{sibling.sourceTenderId}</span>
+                      <Badge tone="success">{sibling.estimatedValue ? formatCurrencyINR(sibling.estimatedValue) : 'Value N/A'}</Badge>
+                    </span>
+                    <span className="td-similar-title">{sibling.title}</span>
+                    <span className="td-similar-meta justify-between">
+                      <span>Pub: {formatDateDisplay(sibling.publishedDate || sibling.publishedDateStr)}</span>
+                      <span className="font-semibold text-dalBlue dark:text-blue-300">View Work <ArrowRight /></span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
-        {/* Critical Dates — horizontal timeline */}
-        <Tile tone="light" order={0} grid={false} className="ai-tile--full mb-2">
-          <p className="ai-tile-kicker ai-tile-kicker--strong">Critical dates</p>
-          <ol className="ai-timeline filter-scrollbar">
-            {[
-              { label: 'Published', raw: tender.publishedDate, str: tender.publishedDateStr },
-              { label: 'Download Start', raw: tender.documentDownloadStartDate, str: tender.documentDownloadStartDateStr },
-              { label: 'Download End', raw: tender.documentDownloadEndDate, str: tender.documentDownloadEndDateStr },
-              { label: 'Clarification Start', raw: tender.clarificationStartDate, str: tender.clarificationStartDateStr, optional: true },
-              { label: 'Clarification End', raw: tender.clarificationEndDate, str: tender.clarificationEndDateStr, optional: true },
-              { label: 'Bid Start', raw: tender.bidSubmissionStartDate, str: tender.bidSubmissionStartDateStr, tone: 'is-start' },
-              { label: 'Bid End', raw: tender.bidSubmissionEndDate, str: tender.bidSubmissionEndDateStr, tone: 'is-end' },
-              { label: 'Bid Opening', raw: tender.bidOpeningDate, str: tender.bidOpeningDateStr, tone: 'is-open' },
-            ]
-              .filter((d) => !d.optional || ((d.str || d.raw) && d.raw !== 'NA'))
-              .map((d) => {
-                const [datePart, timePart] = formatDateTimeDisplay(d.str || d.raw).split(', ');
-                const when = d.raw ? new Date(d.raw?.$date || d.raw) : null;
-                const passed = when && !isNaN(when.getTime()) && when.getTime() <= nowMs;
-                return (
-                  <li key={d.label} className={`ai-timeline-item ${d.tone || ''} ${passed ? 'is-passed' : ''}`}>
-                    <span className="ai-timeline-label">{d.label}</span>
-                    <span className="ai-timeline-dot" aria-hidden="true" />
-                    <span className="ai-timeline-date">{datePart}</span>
-                    {timePart && <span className="ai-timeline-time">{timePart}</span>}
-                  </li>
-                );
-              })}
+        {/* ── Critical dates ─────────────────────────────────────────── */}
+        <Section id="critical-dates" title="Critical dates">
+          <ol className="td-dates" style={{ '--td-date-count': criticalDates.length }}>
+            {criticalDates.map((d) => {
+              const [datePart, timePart] = formatDateTimeDisplay(d.str || d.raw).split(', ');
+              const when = d.raw ? new Date(d.raw?.$date || d.raw) : null;
+              const passed = when && !isNaN(when.getTime()) && when.getTime() <= nowMs;
+              return (
+                <li key={d.label} className={`td-date ${d.tone || ''} ${passed ? 'is-passed' : ''}`}>
+                  <span className="td-date-dot" aria-hidden="true" />
+                  <span className="td-date-label">{d.label}</span>
+                  <span className="td-date-day">{datePart}</span>
+                  {timePart && <span className="td-date-time">{timePart}</span>}
+                </li>
+              );
+            })}
           </ol>
-        </Tile>
+        </Section>
 
         {/* Post-closing progress: bid opening → evaluation → award, from the portal's Tenders Status page */}
         <TenderProgress tender={tender} nowMs={nowMs} />
 
-        {/* Content Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-          
-          {/* Main 2-Span Column */}
-          <div className="lg:col-span-2 space-y-2">
-            
-            {/* Basic Details Section */}
-            <Tile tone="light" order={0}>
-              <p className="ai-tile-kicker ai-tile-kicker--strong">Basic details</p>
-              <div className="ai-tile-content">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                <div className="space-y-0.5">
-                  <DataRow label="Organisation Chain" value={tender.organisationChain?.replace(/\|\|/g, ' > ')} />
-                  <DataRow label="Tender Reference Number" value={tender.tenderReferenceNumber} />
-                  <DataRow label="Tender ID" value={tender.sourceTenderId} />
-                  <DataRow label="Withdrawal Allowed" value={tender.withdrawalAllowed} />
-                  <DataRow label="Tender Type" value={tender.tenderType} />
-                  <DataRow label="Tender Category" value={tender.tenderCategory} />
-                  <DataRow label="Technical Evaluation" value={tender.generalTechnicalEvaluationAllowed} />
-                </div>
-                <div className="space-y-0.5">
-                  <DataRow label="Payment Mode" value={tender.paymentMode} />
-                  <DataRow label="Form Of Contract" value={tender.formOfContract} />
-                  <DataRow label="No. of Covers" value={tender.noOfCovers} />
-                  <DataRow label="ItemWise Tech Eval" value={tender.itemWiseTechnicalEvaluationAllowed} />
-                  <DataRow label="Multi Currency BOQ" value={tender.isMultiCurrencyAllowedForBOQ} />
-                  <DataRow label="Multi Currency Fee" value={tender.isMultiCurrencyAllowedForFee} />
-                  <DataRow label="Two Stage Bidding" value={tender.allowTwoStageBidding} />
-                </div>
-              </div>
-            </div>
-            </Tile>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
 
-            {/* Work Execution Location Box */}
-            <Tile tone="light" order={1}>
-              <div className="ai-tile-head mb-4">
-                <div>
-                  <p className="ai-tile-kicker ai-tile-kicker--strong">Work execution location</p>
-                  <p className="ai-tile-sub">Geographic execution site and administrative jurisdiction</p>
-                </div>
+          {/* ── Main column ──────────────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-5 sm:space-y-6 min-w-0">
+
+            <Section id="basic-details" title="Basic details">
+              <Fields>
+                <Field wide label="Organisation Chain" value={tender.organisationChain?.replace(/\|\|/g, ' › ')} />
+                <Field label="Tender Reference Number" value={tender.tenderReferenceNumber} mono />
+                <Field label="Tender ID" value={tender.sourceTenderId} mono />
+                <Field label="Tender Type" value={tender.tenderType} />
+                <Field label="Tender Category" value={tender.tenderCategory} />
+                <Field label="Form Of Contract" value={tender.formOfContract} />
+                <Field label="Payment Mode" value={tender.paymentMode} />
+                <Field label="No. of Covers" value={tender.noOfCovers} />
+                <Field label="Withdrawal Allowed" value={tender.withdrawalAllowed} />
+                <Field label="Technical Evaluation" value={tender.generalTechnicalEvaluationAllowed} />
+                <Field label="ItemWise Tech Eval" value={tender.itemWiseTechnicalEvaluationAllowed} />
+                <Field label="Multi Currency BOQ" value={tender.isMultiCurrencyAllowedForBOQ} />
+                <Field label="Multi Currency Fee" value={tender.isMultiCurrencyAllowedForFee} />
+                <Field label="Two Stage Bidding" value={tender.allowTwoStageBidding} />
+              </Fields>
+            </Section>
+
+            <Section
+              id="work-location"
+              title="Work execution location"
+              description="Geographic execution site and administrative jurisdiction"
+              action={(
                 <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="ai-tile-link glass-btn">
                   <Map className="w-3.5 h-3.5" />
                   <span>Google Maps</span>
                   <ExternalLink className="w-3 h-3 opacity-60" />
                 </a>
-              </div>
-
-              {/* Specific Project Site Text */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700 mb-4">
-                <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">
-                  <Compass className="w-3 h-3" /> Project Site / Area Description
-                </span>
-                <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
-                  {workLoc.specificSite || 'Execution site as specified in tender document.'}
-                </p>
-              </div>
-
-              {/* Geographic Coordinates Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-0.5">District / City</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-techCoral shrink-0" />
-                    {workLoc.famousLocation}{tender.state ? `, ${tender.state}` : ''}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-0.5">Postal Pincode</span>
-                  <span className="text-xs sm:text-sm font-mono font-bold text-slate-900 dark:text-white">
-                    {workLoc.pincode}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-0.5">Portal Location</span>
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate block">
-                    {workLoc.rawLocation || 'Refer to Notice'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Office Details */}
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <span className="block text-[10px] font-bold uppercase text-slate-400">Portal Location</span>
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-0.5 block truncate" title={tender.location}>
-                    {tender.location || 'As specified in NIT'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs border-t border-slate-100 dark:border-slate-700 pt-3">
-                <div>
-                  <span className="block text-[10px] font-bold uppercase text-slate-400">Bid Opening Office:</span>
-                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-0.5">{tender.bidOpeningPlace && tender.bidOpeningPlace !== 'NA' ? tender.bidOpeningPlace : 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold uppercase text-slate-400">Pre-Bid Meeting:</span>
-                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-0.5">
-                    {tender.preBidMeetingAddress && tender.preBidMeetingAddress !== 'NA' 
-                      ? tender.preBidMeetingAddress 
-                      : (tender.preBidMeetingPlace && tender.preBidMeetingPlace !== 'NA' 
-                          ? tender.preBidMeetingPlace 
-                          : 'No Pre-Bid Meeting Scheduled')}
-                  </p>
-                </div>
-              </div>
-            </Tile>
-
-
-            {/* Other Important Documents List (Mandatory Bidder Checklist) */}
-            {tender.otherImportantDocuments && tender.otherImportantDocuments.length > 0 && (
-              <Tile tone="light" order={4}>
-                <div className="ai-tile-head">
-                  <p className="ai-tile-kicker ai-tile-kicker--strong">Other important documents</p>
-                  <p className="ai-tile-sub">{tender.otherImportantDocuments.length} mandatory document(s)</p>
-                </div>
-                <div className="ai-tile-content">
-                <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
-                  <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[500px]">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
-                      <tr>
-                        <th className="px-2.5 py-1.5 w-12">S.No</th>
-                        <th className="px-2.5 py-1.5 w-36">Category</th>
-                        <th className="px-2.5 py-1.5 w-48">Sub Category</th>
-                        <th className="px-2.5 py-1.5">Sub Category Description</th>
-                        <th className="px-2.5 py-1.5 w-24">Format/File</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tender.otherImportantDocuments.map((doc, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                          <td className="px-2.5 py-2 font-mono font-bold text-slate-900 dark:text-white">{doc.sNo || idx + 1}</td>
-                          <td className="px-2.5 py-2 font-medium">{doc.category}</td>
-                          <td className="px-2.5 py-2 font-semibold text-slate-900 dark:text-white">{doc.subCategory}</td>
-                          <td className="px-2.5 py-2 text-slate-600 dark:text-slate-300 font-normal leading-relaxed">{doc.description}</td>
-                          <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500">{doc.format || 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              </Tile>
-            )}
-            
-            {/* Work Item Details */}
-            <Tile tone="light" order={5}>
-              <p className="ai-tile-kicker ai-tile-kicker--strong">Work item details</p>
-              <div className="ai-tile-content">
-              
-              <div className="space-y-3 mb-4">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Title</span>
-                  <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-semibold leading-relaxed">
-                    {tender.title}
-                  </p>
-                </div>
-                {tender.workDescription && tender.workDescription !== tender.title && (
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Work Description</span>
-                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                      {tender.workDescription}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                <div className="space-y-0.5">
-                  <DataRow 
-                    label="Tender Value in ₹" 
-                    value={
-                      <span className="font-mono font-bold text-dalBlue dark:text-blue-300">
-                        {formatCurrencyINR(tender.estimatedValue)}
-                        {tender.estimatedValue ? ` (${tender.estimatedValue.toLocaleString('en-IN')})` : ''}
-                      </span>
-                    } 
-                  />
-                  <DataRow label="Product Category" value={tender.productCategory} />
-                  <DataRow label="Sub category" value={tender.subCategory} />
-                  <DataRow label="Contract Type" value={tender.contractType} />
-                  <DataRow label="Location" value={tender.location || 'As specified in NIT'} />
-                  <DataRow label="Pincode" value={<span className="font-mono">{tender.pincode || 'N/A'}</span>} />
-                  <DataRow label="Tenderer Class" value={tender.tendererClass} />
-                  <DataRow label="NDA/Pre Qualification" value={tender.ndaPreQualification} />
-                  <DataRow label="Independent External Monitor/Remarks" value={tender.independentExternalMonitorRemarks} />
-                </div>
-                <div className="space-y-0.5">
-                  <DataRow label="Bid Validity(Days)" value={<span className="font-mono">{tender.bidValidityDays ? `${tender.bidValidityDays}` : 'N/A'}</span>} />
-                  <DataRow label="Period Of Work(Days)" value={<span className="font-mono">{tender.periodOfWorkDays ? `${tender.periodOfWorkDays} Days` : 'N/A'}</span>} />
-                  <DataRow 
-                    label="Pre Bid Meeting Date" 
-                    value={
-                      tender.preBidMeetingPlace === 'NA' || !tender.preBidMeetingDate
-                        ? 'NA' 
-                        : <span className="font-mono">{formatDateTimeDisplay(parseDate(tender.preBidMeetingDate))}</span>
-                    } 
-                  />
-                  <DataRow label="Pre Bid Meeting Place" value={tender.preBidMeetingPlace} />
-                  <DataRow label="Pre Bid Meeting Address" value={tender.preBidMeetingAddress} />
-                  <DataRow label="Bid Opening Place" value={tender.bidOpeningPlace} />
-                  <DataRow label="Should Allow NDA Tender" value={tender.shouldAllowNDATender} />
-                  <DataRow label="Allow Preferential Bidder" value={tender.allowPreferentialBidder} />
-                </div>
-              </div>
-            </div>
-            </Tile>
-
-
-
-          </div>
-
-          {/* Right Column: Financials, Dates & Documents */}
-          <div className="space-y-2">
-            
-            {/* Tender Fee & EMD Details */}
-            <Tile tone="blue" order={7}>
-              <p className="ai-tile-kicker ai-tile-kicker--strong">Fee &amp; EMD details</p>
-              <dl className="ai-fields ai-fields--1">
-                <div className="ai-field">
-                  <dt>Tender Fee</dt>
-                  <dd className="big">{formatCurrencyINR(tender.tenderFee)}</dd>
-                  <dd className="ai-field-meta">Payable To: <strong>{tender.feePayableTo || 'N/A'}</strong></dd>
-                  <dd className="ai-field-meta">Payable At: <strong>{tender.feePayableAt || 'N/A'}</strong></dd>
-                  <dd className="ai-field-meta">Fee Exemption: <strong>{tender.tenderFeeExemptionAllowed || 'No'}</strong></dd>
-                </div>
-                <div className="ai-field">
-                  <dt>EMD Deposit</dt>
-                  <dd className="big">{formatCurrencyINR(tender.emdAmount)}<span className="ai-field-tag">{tender.emdFeeType || 'Fixed'}</span></dd>
-                  <dd className="ai-field-meta">Payable To: <strong>{tender.emdPayableTo || 'N/A'}</strong></dd>
-                  <dd className="ai-field-meta">Payable At: <strong>{tender.emdPayableAt || 'N/A'}</strong></dd>
-                  <dd className="ai-field-meta">Exemption: <strong>{tender.emdExemptionAllowed || 'No'}</strong></dd>
-                </div>
-              </dl>
-            </Tile>
-
-            {/* Payment instruments */}
-            <Tile tone="light" order={9}>
-              <p className="ai-tile-kicker ai-tile-kicker--strong">Payment instruments</p>
-              <div className="ai-tile-content">
-              {genuineInstruments.length > 0 ? (
-                <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
-                  <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[240px]">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
-                      <tr>
-                        <th className="px-2.5 py-1.5">S.No</th>
-                        <th className="px-2.5 py-1.5">Instrument Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {genuineInstruments.map((inst, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60">
-                          <td className="px-2.5 py-1.5 font-mono">{inst.sNo || idx + 1}</td>
-                          <td className="px-2.5 py-1.5 font-medium">{inst.instrumentType}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : tender.paymentMode === 'Offline' ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).</p>
-              ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400">Online payment mode (e-Payment / Net Banking / RTGS / NEFT).</p>
               )}
-            </div>
-            </Tile>
-
-            {/* Covers */}
-            <Tile tone="light" order={9}>
-              <div className="ai-tile-head">
-                <p className="ai-tile-kicker ai-tile-kicker--strong">Covers information</p>
-                <p className="ai-tile-sub">No. of Covers: {tender.noOfCovers || 2}</p>
-              </div>
-              <div className="ai-tile-content">
-              {genuineCovers.length > 0 ? (
-                <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
-                  <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 min-w-[340px]">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase text-slate-500 border-y border-slate-100 dark:border-slate-700">
-                      <tr>
-                        <th className="px-2.5 py-1.5 w-12">Cover</th>
-                        <th className="px-2.5 py-1.5 w-32">Cover Type</th>
-                        <th className="px-2.5 py-1.5">Description</th>
-                        <th className="px-2.5 py-1.5 w-24">Doc Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {genuineCovers.map((cover, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                          <td className="px-2.5 py-2 font-mono font-bold text-slate-900 dark:text-white">{cover.coverNo || idx + 1}</td>
-                          <td className="px-2.5 py-2 font-medium">{cover.coverType || 'Fee/PreQual/Technical'}</td>
-                          <td className="px-2.5 py-2 text-slate-600 dark:text-slate-300 font-normal leading-relaxed">{cover.description || 'Document requirement as per NIT'}</td>
-                          <td className="px-2.5 py-2 font-mono uppercase font-bold text-dalBlue dark:text-blue-400">{cover.documentType}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            >
+              <div className="space-y-3">
+                <div className="td-tile td-tile--feature">
+                  <span className="td-tile-label"><Compass /> Project Site / Area Description</span>
+                  <p className="td-tile-value">{workLoc.specificSite || 'Execution site as specified in tender document.'}</p>
                 </div>
+                <div className="td-tiles td-tiles--3">
+                  <div className="td-tile">
+                    <span className="td-tile-label"><MapPin className="text-techCoral" /> District / City</span>
+                    <p className="td-tile-value">{workLoc.famousLocation}{tender.state ? `, ${tender.state}` : ''}</p>
+                  </div>
+                  <div className="td-tile">
+                    <span className="td-tile-label">Postal Pincode</span>
+                    <p className="td-tile-value td-mono">{workLoc.pincode}</p>
+                  </div>
+                  <div className="td-tile">
+                    <span className="td-tile-label">Portal Location</span>
+                    <p className="td-tile-value">{workLoc.rawLocation || 'Refer to Notice'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="td-group">
+                <Fields>
+                  <Field wide label="Portal Location (NIT)" value={tender.location || 'As specified in NIT'} />
+                  <Field label="Bid Opening Office" value={tender.bidOpeningPlace && tender.bidOpeningPlace !== 'NA' ? tender.bidOpeningPlace : 'N/A'} />
+                  <Field
+                    label="Pre-Bid Meeting"
+                    value={tender.preBidMeetingAddress && tender.preBidMeetingAddress !== 'NA'
+                      ? tender.preBidMeetingAddress
+                      : (tender.preBidMeetingPlace && tender.preBidMeetingPlace !== 'NA'
+                          ? tender.preBidMeetingPlace
+                          : 'No Pre-Bid Meeting Scheduled')}
+                  />
+                </Fields>
+              </div>
+            </Section>
+
+            <Section id="work-item" title="Work item details">
+              <FieldGroup title="Work description">
+                <p className="td-prose-label">Title</p>
+                <p className="td-prose td-prose--strong">{tender.title}</p>
+                {tender.workDescription && tender.workDescription !== tender.title && (
+                  <>
+                    <p className="td-prose-label mt-4">Work Description</p>
+                    <p className="td-prose">{tender.workDescription}</p>
+                  </>
+                )}
+              </FieldGroup>
+
+              <FieldGroup title="Financial and contract information">
+                <Fields>
+                  <Field
+                    wide
+                    emphasis
+                    mono
+                    label="Tender Value in ₹"
+                    value={`${formatCurrencyINR(tender.estimatedValue)}${tender.estimatedValue ? ` (${tender.estimatedValue.toLocaleString('en-IN')})` : ''}`}
+                  />
+                  <Field label="Product Category" value={tender.productCategory} />
+                  <Field label="Sub category" value={tender.subCategory} />
+                  <Field label="Contract Type" value={tender.contractType} />
+                  <Field label="Tenderer Class" value={tender.tendererClass} />
+                </Fields>
+              </FieldGroup>
+
+              <FieldGroup title="Location">
+                <Fields>
+                  <Field label="Location" value={tender.location || 'As specified in NIT'} />
+                  <Field label="Pincode" value={tender.pincode || 'N/A'} mono />
+                </Fields>
+              </FieldGroup>
+
+              <FieldGroup title="Timeline and bid conditions">
+                <Fields>
+                  <Field label="Bid Validity(Days)" value={tender.bidValidityDays ? `${tender.bidValidityDays}` : 'N/A'} mono />
+                  <Field label="Period Of Work(Days)" value={tender.periodOfWorkDays ? `${tender.periodOfWorkDays} Days` : 'N/A'} mono />
+                  <Field
+                    label="Pre Bid Meeting Date"
+                    value={tender.preBidMeetingPlace === 'NA' || !tender.preBidMeetingDate ? 'NA' : formatDateTimeDisplay(parseDate(tender.preBidMeetingDate))}
+                    mono
+                  />
+                  <Field label="Pre Bid Meeting Place" value={tender.preBidMeetingPlace} />
+                  <Field label="Pre Bid Meeting Address" value={tender.preBidMeetingAddress} />
+                  <Field label="Bid Opening Place" value={tender.bidOpeningPlace} />
+                </Fields>
+              </FieldGroup>
+
+              <FieldGroup title="Eligibility and other conditions">
+                <Fields>
+                  <Field label="NDA/Pre Qualification" value={tender.ndaPreQualification} />
+                  <Field label="Should Allow NDA Tender" value={tender.shouldAllowNDATender} />
+                  <Field label="Allow Preferential Bidder" value={tender.allowPreferentialBidder} />
+                  <Field wide label="Independent External Monitor/Remarks" value={tender.independentExternalMonitorRemarks} />
+                </Fields>
+              </FieldGroup>
+            </Section>
+
+            <Section
+              id="covers"
+              title="Covers information"
+              description={`No. of Covers: ${tender.noOfCovers || 2}`}
+            >
+              {genuineCovers.length > 0 ? (
+                <table className="td-table">
+                  <thead>
+                    <tr>
+                      <th>Cover</th>
+                      <th>Cover Type</th>
+                      <th>Description</th>
+                      <th>Doc Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {genuineCovers.map((cover, idx) => {
+                      const docType = String(cover.documentType || '');
+                      const isSheet = /xls/i.test(docType);
+                      return (
+                        <tr key={idx}>
+                          <td data-label="Cover" className="td-num">{cover.coverNo || idx + 1}</td>
+                          <td data-label="Cover Type" className="td-strong">{cover.coverType || 'Fee/PreQual/Technical'}</td>
+                          <td data-label="Description">{cover.description || 'Document requirement as per NIT'}</td>
+                          <td data-label="Doc Type">
+                            {docType ? <Badge tone={isSheet ? 'xls' : 'pdf'} className="uppercase">{docType}</Badge> : <span className="text-slate-400">N/A</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               ) : (
-                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                <div className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
                   <p>Standard {tender.noOfCovers || 2}-cover bidding system:</p>
-                  <ul className="list-disc list-inside text-[11px] text-slate-600 dark:text-slate-300">
+                  <ul className="list-disc list-inside space-y-1">
                     <li>Cover 1: Fee / Pre-Qualification / Technical (.pdf)</li>
                     <li>Cover 2: Finance / BOQ Schedule (.xls)</li>
                   </ul>
                 </div>
               )}
-            </div>
-            </Tile>
-            {/* Official Documents & Attachments Section */}
-            <Tile tone="light" order={9}>
-              <div className="ai-tile-head mb-3.5">
-                <h3 className="ai-tile-heading">Tender documents &amp; attachments</h3>
-                {totalDocsCount > 0 ? (
-                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-dalBlue dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    {totalDocsCount} {totalDocsCount === 1 ? 'file' : 'files'}
-                  </span>
-                ) : (
-                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                    Pending Release
-                  </span>
-                )}
-              </div>
-              
-              <div className="space-y-4">
-                {/* 1. Official Tender Notices & Corrigenda */}
-                {nitDocs.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-techCoral shrink-0" />
-                        <span>Tender Notices &amp; Corrigenda ({nitDocs.length})</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">PDF Format</span>
-                    </div>
+            </Section>
 
-                    <div className="space-y-2">
-                      {nitDocs.map((doc, index) => {
-                        const docName = doc.documentName || `Tendernotice_${index + 1}.pdf`;
-                        const sizeStr = doc.documentSizeKb 
-                          ? (doc.documentSizeKb >= 1024 
-                              ? `${(doc.documentSizeKb / 1024).toFixed(1)} MB` 
-                              : `${doc.documentSizeKb} KB`)
-                          : null;
-
-                        return (
-                          <div 
-                            key={index} 
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60 hover:border-dalBlue dark:hover:border-blue-500 transition-all"
-                          >
-                            <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                              <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-950/50 text-chinarRed border border-red-200/80 dark:border-red-900/50 flex items-center justify-center shrink-0">
-                                <FileText className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate" title={docName}>
-                                  {docName}
-                                </p>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                  {doc.description || `Notice Inviting Tender #${index + 1}`}
-                                  {sizeStr && <span className="ml-1.5 font-mono text-slate-400">• {sizeStr}</span>}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                              <a 
-                                href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/notice/${index}`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-dalBlue hover:bg-dalBlue/90 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-xs transition-all cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>View Notice</span>
-                              </a>
-                              <a 
-                                href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/notice/${index}?download=1`}
-                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
-                                title="Download Notice"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </a>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}                {/* 2. Work Item Documents & BOQ Archive (.zip) */}
-                {zipUrl && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <FolderArchive className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>Work Item Documents &amp; BOQ Package</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Direct ZIP Archive</span>
-                    </div>
-
-                    {/* Main ZIP Download & Action Card */}
-                    <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-400 transition-all space-y-3">
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-start gap-2.5 min-w-0 w-full">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800 mt-0.5 sm:mt-0">
-                            <FolderArchive className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate" title={tender.zipFileName || 'Work_Documents_and_BOQ.zip'}>
-                                {tender.zipFileName || 'Work_Documents_and_BOQ.zip'}
-                              </p>
-                              <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                                ZIP Archive
-                              </span>
-                              {tender.zipFileSizeKb && (
-                                <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                                  {tender.zipFileSizeKb >= 1024 
-                                    ? `${(tender.zipFileSizeKb / 1024).toFixed(1)} MB` 
-                                    : `${tender.zipFileSizeKb} KB`}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                              Contains official BOQ spreadsheets (.xls/.xlsx), technical drawings, and work specifications.
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons: Direct ZIP Download + Unzip in Browser */}
-                        <div className="flex items-center gap-2 self-start flex-wrap max-w-full">
-                          <button
-                            type="button"
-                            onClick={handleDownloadZip}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition-all cursor-pointer"
-                            title="Directly download the complete .zip file"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Download ZIP</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={handleUnzip}
-                            disabled={isUnzipping}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                              extractedFiles
-                                ? 'bg-emerald-100/60 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                            }`}
-                          >
-                            {isUnzipping ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600 dark:text-emerald-400" />
-                                <span>Unpacking...</span>
-                              </>
-                            ) : extractedFiles ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Unpacked ({extractedFiles.length} files)</span>
-                              </>
-                            ) : (
-                              <>
-                                <FolderArchive className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Inspect &amp; Unzip Files</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Information note explaining on-demand unzipping */}
-                      {!extractedFiles && !isUnzipping && (
-                        <div className="flex items-start gap-2 p-2 rounded-lg bg-white/70 dark:bg-slate-900/50 border border-emerald-100 dark:border-emerald-900/40 text-[11px] text-slate-600 dark:text-slate-400">
-                          <Info className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                          <span>
-                            Looking for individual files without downloading the full archive? Click <strong>&quot;Inspect &amp; Unzip Files&quot;</strong> to unpack and download specific BOQ sheets (as the original Excel file or as CSV) or PDFs directly in your browser. (Note: Extraction may take a few moments depending on archive size).
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Unzipping In-Progress Loader */}
-                      {isUnzipping && (
-                        <div className="flex items-center justify-center gap-2.5 p-3 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-800 text-xs font-medium text-slate-700 dark:text-slate-300">
-                          <Loader2 className="w-4 h-4 animate-spin text-emerald-600 dark:text-emerald-400" />
-                          <span>Unpacking archive contents in your browser... Please wait a moment.</span>
-                        </div>
-                      )}
-
-                      {/* Unzip Error Message */}
-                      {unzipError && (
-                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-chinarRed dark:text-red-300">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0" />
-                            <span>{unzipError}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { setExtractedFiles(null); handleUnzip(); }}
-                            className="underline font-bold text-xs hover:text-red-800 cursor-pointer"
-                          >
-                            Retry
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Extracted Files Explorer List */}
-                      {extractedFiles && extractedFiles.length > 0 && (
-                        <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-900/50 space-y-2">
-                          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Extracted Files Available for Download ({extractedFiles.length})</span>
-                            </span>
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold uppercase shrink-0">Ready in Browser</span>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            {extractedFiles.map((file, idx) => {
-                              const isXls = file.type === 'BOQ';
-                              const isPdf = file.type === 'PDF';
-
-                              return (
-                                <div
-                                  key={idx}
-                                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg border bg-white dark:bg-slate-900/80 transition-all ${
-                                    isXls
-                                      ? 'border-emerald-200 dark:border-emerald-800 hover:border-emerald-400'
-                                      : isPdf
-                                      ? 'border-blue-200 dark:border-blue-800 hover:border-blue-400'
-                                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                                    <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${
-                                      isXls
-                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
-                                        : isPdf
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400'
-                                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                    }`}>
-                                      {isXls ? <FileSpreadsheet className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                                    </div>
-
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-1.5">
-                                        <p className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate" title={file.name}>
-                                          {file.name}
-                                        </p>
-                                        <span className={`text-[9px] font-sans font-bold px-1.5 py-0.2 rounded uppercase ${
-                                          isXls 
-                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' 
-                                            : isPdf 
-                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' 
-                                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                        }`}>
-                                          {file.type}
-                                        </span>
-                                      </div>
-                                      {file.sizeKb > 0 && (
-                                        <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                          {file.sizeKb >= 1024 ? `${(file.sizeKb / 1024).toFixed(1)} MB` : `${file.sizeKb} KB`}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                                    {isPdf && (
-                                      <a
-                                        href={file.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-all cursor-pointer"
-                                      >
-                                        <Eye className="w-3 h-3" />
-                                        <span>View</span>
-                                      </a>
-                                    )}
-                                    <a
-                                      href={file.url}
-                                      download={file.name}
-                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
-                                        isXls
-                                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                      }`}
-                                    >
-                                      <Download className="w-3 h-3" />
-                                      <span>{isXls ? 'Excel' : 'Download'}</span>
-                                    </a>
-                                    {isXls && (
-                                      <a
-                                        href={`${api.defaults.baseURL}/tenders/${tender._id || id}/zip/csv?entry=${encodeURIComponent(file.path || file.name)}`}
-                                        download
-                                        aria-label={`Download ${file.name} as CSV`}
-                                        title="Cell values only, opens in any app. Bid with the Excel file."
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all cursor-pointer"
-                                      >
-                                        <Download className="w-3 h-3" />
-                                        <span>CSV</span>
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Legacy Extracted Work Item Documents Fallback (for older data) */}
-                {!zipUrl && workDocs.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <FolderArchive className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>Work Item Documents &amp; Attachments ({workDocs.length})</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Extracted Files</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {workDocs.map((doc, index) => {
-                        const docName = doc.documentName || `Document_${index + 1}`;
-                        const lowerName = docName.toLowerCase();
-                        const isXls = lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || doc.documentType === 'BOQ';
-                        const isPdf = lowerName.endsWith('.pdf') || doc.documentType === 'TECHNICAL_DOCUMENT';
-                        const sizeStr = doc.documentSizeKb 
-                          ? (doc.documentSizeKb >= 1024 
-                              ? `${(doc.documentSizeKb / 1024).toFixed(1)} MB` 
-                              : `${doc.documentSizeKb} KB`)
-                          : null;
-
-                        return (
-                          <div 
-                            key={index} 
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border transition-all ${
-                              isXls 
-                                ? 'border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-400' 
-                                : isPdf 
-                                ? 'border-blue-200 dark:border-blue-800/70 bg-blue-50/50 dark:bg-blue-950/20 hover:border-blue-400'
-                                : 'border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60 hover:border-slate-400'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                                isXls 
-                                  ? 'bg-emerald-100/70 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800' 
-                                  : isPdf
-                                  ? 'bg-blue-100/70 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-800'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                              }`}>
-                                {isXls ? <FileSpreadsheet className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <p className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate" title={docName}>
-                                    {docName}
-                                  </p>
-                                  <span className={`text-[9px] font-sans font-bold px-1.5 py-0.2 rounded uppercase ${
-                                    isXls 
-                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' 
-                                      : isPdf 
-                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' 
-                                      : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                  }`}>
-                                    {doc.documentType || (isXls ? 'BOQ' : isPdf ? 'Drawing/Spec' : 'Attachment')}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                  {doc.description || (isXls ? 'BOQ Work Schedule' : 'Enclosed Document from Zip Archive')}
-                                  {sizeStr && <span className="ml-1.5 font-mono text-slate-400">• {sizeStr}</span>}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                              {isPdf ? (
-                                <>
-                                  <a 
-                                    href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-all cursor-pointer"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>View Document</span>
-                                  </a>
-                                  <a 
-                                    href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?download=1`}
-                                    download={docName}
-                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
-                                    title="Download File"
-                                  >
-                                    <Download className="w-3.5 h-3.5" />
-                                  </a>
-                                </>
-                              ) : isXls ? (
-                                <>
-                                <a 
-                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}`}
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  download={docName}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition-all cursor-pointer"
-                                >
-                                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                                  <span>Excel</span>
-                                </a>
-                                <a
-                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?format=csv`}
-                                  download
-                                  aria-label={`Download ${docName} as CSV`}
-                                  title="Cell values only, opens in any app. Bid with the Excel file."
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs transition-all cursor-pointer"
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                  <span>CSV</span>
-                                </a>
-                                </>
-                              ) : (
-                                <a 
-                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/documents/${doc.isLegacyDocument ? 'legacy/0' : `work/${index - (hasLegacyBoqDocument ? 1 : 0)}`}?download=1`}
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  download={docName}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs transition-all cursor-pointer"
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                  <span>Download File</span>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. Fallback when no documents yet released */}
-                {totalDocsCount === 0 && (
-                  <div className="p-4 sm:p-5 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/30 text-slate-800 dark:text-slate-200 space-y-3.5 shadow-xs">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
-                        <FileClock className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                          Tender Documents Not Available Yet
-                        </h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                          Official tender documents (NIT notice, drawings, specifications, and BOQ schedule) have not been released by the department on the portal yet.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-lg bg-white/90 dark:bg-slate-900/80 border border-amber-200/80 dark:border-amber-900/60 space-y-1">
-                      <span className="block text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
-                        Document Availability Schedule
-                      </span>
-                      <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {tender.documentDownloadStartDate ? (
-                          <>
-                            The documents will be available on{' '}
-                            <strong className="font-mono text-dalBlue dark:text-blue-300 font-bold">
-                              {formatDateTimeDisplay(parseDate(tender.documentDownloadStartDate))}
-                            </strong>
-                          </>
-                        ) : (
-                          'The documents will be available as soon as released on the official portal.'
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="pt-1">
-                      <Button 
-                        onClick={handleOpenPortalModal}
-                        className="w-full gap-1.5 bg-dalBlue hover:bg-dalBlue-700 text-white text-xs font-semibold py-2.5 shadow-xs"
-                      >
-                        Check Status on Official Portal <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Tile>
-
+            {/* Mandatory bidder checklist */}
+            {tender.otherImportantDocuments && tender.otherImportantDocuments.length > 0 && (
+              <Section
+                id="other-documents"
+                title="Other important documents"
+                description={`${tender.otherImportantDocuments.length} mandatory document(s)`}
+              >
+                <table className="td-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Category</th>
+                      <th>Sub Category</th>
+                      <th>Sub Category Description</th>
+                      <th>Format/File</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tender.otherImportantDocuments.map((doc, idx) => (
+                      <tr key={idx}>
+                        <td data-label="S.No" className="td-num">{doc.sNo || idx + 1}</td>
+                        <td data-label="Category">{doc.category}</td>
+                        <td data-label="Sub Category" className="td-strong">{doc.subCategory}</td>
+                        <td data-label="Description">{doc.description}</td>
+                        <td data-label="Format/File" className="td-mono text-xs">{doc.format || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
           </div>
+
+          {/* ── Side column: money first ─────────────────────────────── */}
+          <aside className="order-first lg:order-none space-y-5 sm:space-y-6 min-w-0 lg:sticky lg:top-24">
+            <Section id="fees" title="Fee & EMD details" className="td-money">
+              <div className="td-money-block">
+                <p className="td-money-label">Tender Fee</p>
+                <p className="td-money-amount">{formatCurrencyINR(tender.tenderFee)}</p>
+                <dl className="td-money-list">
+                  <div><dt>Payable To</dt><dd>{tender.feePayableTo || 'N/A'}</dd></div>
+                  <div><dt>Payable At</dt><dd>{tender.feePayableAt || 'N/A'}</dd></div>
+                  <div><dt>Fee Exemption</dt><dd>{tender.tenderFeeExemptionAllowed || 'No'}</dd></div>
+                </dl>
+              </div>
+              <div className="td-money-block">
+                <p className="td-money-label">
+                  EMD Deposit
+                  <Badge tone="accent">{tender.emdFeeType || 'Fixed'}</Badge>
+                </p>
+                <p className="td-money-amount">{formatCurrencyINR(tender.emdAmount)}</p>
+                <dl className="td-money-list">
+                  <div><dt>Payable To</dt><dd>{tender.emdPayableTo || 'N/A'}</dd></div>
+                  <div><dt>Payable At</dt><dd>{tender.emdPayableAt || 'N/A'}</dd></div>
+                  <div><dt>Exemption</dt><dd>{tender.emdExemptionAllowed || 'No'}</dd></div>
+                </dl>
+              </div>
+            </Section>
+
+            <Section id="payment-instruments" title="Payment instruments">
+              {genuineInstruments.length > 0 ? (
+                <table className="td-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Instrument Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {genuineInstruments.map((inst, idx) => (
+                      <tr key={idx}>
+                        <td data-label="S.No" className="td-num">{inst.sNo || idx + 1}</td>
+                        <td data-label="Instrument" className="td-strong">{inst.instrumentType}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="td-prose">
+                  {tender.paymentMode === 'Offline'
+                    ? 'Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).'
+                    : 'Online payment mode (e-Payment / Net Banking / RTGS / NEFT).'}
+                </p>
+              )}
+            </Section>
+          </aside>
         </div>
+
+        {/* ── Documents ──────────────────────────────────────────────── */}
+        <Section
+          id="documents"
+          title="Tender documents & attachments"
+          description="Official notices, corrigenda, BOQ and work documents from the portal"
+          action={totalDocsCount > 0
+            ? <Badge tone="accent">{totalDocsCount} {totalDocsCount === 1 ? 'file' : 'files'}</Badge>
+            : <Badge tone="warning">Pending Release</Badge>}
+        >
+          {/* 1. Official tender notices & corrigenda */}
+          {nitDocs.length > 0 && (
+            <div className="td-doc-group">
+              <div className="td-doc-group-head">
+                <h3 className="td-doc-group-title"><FileText className="text-techCoral" /> Tender Notices &amp; Corrigenda ({nitDocs.length})</h3>
+                <span className="td-doc-group-note">PDF Format</span>
+              </div>
+              <ul className="td-docs">
+                {nitDocs.map((doc, index) => (
+                  <DocRow
+                    key={index}
+                    icon={<FileText />}
+                    tone="pdf"
+                    name={doc.documentName || `Tendernotice_${index + 1}.pdf`}
+                    typeLabel="PDF"
+                    description={doc.description || `Notice Inviting Tender #${index + 1}`}
+                    size={formatSizeKb(doc.documentSizeKb)}
+                    actions={(
+                      <>
+                        <a href={`${docBase}/notice/${index}`} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--primary td-btn--sm">
+                          <Eye /> View Notice
+                        </a>
+                        <a href={`${docBase}/notice/${index}?download=1`} className="td-btn td-btn--secondary td-btn--icon" title="Download Notice" aria-label="Download Notice">
+                          <Download />
+                        </a>
+                      </>
+                    )}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* 2. Work item documents & BOQ archive (.zip) */}
+          {zipUrl && (
+            <div className="td-doc-group">
+              <div className="td-doc-group-head">
+                <h3 className="td-doc-group-title"><FolderArchive className="text-emerald-600 dark:text-emerald-400" /> Work Item Documents &amp; BOQ Package</h3>
+                <span className="td-doc-group-note">Direct ZIP Archive</span>
+              </div>
+
+              <ul className="td-docs">
+                <DocRow
+                  icon={<FolderArchive />}
+                  tone="zip"
+                  name={zipName}
+                  typeLabel="ZIP Archive"
+                  description="Contains official BOQ spreadsheets (.xls/.xlsx), technical drawings, and work specifications."
+                  size={formatSizeKb(tender.zipFileSizeKb)}
+                  actions={(
+                    <>
+                      <button type="button" onClick={handleDownloadZip} className="td-btn td-btn--success td-btn--sm" title="Directly download the complete .zip file">
+                        <Download /> Download ZIP
+                      </button>
+                      <button type="button" onClick={handleUnzip} disabled={isUnzipping} className="td-btn td-btn--secondary td-btn--sm">
+                        {isUnzipping ? (
+                          <><Loader2 className="animate-spin text-emerald-600" /> Unpacking...</>
+                        ) : extractedFiles ? (
+                          <><Check className="text-emerald-600" /> Unpacked ({extractedFiles.length} files)</>
+                        ) : (
+                          <><FolderArchive className="text-emerald-600" /> Inspect &amp; Unzip Files</>
+                        )}
+                      </button>
+                    </>
+                  )}
+                />
+              </ul>
+
+              {!extractedFiles && !isUnzipping && (
+                <div className="td-callout">
+                  <Info />
+                  <span>
+                    Looking for individual files without downloading the full archive? Click <strong>&quot;Inspect &amp; Unzip Files&quot;</strong> to unpack and download specific BOQ sheets (as the original Excel file or as CSV) or PDFs directly in your browser. (Note: Extraction may take a few moments depending on archive size).
+                  </span>
+                </div>
+              )}
+
+              {isUnzipping && (
+                <div className="td-callout">
+                  <Loader2 className="animate-spin" />
+                  <span>Unpacking archive contents in your browser... Please wait a moment.</span>
+                </div>
+              )}
+
+              {unzipError && (
+                <div className="td-callout td-callout--error" role="alert">
+                  <span className="flex items-center gap-2"><AlertCircle />{unzipError}</span>
+                  <button type="button" onClick={() => { setExtractedFiles(null); handleUnzip(); }} className="underline font-semibold cursor-pointer">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {extractedFiles && extractedFiles.length > 0 && (
+                <div className="mt-5">
+                  <div className="td-doc-group-head">
+                    <h4 className="td-doc-group-title text-sm"><Check className="text-emerald-600 dark:text-emerald-400" /> Extracted Files Available for Download ({extractedFiles.length})</h4>
+                    <Badge tone="success">Ready in Browser</Badge>
+                  </div>
+                  <ul className="td-docs">
+                    {extractedFiles.map((file, idx) => {
+                      const isXls = file.type === 'BOQ';
+                      const isPdf = file.type === 'PDF';
+                      return (
+                        <DocRow
+                          key={idx}
+                          icon={isXls ? <FileSpreadsheet /> : <FileText />}
+                          tone={isXls ? 'xls' : isPdf ? 'pdf' : 'neutral'}
+                          name={file.name}
+                          typeLabel={file.type}
+                          size={file.sizeKb > 0 ? formatSizeKb(file.sizeKb) : null}
+                          actions={(
+                            <>
+                              {isPdf && (
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--primary td-btn--sm">
+                                  <Eye /> View
+                                </a>
+                              )}
+                              <a href={file.url} download={file.name} className={`td-btn td-btn--sm ${isXls ? 'td-btn--success' : 'td-btn--secondary'}`}>
+                                <Download /> {isXls ? 'Excel' : 'Download'}
+                              </a>
+                              {isXls && (
+                                <a
+                                  href={`${api.defaults.baseURL}/tenders/${tender._id || id}/zip/csv?entry=${encodeURIComponent(file.path || file.name)}`}
+                                  download
+                                  aria-label={`Download ${file.name} as CSV`}
+                                  title="Cell values only, opens in any app. Bid with the Excel file."
+                                  className="td-btn td-btn--secondary td-btn--sm"
+                                >
+                                  <Download /> CSV
+                                </a>
+                              )}
+                            </>
+                          )}
+                        />
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Legacy extracted work item documents (older data without a ZIP) */}
+          {!zipUrl && workDocs.length > 0 && (
+            <div className="td-doc-group">
+              <div className="td-doc-group-head">
+                <h3 className="td-doc-group-title"><FolderArchive className="text-emerald-600 dark:text-emerald-400" /> Work Item Documents &amp; Attachments ({workDocs.length})</h3>
+                <span className="td-doc-group-note">Extracted Files</span>
+              </div>
+              <ul className="td-docs">
+                {workDocs.map((doc, index) => {
+                  const docName = doc.documentName || `Document_${index + 1}`;
+                  const lowerName = docName.toLowerCase();
+                  const isXls = lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || doc.documentType === 'BOQ';
+                  const isPdf = lowerName.endsWith('.pdf') || doc.documentType === 'TECHNICAL_DOCUMENT';
+                  const path = workDocPath(doc, index);
+                  return (
+                    <DocRow
+                      key={index}
+                      icon={isXls ? <FileSpreadsheet /> : <FileText />}
+                      tone={isXls ? 'xls' : isPdf ? 'pdf' : 'neutral'}
+                      name={docName}
+                      typeLabel={doc.documentType || (isXls ? 'BOQ' : isPdf ? 'Drawing/Spec' : 'Attachment')}
+                      description={doc.description || (isXls ? 'BOQ Work Schedule' : 'Enclosed Document from Zip Archive')}
+                      size={formatSizeKb(doc.documentSizeKb)}
+                      actions={isPdf ? (
+                        <>
+                          <a href={path} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--primary td-btn--sm">
+                            <Eye /> View Document
+                          </a>
+                          <a href={`${path}?download=1`} download={docName} className="td-btn td-btn--secondary td-btn--icon" title="Download File" aria-label="Download File">
+                            <Download />
+                          </a>
+                        </>
+                      ) : isXls ? (
+                        <>
+                          <a href={path} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--success td-btn--sm">
+                            <FileSpreadsheet /> Excel
+                          </a>
+                          <a
+                            href={`${path}?format=csv`}
+                            download
+                            aria-label={`Download ${docName} as CSV`}
+                            title="Cell values only, opens in any app. Bid with the Excel file."
+                            className="td-btn td-btn--secondary td-btn--sm"
+                          >
+                            <Download /> CSV
+                          </a>
+                        </>
+                      ) : (
+                        <a href={`${path}?download=1`} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--secondary td-btn--sm">
+                          <Download /> Download File
+                        </a>
+                      )}
+                    />
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* 3. Nothing released yet */}
+          {totalDocsCount === 0 && (
+            <div className="td-notice">
+              <div className="flex items-start gap-3">
+                <FileClock className="w-5 h-5 mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Tender Documents Not Available Yet</h3>
+                  <p className="td-card-desc mt-1">
+                    Official tender documents (NIT notice, drawings, specifications, and BOQ schedule) have not been released by the department on the portal yet.
+                  </p>
+                  <p className="td-prose-label mt-4">Document Availability Schedule</p>
+                  <p className="td-prose">
+                    {tender.documentDownloadStartDate ? (
+                      <>
+                        The documents will be available on{' '}
+                        <strong className="td-mono text-dalBlue dark:text-blue-300">
+                          {formatDateTimeDisplay(parseDate(tender.documentDownloadStartDate))}
+                        </strong>
+                      </>
+                    ) : (
+                      'The documents will be available as soon as released on the official portal.'
+                    )}
+                  </p>
+                  <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--primary mt-4">
+                    Check Status on Official Portal <ExternalLink />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Section>
 
         {/* Related open tenders: internal links for visitors and crawlers */}
         <SimilarTenders tender={tender} isClosed={Boolean((tender.bidSubmissionEndDate || tender.closingDate) && new Date(tender.bidSubmissionEndDate || tender.closingDate).getTime() < nowMs)} />
