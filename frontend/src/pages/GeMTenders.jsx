@@ -19,6 +19,7 @@ import {
   Calendar,
   Loader2,
   SlidersHorizontal,
+  Heart,
 } from 'lucide-react';
 
 import { gemApi } from '@/services/gemApi';
@@ -26,7 +27,8 @@ import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal'
 import { TenderCard } from '@/components/shared/TenderCard';
 import { SearchBeam } from '@/components/ui/search-beam';
 import { useSeo } from '@/hooks/useSeo';
-import { tenderPath } from '@/utils/tenderUrl';
+import { tenderPath, isGemTender } from '@/utils/tenderUrl';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
 
 const STATE_TABS = [
   { label: 'All Northern States', value: '' },
@@ -189,6 +191,11 @@ export default function GeMTenders() {
   const [sortBy, setSortBy] = useState('arrival');
   const [closingDays, setClosingDays] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  // "Saved only": limit the list to GeM bids the user hearted.
+  const [savedOnly, setSavedOnly] = useState(searchParams.get('saved') === '1');
+  const savedTenders = useBookmarkStore((st) => st.savedTenders);
+  const savedGemIds = savedTenders.filter(isGemTender).map((t) => t._id || t.sourceTenderId).filter(Boolean);
+  const savedIdsParam = savedOnly ? (savedGemIds.join(',') || 'none') : undefined;
   const [pagination, setPagination] = useState({ totalPages: 1, totalCount: 0 });
 
   // New Filter States
@@ -245,7 +252,8 @@ export default function GeMTenders() {
           publishedFrom: publishedRange === 'custom' && publishedFrom ? publishedFrom : undefined,
           publishedTo: publishedRange === 'custom' && publishedTo ? publishedTo : undefined,
           sortBy,
-          closingDays: closingDays || undefined
+          closingDays: closingDays || undefined,
+          savedIds: savedIdsParam,
         });
 
         if (!cancelled && res?.success) {
@@ -268,7 +276,7 @@ export default function GeMTenders() {
     };
     fetchTenders();
     return () => { cancelled = true; };
-  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, pdfStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo]);
+  }, [appliedSearch, closingDays, currentPage, selectedLocation, selectedState, pdfStatus, tenderStatusFilter, sortBy, procurementType, tenderAmountRange, minAmount, maxAmount, feePreference, publishedRange, publishedFrom, publishedTo, savedIdsParam]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -292,6 +300,7 @@ export default function GeMTenders() {
   };
 
   const handleResetFilters = () => {
+    setSavedOnly(false);
     setSelectedState('');
     setPdfStatus('');
     setTenderStatusFilter('active');
@@ -385,6 +394,27 @@ export default function GeMTenders() {
               {mobileFilterCount > 0 && <span className="gem-filter-toggle-count">{mobileFilterCount}</span>}
             </button>
           </form>
+          <div className="tender-source-chips" role="group" aria-label="Bid list">
+            <button
+              type="button"
+              onClick={() => { setSavedOnly(false); setCurrentPage(1); }}
+              aria-pressed={!savedOnly}
+              className={`tender-source-chip${!savedOnly ? ' is-active' : ''}`}
+            >
+              All GeM bids
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSavedOnly((v) => !v); setCurrentPage(1); }}
+              aria-pressed={savedOnly}
+              title={savedOnly ? 'Show all GeM bids' : 'Show only bids you saved'}
+              className={`tender-source-chip tender-source-chip--saved${savedOnly ? ' is-active' : ''}`}
+            >
+              <Heart className={`w-3.5 h-3.5${savedOnly ? ' fill-current' : ''}`} aria-hidden="true" />
+              Saved
+              <span className="tender-source-chip-count">{savedGemIds.length.toLocaleString('en-IN')}</span>
+            </button>
+          </div>
         </div>
 
         {/* 2. Interactive Filter Bar */}
@@ -705,7 +735,11 @@ export default function GeMTenders() {
             <Layers className="w-10 h-10 text-slate-400 mx-auto" />
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No GeM Bids Found</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              No live bids match your selected search criteria for {selectedState || 'this region'}. Try clearing some filters or changing state.
+              {savedOnly
+                ? (savedGemIds.length
+                  ? 'None of your saved GeM bids are in this view or match these filters. Try another status or clear filters.'
+                  : 'You have not saved any GeM bids yet. Tap the heart on a bid to save it here.')
+                : `No live bids match your selected search criteria for ${selectedState || 'this region'}. Try clearing some filters or changing state.`}
             </p>
             <button
               onClick={handleResetFilters}

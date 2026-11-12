@@ -9,6 +9,7 @@
  */
 
 import express from 'express';
+import { buildSavedTendersCondition } from '../utils/savedTendersFilter.js';
 import axios from 'axios';
 import Tender from '../models/Tender.js';
 import { gemAdapter, GEM_REGION_STATES, canonicalRegionState } from '../services/adapters/GeMAdapter.js';
@@ -80,6 +81,7 @@ router.get('/tenders', async (req, res, next) => {
       twoStageBidding,
       preferentialBidder,
       pdfStatus,
+      savedIds, // "Saved only": ids / bid numbers of the user's hearted bids
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10));
@@ -285,6 +287,9 @@ router.get('/tenders', async (req, res, next) => {
     if (tendererClass && typeof tendererClass === 'string' && tendererClass.trim() && tendererClass.toUpperCase() !== 'ANY') {
       conditions.push({ tendererClass: { $regex: escapeRegex(tendererClass), $options: 'i' } });
     }
+
+    const savedCondition = buildSavedTendersCondition(savedIds);
+    if (savedCondition) conditions.push(savedCondition);
 
     const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
 

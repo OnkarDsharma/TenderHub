@@ -4,6 +4,7 @@
  */
 
 import mongoose from 'mongoose';
+import { buildSavedTendersCondition } from '../utils/savedTendersFilter.js';
 import { idFromParam } from '../utils/tenderUrl.js';
 import { Readable } from 'stream';
 import Tender from '../models/Tender.js';
@@ -92,6 +93,7 @@ export const getTenders = async (req, res, next) => {
       preferentialBidder,
       closingDays,
       status = 'active', // 'active' | 'archived' | 'all'
+      savedIds, // "Saved only": ids / tender numbers of the user's hearted tenders
       progress, // post-closing result from the portal's Tenders Status page: 'evaluation' | 'awarded' | 'cancelled'
       sortBy = 'arrival' // 'arrival' | 'closingAsc' | 'closingDesc' | 'valueDesc' | 'valueAsc'
     } = req.query;
@@ -104,6 +106,10 @@ export const getTenders = async (req, res, next) => {
 
     // 2. Build array of base filter conditions (Category, Search, Department, Location, Portal, etc.)
     const baseConditions = [];
+
+    // Saved only (applies to the tab counts too, so Active/Archived/Expired show the saved split)
+    const savedCondition = buildSavedTendersCondition(savedIds);
+    if (savedCondition) baseConditions.push(savedCondition);
 
     // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana, Delhi)
     if (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL') {

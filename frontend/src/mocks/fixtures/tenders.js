@@ -438,6 +438,11 @@ export function filterTenders(source, q = {}) {
   const status = (q.status || 'active').toLowerCase();
   if (status !== 'all') rows = rows.filter((t) => statusBucket(t) === status);
 
+  if (q.savedIds !== undefined) {
+    const ids = new Set(String(q.savedIds).split(',').map((v) => v.trim()).filter((v) => v && v !== 'none'));
+    rows = rows.filter((t) => ids.has(t._id) || ids.has(t.sourceTenderId));
+  }
+
   const search = (q.search || q.keywords || '').trim().toLowerCase();
   if (search) {
     rows = rows.filter((t) => [t.title, t.sourceTenderId, t.tenderReferenceNumber, t.departmentName, t.organisationChain, t.location, t.productCategory]

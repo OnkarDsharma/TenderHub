@@ -1405,6 +1405,11 @@ html:not(.dark) [role="dialog"] > div {
 .dark .tender-source-chip.is-active { background: #2563eb; border-color: #2563eb; color: #fff; }
 .dark .tender-source-chip--pmgsy:not(.is-active) { border-color: #065f46; background: rgba(6, 95, 70, .25); color: #6ee7b7; }
 .dark .tender-source-chip--pmgsy.is-active { background: #059669; border-color: #059669; color: #fff; }
+.tender-source-chip--saved:not(.is-active) { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+.tender-source-chip--saved.is-active { background: #e11d48; border-color: #e11d48; color: #fff; }
+.tender-source-chip--saved .tender-source-chip-count { background: rgba(190, 18, 60, .12); }
+.dark .tender-source-chip--saved:not(.is-active) { border-color: #881337; background: rgba(136, 19, 55, .25); color: #fda4af; }
+.dark .tender-source-chip--saved.is-active { background: #e11d48; border-color: #e11d48; color: #fff; }
 
 .gem-filter-panel {
   /* Let the full filter card flow with the page instead of trapping its

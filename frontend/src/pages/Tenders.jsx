@@ -24,17 +24,19 @@ import {
   SlidersHorizontal,
   Loader2,
   ArrowUpRight,
+  Heart,
 } from 'lucide-react';
 
 import { useTenders, useTenderOrganizations, useTenderStats } from '@/hooks/useTenders';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { Button } from '@/components/ui/Button';
 import { FilterSelectionModal } from '@/components/tenders/FilterSelectionModal';
 import { SearchBeam } from '@/components/ui/search-beam';
 import { useSeo } from '@/hooks/useSeo';
-import { tenderPath } from '@/utils/tenderUrl';
+import { tenderPath, isGemTender } from '@/utils/tenderUrl';
 
 // Northern Region State Options matching GeM portal
 const STATE_OPTIONS = [
@@ -234,6 +236,20 @@ export default function Tenders() {
   const [location, setLocation] = useState(searchParams.get('location') || '');
   const [closingDays, setClosingDays] = useState(searchParams.get('closingDays') || '');
   const [status, setStatus] = useState('active');
+  // "Saved only": limit the list to tenders the user hearted (state-portal ones; GeM bids have their own page).
+  const [savedOnly, setSavedOnly] = useState(searchParams.get('saved') === '1');
+  const savedTenders = useBookmarkStore((st) => st.savedTenders);
+  const savedIds = savedTenders.filter((t) => !isGemTender(t)).map((t) => t._id || t.sourceTenderId).filter(Boolean);
+  const setSavedFilter = (next) => {
+    if (next === savedOnly) return;
+    setSavedOnly(next);
+    setCurrentPage(1);
+    setSearchParams((params) => {
+      const updated = new URLSearchParams(params);
+      if (next) updated.set('saved', '1'); else updated.delete('saved');
+      return updated;
+    }, { replace: true });
+  };
   // Post-closing result filter (Expired tab only): '' | 'evaluation' | 'awarded' | 'cancelled'.
   const [progress, setProgress] = useState('');
   const [sortBy, setSortBy] = useState('arrival');
@@ -297,6 +313,7 @@ export default function Tenders() {
     closingDays: closingDays,
     status: status,
     progress: status === 'expired' && progress ? progress : undefined,
+    savedIds: savedOnly ? (savedIds.join(',') || 'none') : undefined,
     sortBy: sortBy,
     page: currentPage,
     limit: queryLimit,
@@ -371,6 +388,7 @@ export default function Tenders() {
       tendererClass: '',
     });
     setClosingDays('');
+    setSavedOnly(false);
     setStatus('active');
     setSortBy('arrival');
     setCurrentPage(1);
@@ -463,7 +481,7 @@ export default function Tenders() {
             </button>
           </form>
           <div className="tender-source-chips" role="group" aria-label="Tender source">
-            <button type="button" onClick={() => handleSchemeChange('')} aria-pressed={!isPmgsy} className={`tender-source-chip${!isPmgsy ? ' is-active' : ''}`}>
+            <button type="button" onClick={() => { handleSchemeChange(''); setSavedFilter(false); }} aria-pressed={!isPmgsy && !savedOnly} className={`tender-source-chip${!isPmgsy && !savedOnly ? ' is-active' : ''}`}>
               All tenders
             </button>
             {(pmgsyCount > 0 || isPmgsy) && (
@@ -472,6 +490,17 @@ export default function Tenders() {
                 <span className="tender-source-chip-count">{pmgsyCount.toLocaleString('en-IN')}</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setSavedFilter(!savedOnly)}
+              aria-pressed={savedOnly}
+              title={savedOnly ? 'Show all tenders' : 'Show only tenders you saved'}
+              className={`tender-source-chip tender-source-chip--saved${savedOnly ? ' is-active' : ''}`}
+            >
+              <Heart className={`w-3.5 h-3.5${savedOnly ? ' fill-current' : ''}`} aria-hidden="true" />
+              Saved
+              <span className="tender-source-chip-count">{savedIds.length.toLocaleString('en-IN')}</span>
+            </button>
             <Link to="/gem-tenders" className="tender-source-chip">
               GeM bids <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
             </Link>
@@ -961,7 +990,11 @@ export default function Tenders() {
                 {status === 'archived' ? 'No Archived Notices Found' : status === 'expired' ? 'No Expired Notices Found' : 'No Matching Tender Notices'}
               </h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                No tender notices match your selected search criteria for {state || 'this region'}. Try clearing some filters or changing state.
+                {savedOnly
+                  ? (savedIds.length
+                    ? 'None of your saved tenders are in this tab or match these filters. Try another tab or clear filters.'
+                    : 'You have not saved any tenders yet. Tap the heart on a tender to save it here.')
+                  : `No tender notices match your selected search criteria for ${state || 'this region'}. Try clearing some filters or changing state.`}
               </p>
               <button
                 onClick={handleReset}
