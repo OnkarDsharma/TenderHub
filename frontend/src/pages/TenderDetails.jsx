@@ -523,8 +523,8 @@ export default function TenderDetails() {
         )}
 
         {/* Critical Dates — horizontal timeline */}
-        <Tile tone="light" order={0} className="ai-tile--full mb-2">
-          <p className="ai-tile-kicker">Critical dates</p>
+        <Tile tone="light" order={0} grid={false} className="ai-tile--full mb-2">
+          <p className="ai-tile-kicker ai-tile-kicker--strong">Critical dates</p>
           <ol className="ai-timeline filter-scrollbar">
             {[
               { label: 'Published', raw: tender.publishedDate, str: tender.publishedDateStr },
@@ -564,7 +564,7 @@ export default function TenderDetails() {
             
             {/* Basic Details Section */}
             <Tile tone="light" order={0}>
-              <p className="ai-tile-kicker">Basic details</p>
+              <p className="ai-tile-kicker ai-tile-kicker--strong">Basic details</p>
               <div className="ai-tile-content">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <div className="space-y-0.5">
@@ -593,10 +593,10 @@ export default function TenderDetails() {
             <Tile tone="light" order={1}>
               <div className="ai-tile-head mb-4">
                 <div>
-                  <p className="ai-tile-kicker">Work execution location</p>
+                  <p className="ai-tile-kicker ai-tile-kicker--strong">Work execution location</p>
                   <p className="ai-tile-sub">Geographic execution site and administrative jurisdiction</p>
                 </div>
-                <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="ai-tile-link">
+                <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="ai-tile-link glass-btn">
                   <Map className="w-3.5 h-3.5" />
                   <span>Google Maps</span>
                   <ExternalLink className="w-3 h-3 opacity-60" />
@@ -671,7 +671,7 @@ export default function TenderDetails() {
             {tender.otherImportantDocuments && tender.otherImportantDocuments.length > 0 && (
               <Tile tone="light" order={4}>
                 <div className="ai-tile-head">
-                  <p className="ai-tile-kicker">Other important documents</p>
+                  <p className="ai-tile-kicker ai-tile-kicker--strong">Other important documents</p>
                   <p className="ai-tile-sub">{tender.otherImportantDocuments.length} mandatory document(s)</p>
                 </div>
                 <div className="ai-tile-content">
@@ -705,7 +705,7 @@ export default function TenderDetails() {
             
             {/* Work Item Details */}
             <Tile tone="light" order={5}>
-              <p className="ai-tile-kicker">Work item details</p>
+              <p className="ai-tile-kicker ai-tile-kicker--strong">Work item details</p>
               <div className="ai-tile-content">
               
               <div className="space-y-3 mb-4">
@@ -775,7 +775,7 @@ export default function TenderDetails() {
             
             {/* Tender Fee & EMD Details */}
             <Tile tone="blue" order={7}>
-              <p className="ai-tile-kicker">Fee &amp; EMD details</p>
+              <p className="ai-tile-kicker ai-tile-kicker--strong">Fee &amp; EMD details</p>
               <dl className="ai-fields ai-fields--1">
                 <div className="ai-field">
                   <dt>Tender Fee</dt>
@@ -796,7 +796,7 @@ export default function TenderDetails() {
 
             {/* Payment instruments */}
             <Tile tone="light" order={9}>
-              <p className="ai-tile-kicker">Payment instruments</p>
+              <p className="ai-tile-kicker ai-tile-kicker--strong">Payment instruments</p>
               <div className="ai-tile-content">
               {genuineInstruments.length > 0 ? (
                 <div className="overflow-x-auto filter-scrollbar -mx-1 px-1">
@@ -828,7 +828,7 @@ export default function TenderDetails() {
             {/* Covers */}
             <Tile tone="light" order={9}>
               <div className="ai-tile-head">
-                <p className="ai-tile-kicker">Covers information</p>
+                <p className="ai-tile-kicker ai-tile-kicker--strong">Covers information</p>
                 <p className="ai-tile-sub">No. of Covers: {tender.noOfCovers || 2}</p>
               </div>
               <div className="ai-tile-content">

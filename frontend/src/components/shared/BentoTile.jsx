@@ -11,7 +11,7 @@ const tileReveal = {
   visible: (i) => ({ opacity: 1, y: 0, filter: 'blur(0px)', transition: { delay: i * 0.08, duration: 0.45, ease: 'easeOut' } }),
 };
 
-export function Tile({ tone = 'light', size, order = 0, className = '', children }) {
+export function Tile({ tone = 'light', size, order = 0, grid = true, className = '', children }) {
   return (
     <motion.div
       custom={order}
@@ -21,7 +21,7 @@ export function Tile({ tone = 'light', size, order = 0, className = '', children
       viewport={{ once: true, margin: '-40px' }}
       className={`ai-tile ai-tile--${tone} ${size ? `ai-tile--${size}` : ''} ${className}`}
     >
-      {tone === 'light' && <span className="ai-tile-grid" aria-hidden="true" />}
+      {tone === 'light' && grid && <span className="ai-tile-grid" aria-hidden="true" />}
       <div className="ai-tile-body">{children}</div>
     </motion.div>
   );

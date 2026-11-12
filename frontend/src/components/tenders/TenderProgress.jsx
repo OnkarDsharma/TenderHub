@@ -62,8 +62,10 @@ function StatusDocuments({ tenderId, documents }) {
         const sheet = isSpreadsheet(name);
         const Icon = sheet ? FileSpreadsheet : FileText;
         const size = formatSize(doc.documentSizeKb);
-        const origin = doc.parentDocument
-          ? `${SOURCE_LABELS[doc.source] || 'From'} ${doc.parentDocument}`
+        // Only files found inside another file name their parent; for page links the parent is just the page label.
+        const nested = doc.source === 'EMBEDDED_IN_PDF' || doc.source === 'LINKED_IN_PDF';
+        const origin = nested && doc.parentDocument
+          ? `${SOURCE_LABELS[doc.source]} ${doc.parentDocument}`
           : SOURCE_LABELS[doc.source] || 'Portal document';
         return (
           <div

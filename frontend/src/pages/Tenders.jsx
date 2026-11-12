@@ -5,7 +5,7 @@
  * verified metric counters, and unified View bid, AI analysis, and Download PDF actions.
  */
 import { useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   RotateCcw, 
@@ -23,7 +23,6 @@ import {
   Calendar,
   SlidersHorizontal,
   Loader2,
-  ArrowUpRight,
   Heart,
 } from 'lucide-react';
 
@@ -501,9 +500,6 @@ export default function Tenders() {
               Saved
               <span className="tender-source-chip-count">{savedIds.length.toLocaleString('en-IN')}</span>
             </button>
-            <Link to="/gem-tenders" className="tender-source-chip">
-              GeM bids <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-            </Link>
           </div>
         </div>
 
