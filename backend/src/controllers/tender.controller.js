@@ -23,6 +23,25 @@ import { isUnlimitedAccessUser } from '../utils/accessAllowlist.js';
 // Upper bound for one listing lookup, so a slow search fails instead of hanging.
 const LIST_QUERY_MAX_MS = 15000;
 
+/**
+ * Maps a portal filter value from the UI to a sourcePortal condition.
+ * Punjab is stored as PB_TENDERS; PUNJAB_TENDERS is still accepted so older links and saved filters keep working.
+ */
+const buildPortalCondition = (portal) => {
+  const cleanPortal = portal.trim().slice(0, 50);
+  if (/^jk_?tenders?$/i.test(cleanPortal)) return { sourcePortal: { $in: ['JK_TENDERS', 'JK_TENDER', 'jktenders.gov.in'] } };
+  if (/^gem$/i.test(cleanPortal)) return { sourcePortal: { $regex: /^gem$/i } };
+  if (/^cppp$/i.test(cleanPortal)) return { sourcePortal: { $regex: /cppp|eprocure/i } };
+  if (/^hp_?tenders?$/i.test(cleanPortal)) return { sourcePortal: { $regex: /hp_?tenders?/i } };
+  if (/^(pb|punjab)_?tenders?$/i.test(cleanPortal)) return { sourcePortal: { $in: ['PB_TENDERS', 'PUNJAB_TENDERS'] } };
+  if (/^ladakh_?tenders?$/i.test(cleanPortal)) return { sourcePortal: 'LADAKH_TENDERS' };
+  if (/^(hr|haryana)_?tenders?$/i.test(cleanPortal)) return { sourcePortal: 'HR_TENDERS' };
+  if (/^(dl|delhi)_?tenders?$/i.test(cleanPortal)) return { sourcePortal: 'DL_TENDERS' };
+  if (/^pmgsy$/i.test(cleanPortal)) return { sourcePortal: 'PMGSY' };
+  const escaped = cleanPortal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { sourcePortal: { $regex: `^${escaped}$`, $options: 'i' } };
+};
+
 const getTodayISTString = () => {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
@@ -53,6 +72,7 @@ export const getTenders = async (req, res, next) => {
       city,
       state,
       portal,
+      scheme,
       publishedRange,
       publishedFrom,
       publishedTo,
@@ -89,26 +109,14 @@ export const getTenders = async (req, res, next) => {
       baseConditions.push({ state: { $regex: `^${escapeRegex(state)}$`, $options: 'i' } });
     }
 
+    // Scheme Filter (e.g. ?scheme=PMGSY for rural road tenders)
+    if (scheme && typeof scheme === 'string' && /^pmgsy$/i.test(scheme.trim())) {
+      baseConditions.push({ scheme: 'PMGSY' });
+    }
+
     // Portal Filter
     if (portal && typeof portal === 'string' && portal.trim() && portal.toUpperCase() !== 'ALL') {
-      const cleanPortal = portal.trim();
-      if (/^jk_?tenders?$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: { $in: ['JK_TENDERS', 'JK_TENDER', 'jktenders.gov.in'] } });
-      } else if (/^gem$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: { $regex: /^gem$/i } });
-      } else if (/^cppp$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: { $regex: /cppp|eprocure/i } });
-      } else if (/^hp_?tenders?$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: { $regex: /hp_?tenders?/i } });
-      } else if (/^punjab_?tenders?$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: { $regex: /punjab/i } });
-      } else if (/^(hr|haryana)_?tenders?$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: 'HR_TENDERS' });
-      } else if (/^(dl|delhi)_?tenders?$/i.test(cleanPortal)) {
-        baseConditions.push({ sourcePortal: 'DL_TENDERS' });
-      } else {
-        baseConditions.push({ sourcePortal: { $regex: `^${escapeRegex(cleanPortal)}$`, $options: 'i' } });
-      }
+      baseConditions.push(buildPortalCondition(portal));
     } else if (portal && portal.toUpperCase() === 'ALL') {
       // Allow all portals without excluding GeM
     } else {
@@ -570,6 +578,7 @@ export const getTenders = async (req, res, next) => {
       'emdAmount',
       'emdExemptionAllowed',
       'sourcePortal',
+      'scheme',
       'tenderFee',
       'tenderFeeExemptionAllowed',
       'tenderType',
@@ -743,17 +752,23 @@ export const triggerAiAnalysis = async (req, res, next) => {
 export const getTenderStats = async (req, res, next) => {
   try {
     const now = new Date();
-    const { portal, state } = req.query;
-    const portalFilter = (typeof portal === 'string' && portal.trim()) ? { sourcePortal: portal.trim().slice(0, 50) } : { sourcePortal: { $ne: 'GEM' } };
+    const { portal, state, scheme } = req.query;
+    const hasPortal = typeof portal === 'string' && portal.trim();
+    const portalFilter = !hasPortal
+      ? { sourcePortal: { $ne: 'GEM' } }
+      : portal.trim().toUpperCase() === 'ALL' ? {} : buildPortalCondition(portal);
 
     // Regional State Filter (Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana, Delhi)
     const stateFilter = (state && typeof state === 'string' && state.trim() && state.toUpperCase() !== 'ALL')
       ? { state: { $regex: `^${state.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
       : {};
 
+    const schemeFilter = (typeof scheme === 'string' && /^pmgsy$/i.test(scheme.trim())) ? { scheme: 'PMGSY' } : {};
+
     const activeMatch = {
       ...portalFilter,
       ...stateFilter,
+      ...schemeFilter,
       status: 'ACTIVE',
       isDelisted: { $ne: true },
       closingDate: { $gte: now },

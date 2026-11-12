@@ -65,6 +65,28 @@
       "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/gem/:state"
     },
     {
+      "source": "/pmgsy-tenders",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/pmgsy"
+    },
+    {
+      "source": "/pmgsy-tenders/in/:state",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|redditbot|SkypeUriPreview|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|Claude-SearchBot|Claude-User|YouBot).*"
+        }
+      ],
+      "destination": "https://tenderhub-4nbc.onrender.com/prerender/landing/pmgsy/:state"
+    },
+    {
       "source": "/tenders/:id",
       "has": [
         {

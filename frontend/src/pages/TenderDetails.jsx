@@ -108,7 +108,17 @@ const PORTAL_STATE_BY_SOURCE = {
   DL_TENDERS: 'Delhi',
 };
 
+const PMGSY_PORTAL = {
+  name: 'PMGSY eProcurement',
+  host: 'pmgsytendersjk.gov.in',
+  government: 'National Rural Infrastructure Development Agency',
+};
+
 const getOfficialPortal = (tender) => {
+  if (tender?.scheme === 'PMGSY' || tender?.sourcePortal === 'PMGSY') {
+    const baseUrl = `https://${PMGSY_PORTAL.host}`;
+    return { ...PMGSY_PORTAL, searchUrl: `${baseUrl}/nicgep/app?page=FrontEndAdvancedSearch&service=page`, homeUrl: baseUrl };
+  }
   const normalizedState = String(tender?.state || '').trim().toLowerCase();
   const stateEntry = Object.entries(OFFICIAL_TENDER_PORTALS)
     .find(([state]) => state.toLowerCase() === normalizedState);

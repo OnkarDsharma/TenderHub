@@ -4,6 +4,7 @@
  *   GET /api/v1/seo/landing/tenders/:state           state landing page
  *   GET /api/v1/seo/landing/tenders/:state/:dept     department landing page
  *   GET /api/v1/seo/landing/gem/:state               GeM state landing page
+ *   GET /api/v1/seo/landing/pmgsy[/:state]           PMGSY hub / state landing page
  *   GET /api/v1/seo/similar/:id                      similar open tenders for a detail page
  * Responses are Redis-cached (fail-open) because the aggregations are shared by
  * every visitor and change only as scrapers add tenders.
@@ -34,15 +35,15 @@ async function cachedJson(key, ttlSeconds, build) {
 
 /** Landing data plus its SEO strings and path, or null (cached as null too). */
 export const landingWithSeo = (kind, state, dept) =>
-  cachedJson(`landing:${kind}:${state}:${dept || ''}`, 60 * 60, async () => {
+  cachedJson(`landing:${kind}:${state || ''}:${dept || ''}`, 60 * 60, async () => {
     const data = await getLanding(kind, state, dept);
-    return data ? { ...data, seo: landingSeo(data), path: landingPath(kind, data.state.slug, data.department?.slug) } : null;
+    return data ? { ...data, seo: landingSeo(data), path: landingPath(kind, data.state?.slug, data.department?.slug) } : null;
   });
 
 const landingHandler = (kind) => async (req, res, next) => {
   try {
     const { state, dept } = req.params;
-    const data = await landingWithSeo(kind, String(state).slice(0, 60), dept ? String(dept).slice(0, 120) : undefined);
+    const data = await landingWithSeo(kind, state ? String(state).slice(0, 60) : undefined, dept ? String(dept).slice(0, 120) : undefined);
     if (!data) return res.status(404).json({ error: 'Page not found' });
     res.set('Cache-Control', 'public, max-age=300');
     return res.status(200).json(data);
@@ -54,6 +55,8 @@ const landingHandler = (kind) => async (req, res, next) => {
 router.get('/landing/tenders/:state', landingHandler('tenders'));
 router.get('/landing/tenders/:state/:dept', landingHandler('tenders'));
 router.get('/landing/gem/:state', landingHandler('gem'));
+router.get('/landing/pmgsy', landingHandler('pmgsy'));
+router.get('/landing/pmgsy/:state', landingHandler('pmgsy'));
 
 router.get('/similar/:id', async (req, res, next) => {
   try {

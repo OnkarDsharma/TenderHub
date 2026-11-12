@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const tenderSchema = new mongoose.Schema({
   // --- Core Identification ---
   sourcePortal: { type: String, required: true, default: 'JK_TENDERS', index: true },
+  // Government scheme the tender belongs to (e.g. PMGSY rural roads); unset for general state tenders.
+  scheme: { type: String, enum: ['PMGSY'], index: true },
   state: { 
     type: String, 
     required: true, 

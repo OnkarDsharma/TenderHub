@@ -46,7 +46,7 @@ import { tenderPath } from '@/utils/tenderUrl';
 const quickLocations = [
   { label: 'Civil Works', query: 'Civil Works' },
   { label: 'Jal Shakti / PHE', query: 'Jal Shakti' },
-  { label: 'PMGSY Roads', query: 'Roads' },
+  { label: 'PMGSY Roads', href: '/pmgsy-tenders' },
   { label: 'Electrical Works', query: 'Electrical Works' },
   { label: 'Baramulla', query: 'Baramulla' },
   { label: 'Srinagar', query: 'Srinagar' },
@@ -82,6 +82,8 @@ export default function Home() {
 
   // Fetch real aggregated database statistics from backend
   const { data: stats, isLoading: isStatsLoading } = useTenderStats();
+  const { data: pmgsyStats } = useTenderStats({ scheme: 'PMGSY' });
+  const pmgsyCount = pmgsyStats?.activeTendersCount ?? 0;
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();
@@ -272,7 +274,7 @@ export default function Home() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleQuickClick(item.query)}
+                    onClick={() => (item.href ? navigate(item.href) : handleQuickClick(item.query))}
                     className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-white hover:bg-techCoral hover:text-white text-slate-700 transition-colors cursor-pointer border border-slate-200"
                   >
                     {item.label}
@@ -333,7 +335,7 @@ export default function Home() {
 
         {/* Bottom Hero Stats Bar */}
         <div className="home-statbar relative z-10 bg-white dark:bg-[#18191E] border-t border-slate-200 dark:border-slate-800 w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-x-6 gap-y-4">
             
             {/* Real Procurement Counters */}
             <div className="home-statbar-stats flex flex-wrap items-center gap-6 sm:gap-10">
@@ -378,6 +380,18 @@ export default function Home() {
               </div>
 
             </div>
+
+            {/* Where the notices come from; each source opens the list filtered to it. */}
+            <nav aria-label="Tender sources" className="home-sources">
+              <span className="home-sources-label">Live from</span>
+              <Link to="/tenders" className="home-source">State e-Procurement portals</Link>
+              <Link to="/gem-tenders" className="home-source">GeM</Link>
+              {pmgsyCount > 0 && (
+                <Link to="/pmgsy-tenders" className="home-source home-source--pmgsy">
+                  PMGSY Rural Roads <span className="home-source-count">{pmgsyCount.toLocaleString('en-IN')}</span>
+                </Link>
+              )}
+            </nav>
 
           </div>
         </div>
@@ -572,7 +586,7 @@ export default function Home() {
                       Official NIC Portal Direct
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Live sync with <span className="font-mono">jktenders.gov.in</span>, <span className="font-mono">eproc.punjab.gov.in</span>, <span className="font-mono">hptenders.gov.in</span> and GeM keeps notices aligned with official publications.
+                      Live sync with <span className="font-mono">jktenders.gov.in</span>, <span className="font-mono">eproc.punjab.gov.in</span>, <span className="font-mono">hptenders.gov.in</span>, PMGSY rural road portals and GeM keeps notices aligned with official publications.
                     </p>
                   </div>
                 </div>

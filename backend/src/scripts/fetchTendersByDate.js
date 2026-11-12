@@ -34,7 +34,8 @@
 
 import 'dotenv/config';
 import { connectDB, closeDB } from '../config/db.js';
-import { JKTenderDateAdapter, normalizeTargetDate } from '../services/adapters/JKTenderDateAdapter.js';
+import { normalizeTargetDate } from '../services/adapters/JKTenderDateAdapter.js';
+import { resolveNicPortals, createDateAdapter } from '../config/nicPortals.js';
 import { telegramService } from '../services/telegram.service.js';
 
 async function main() {
@@ -100,33 +101,10 @@ async function main() {
     }
   }
 
-  // Map state to Portal Configuration
-  let portalName = 'JK_TENDERS';
-  let baseUrl = 'https://jktenders.gov.in';
-  let stateName = 'Jammu & Kashmir';
-
-  const cleanState = stateArg.toLowerCase();
-  if (cleanState.includes('hp') || cleanState.includes('himachal')) {
-    portalName = 'HP_TENDERS';
-    baseUrl = 'https://hptenders.gov.in';
-    stateName = 'Himachal Pradesh';
-  } else if (cleanState.includes('pb') || cleanState.includes('punjab')) {
-    portalName = 'PB_TENDERS';
-    baseUrl = 'https://eproc.punjab.gov.in';
-    stateName = 'Punjab';
-  } else if (cleanState.includes('ladakh')) {
-    portalName = 'LADAKH_TENDERS';
-    baseUrl = 'https://tenders.ladakh.gov.in';
-    stateName = 'Ladakh';
-  } else if (cleanState === 'hr' || cleanState.includes('haryana')) {
-    portalName = 'HR_TENDERS';
-    baseUrl = 'https://etenders.hry.nic.in';
-    stateName = 'Haryana';
-  } else if (cleanState === 'dl' || cleanState.includes('delhi')) {
-    portalName = 'DL_TENDERS';
-    baseUrl = 'https://govtprocurement.delhi.gov.in';
-    stateName = 'Delhi';
-  }
+  // Map state / portal argument to its portal configuration (see config/nicPortals.js)
+  const portalConfig = resolveNicPortals(stateArg)[0];
+  const { portalName, baseUrl } = portalConfig;
+  const stateName = portalConfig.scheme ? `${portalConfig.scheme} (nationwide)` : portalConfig.state;
 
   const dateConfig = normalizeTargetDate(dateArg);
   const startTime = Date.now();
@@ -156,7 +134,7 @@ async function main() {
     });
   } catch {}
 
-  const adapter = new JKTenderDateAdapter(portalName, baseUrl, stateName);
+  const adapter = createDateAdapter(portalConfig);
 
   if (sweep) {
     try {

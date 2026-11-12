@@ -77,6 +77,9 @@ export default function App() {
             <Route path="/tenders/in/:state/:dept" element={<LandingPage kind="tenders" />} />
             <Route path="/gem-tenders/in" element={<Navigate to="/gem-tenders" replace />} />
             <Route path="/gem-tenders/in/:state" element={<LandingPage kind="gem" />} />
+            <Route path="/pmgsy-tenders" element={<LandingPage kind="pmgsy" />} />
+            <Route path="/pmgsy-tenders/in" element={<Navigate to="/pmgsy-tenders" replace />} />
+            <Route path="/pmgsy-tenders/in/:state" element={<LandingPage kind="pmgsy" />} />
             <Route path="/tenders/:id" element={<TenderDetails />} />
           </Routes>
           </Suspense>

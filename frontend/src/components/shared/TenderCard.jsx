@@ -36,11 +36,14 @@ const STATE_PORTALS = {
   LADAKH_TENDERS: `https://tenders.ladakh.gov.in${NIC_SEARCH_PATH}`,
   HR_TENDERS: `https://etenders.hry.nic.in${NIC_SEARCH_PATH}`,
   DL_TENDERS: `https://govtprocurement.delhi.gov.in${NIC_SEARCH_PATH}`,
+  // PMGSY is one nationwide database; every pmgsytenders host searches all of it.
+  PMGSY: `https://pmgsytendersjk.gov.in${NIC_SEARCH_PATH}`,
   GEM: 'https://bidplus.gem.gov.in/all-bids',
 };
 
 const resolvePortalUrl = (tender, isGeM) => {
   if (isGeM) return STATE_PORTALS.GEM;
+  if (tender.scheme === 'PMGSY') return STATE_PORTALS.PMGSY;
   if (STATE_PORTALS[tender.sourcePortal]) return STATE_PORTALS[tender.sourcePortal];
   const state = String(tender.state || '').toLowerCase();
   if (state.includes('ladakh')) return STATE_PORTALS.LADAKH_TENDERS;
@@ -86,6 +89,7 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
   const tenderId = tender._id || tender.sourceTenderId;
   const bookmarked = isBookmarked(tenderId);
   const isGeM = tender.sourcePortal === 'GEM' || tender.departmentCode === 'GEM' || String(tender.sourceTenderId || '').startsWith('GEM/');
+  const isPmgsy = tender.scheme === 'PMGSY' || tender.sourcePortal === 'PMGSY';
   // GeM geography = delivery state(s) from GeM's consignee-state search.
   const stateLabel = isGeM
     ? (tender.consigneeStates?.length ? tender.consigneeStates.join(' · ') : null)
@@ -202,6 +206,11 @@ export function TenderCard({ tender, onViewDetails, isBlurred = false, locationL
               <span className="truncate">{item}</span>
             </span>
           ))}
+          {isPmgsy && (
+            <span className="shrink-0 px-1.5 py-px rounded text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10" title="Pradhan Mantri Gram Sadak Yojana: rural road works">
+              PMGSY Rural Roads
+            </span>
+          )}
           {tender.isMultiTender && (
             <span className="shrink-0 px-1.5 py-px rounded text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10">
               Multi-work NIT

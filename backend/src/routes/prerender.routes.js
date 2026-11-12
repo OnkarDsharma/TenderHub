@@ -92,8 +92,10 @@ const handler = (section) => async (req, res, next) => {
 const landingHandler = (kind) => async (req, res, next) => {
   try {
     const { state, dept } = req.params;
-    const requested = `/${kind === 'gem' ? 'gem-tenders' : 'tenders'}/in/${state}${dept ? `/${dept}` : ''}`;
-    const data = await landingWithSeo(kind, String(state).slice(0, 60), dept ? String(dept).slice(0, 120) : undefined);
+    const requested = kind === 'pmgsy'
+      ? `/pmgsy-tenders${state ? `/in/${state}` : ''}`
+      : `/${kind === 'gem' ? 'gem-tenders' : 'tenders'}/in/${state}${dept ? `/${dept}` : ''}`;
+    const data = await landingWithSeo(kind, state ? String(state).slice(0, 60) : undefined, dept ? String(dept).slice(0, 120) : undefined);
     if (!data) return sendHtml(res, 404, renderNotFound(requested, 'page'));
     // Earlier or alternative department URLs (e.g. /haudd) 301 to the readable one.
     if (requested.toLowerCase() !== data.path) return res.redirect(301, `${siteUrl()}${data.path}`);
@@ -106,6 +108,8 @@ const landingHandler = (kind) => async (req, res, next) => {
 router.get('/prerender/landing/tenders/:state', landingHandler('tenders'));
 router.get('/prerender/landing/tenders/:state/:dept', landingHandler('tenders'));
 router.get('/prerender/landing/gem/:state', landingHandler('gem'));
+router.get('/prerender/landing/pmgsy', landingHandler('pmgsy'));
+router.get('/prerender/landing/pmgsy/:state', landingHandler('pmgsy'));
 router.get('/prerender/tenders/:id', handler('tenders'));
 router.get('/prerender/gem-tenders/:id', handler('gem-tenders'));
 

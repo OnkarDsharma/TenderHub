@@ -5,7 +5,7 @@
  * verified metric counters, and unified View bid, AI analysis, and Download PDF actions.
  */
 import { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Search, 
   RotateCcw, 
@@ -23,9 +23,10 @@ import {
   Calendar,
   SlidersHorizontal,
   Loader2,
+  ArrowUpRight,
 } from 'lucide-react';
 
-import { useTenders, useTenderOrganizations } from '@/hooks/useTenders';
+import { useTenders, useTenderOrganizations, useTenderStats } from '@/hooks/useTenders';
 import { TenderCard } from '@/components/shared/TenderCard';
 import { AuthPromptModal } from '@/components/shared/AuthPromptModal';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -225,6 +226,9 @@ export default function Tenders() {
   const [appliedSearch, setAppliedSearch] = useState(initialSearch);
 
   const [state, setState] = useState(initialState);
+  // Source scheme: '' = every state-portal tender, 'PMGSY' = PMGSY rural road tenders only.
+  const [scheme, setScheme] = useState(/^pmgsy$/i.test(searchParams.get('scheme') || '') ? 'PMGSY' : '');
+  const isPmgsy = scheme === 'PMGSY';
   const [category, setCategory] = useState(initialCategory);
   const [organization, setOrganization] = useState(searchParams.get('organization') || '');
   const [location, setLocation] = useState(searchParams.get('location') || '');
@@ -265,11 +269,15 @@ export default function Tenders() {
   // Standard query pagination limit for directory listings
   const queryLimit = 12;
   const { data: organizations = [] } = useTenderOrganizations(state);
+  // Open PMGSY count for the source chip; the chip stays hidden until there is something to show.
+  const { data: pmgsyStats } = useTenderStats({ scheme: 'PMGSY', state: state || undefined });
+  const pmgsyCount = pmgsyStats?.activeTendersCount ?? 0;
 
   // Construct API Query
   const queryFilters = {
     search: appliedSearch,
     state: state || undefined,
+    scheme: scheme || undefined,
     category: category,
     organisation: organization,
     location: location,
@@ -317,6 +325,18 @@ export default function Tenders() {
     setCurrentPage(1);
   };
 
+  const handleSchemeChange = (nextScheme) => {
+    setScheme(nextScheme);
+    setOrganization('');
+    setCurrentPage(1);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (nextScheme) next.set('scheme', nextScheme);
+      else next.delete('scheme');
+      return next;
+    }, { replace: true });
+  };
+
   const handlePublishedSelect = (preset) => {
     setPublishedRange(preset);
     if (preset !== 'custom') {
@@ -330,6 +350,7 @@ export default function Tenders() {
     setSearch('');
     setAppliedSearch('');
     setState('');
+    setScheme('');
     setCategory('');
     setOrganization('');
     setLocation('');
@@ -387,15 +408,17 @@ export default function Tenders() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
                 <Landmark className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
-                <span>Public Procurement Portal • {state || 'Northern Region'}</span>
+                <span>{isPmgsy ? 'PMGSY Rural Roads' : 'Public Procurement Portal'} • {state || 'Northern Region'}</span>
               </div>
             </div>
 
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
-              Public procurement &amp; tender notices
+              {isPmgsy ? 'PMGSY rural road tenders' : <>Public procurement &amp; tender notices</>}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs, with delivery locations across {state || 'Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana and Delhi'}.
+              {isPmgsy
+                ? `Road construction, upgradation, bridge and maintenance works under Pradhan Mantri Gram Sadak Yojana, issued by state rural road agencies in ${state || 'Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana and Delhi'}.`
+                : `Live bids from Central Government, State Departments, PWD, Jal Shakti, and PSUs, with delivery locations across ${state || 'Jammu & Kashmir, Himachal Pradesh, Punjab, Ladakh, Haryana and Delhi'}.`}
             </p>
           </div>
 
@@ -417,7 +440,7 @@ export default function Tenders() {
                 Closing within 48h
               </span>
             </div>
-            <p className="gem-source-note text-[11px] text-slate-500 dark:text-slate-400">Source: State eProcurement Portals</p>
+            <p className="gem-source-note text-[11px] text-slate-500 dark:text-slate-400">Source: {isPmgsy ? 'PMGSY eProcurement (pmgsytenders.gov.in)' : 'State eProcurement Portals'}</p>
           </div>
         </div>
 
@@ -436,6 +459,20 @@ export default function Tenders() {
               {mobileFilterCount > 0 && <span className="gem-filter-toggle-count">{mobileFilterCount}</span>}
             </button>
           </form>
+          <div className="tender-source-chips" role="group" aria-label="Tender source">
+            <button type="button" onClick={() => handleSchemeChange('')} aria-pressed={!isPmgsy} className={`tender-source-chip${!isPmgsy ? ' is-active' : ''}`}>
+              All tenders
+            </button>
+            {(pmgsyCount > 0 || isPmgsy) && (
+              <button type="button" onClick={() => handleSchemeChange('PMGSY')} aria-pressed={isPmgsy} className={`tender-source-chip tender-source-chip--pmgsy${isPmgsy ? ' is-active' : ''}`}>
+                PMGSY Rural Roads
+                <span className="tender-source-chip-count">{pmgsyCount.toLocaleString('en-IN')}</span>
+              </button>
+            )}
+            <Link to="/gem-tenders" className="tender-source-chip">
+              GeM bids <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
 
         {/* 2. Left Filter Panel (Sticky Sidebar) */}

@@ -7,7 +7,7 @@ import { hpTenderAdapter } from '../services/adapters/HPTenderAdapter.js';
 import { HARYANA_PORTAL, HARYANA_BASE_URL, HARYANA_STATE } from '../services/adapters/HaryanaTenderAdapter.js';
 import { DELHI_PORTAL, DELHI_BASE_URL, DELHI_STATE } from '../services/adapters/DelhiTenderAdapter.js';
 import { gemAdapter } from '../services/adapters/GeMAdapter.js';
-import { NIC_PORTALS } from '../config/nicPortals.js';
+import { NIC_PORTALS, createDateAdapter } from '../config/nicPortals.js';
 import SyncJob from '../models/SyncJob.js';
 import Tender from '../models/Tender.js';
 import SystemLog from '../models/SystemLog.js';
@@ -42,9 +42,10 @@ export const tenderSyncWorker = new Worker('TenderQueue', async (job) => {
 
       // Each pending record belongs to one portal; recover it on that portal.
       const result = { recoveredCount: 0, totalPdfsSecured: 0, totalChecked: 0 };
-      for (const { portalName, baseUrl, state } of NIC_PORTALS) {
+      for (const portal of NIC_PORTALS) {
+        const { portalName } = portal;
         try {
-          const dateAdapter = new JKTenderDateAdapter(portalName, baseUrl, state);
+          const dateAdapter = createDateAdapter(portal);
           const res = await dateAdapter.fetchPendingDocuments({ limit: 50, headless: true });
           result.recoveredCount += res.recoveredCount || 0;
           result.totalPdfsSecured += res.totalPdfsSecured || 0;

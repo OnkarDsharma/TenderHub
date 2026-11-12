@@ -6,6 +6,7 @@
  *   /tenders/in/:state           open tenders in a state, with department links
  *   /tenders/in/:state/:dept     open tenders from one department in a state
  *   /gem-tenders/in/:state       open GeM bids delivered to a state
+ *   /pmgsy-tenders[/in/:state]   open PMGSY rural road tenders (all covered states, or one)
  *
  * Data, title and description come from GET /seo/landing/... so the page and
  * the crawler HTML (backend prerender) always say the same thing.
@@ -22,7 +23,7 @@ import { LANDING_STATES } from '@/utils/landingStates';
 
 
 const fetchLanding = async (kind, state, dept) => {
-  const path = `/seo/landing/${kind}/${encodeURIComponent(state)}${dept ? `/${encodeURIComponent(dept)}` : ''}`;
+  const path = `/seo/landing/${kind}${state ? `/${encodeURIComponent(state)}` : ''}${dept ? `/${encodeURIComponent(dept)}` : ''}`;
   const res = await api.get(path, { timeout: 60000 });
   return res.data;
 };
@@ -30,8 +31,9 @@ const fetchLanding = async (kind, state, dept) => {
 export default function LandingPage({ kind = 'tenders' }) {
   const { state, dept } = useParams();
   const gem = kind === 'gem';
-  const sectionPath = gem ? '/gem-tenders' : '/tenders';
-  const sectionName = gem ? 'GeM Bids' : 'Tenders';
+  const pmgsy = kind === 'pmgsy';
+  const sectionPath = gem ? '/gem-tenders' : pmgsy ? '/pmgsy-tenders' : '/tenders';
+  const sectionName = gem ? 'GeM Bids' : pmgsy ? 'PMGSY Tenders' : 'Tenders';
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['landing', kind, state, dept || ''],
@@ -56,13 +58,15 @@ export default function LandingPage({ kind = 'tenders' }) {
     path: data.path,
   } : {
     title: is404 ? 'Page Not Found' : `${sectionName}`,
-    path: `${sectionPath}/in/${state}${dept ? `/${dept}` : ''}`,
+    path: state ? `${sectionPath}/in/${state}${dept ? `/${dept}` : ''}` : sectionPath,
     noindex: is404,
   });
 
-  const searchHref = data
-    ? `${sectionPath}?state=${encodeURIComponent(data.state.name)}${data.department ? `&organization=${encodeURIComponent(data.department.name)}` : ''}`
-    : sectionPath;
+  const searchHref = pmgsy
+    ? `/tenders?scheme=PMGSY${data?.state ? `&state=${encodeURIComponent(data.state.name)}` : ''}`
+    : data
+      ? `${sectionPath}?state=${encodeURIComponent(data.state.name)}${data.department ? `&organization=${encodeURIComponent(data.department.name)}` : ''}`
+      : sectionPath;
 
   return (
     <div className="gem-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8 transition-colors duration-200">
@@ -72,8 +76,10 @@ export default function LandingPage({ kind = 'tenders' }) {
         <nav aria-label="Breadcrumb" className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-1.5">
           <Link to="/" className="hover:text-dalBlue dark:hover:text-blue-300">Home</Link>
           <span aria-hidden="true">›</span>
-          <Link to={sectionPath} className="hover:text-dalBlue dark:hover:text-blue-300">{sectionName}</Link>
-          {data && (
+          {pmgsy && !state
+            ? <span className="text-slate-700 dark:text-slate-200">{sectionName}</span>
+            : <Link to={sectionPath} className="hover:text-dalBlue dark:hover:text-blue-300">{sectionName}</Link>}
+          {data?.state && (
             <>
               <span aria-hidden="true">›</span>
               {data.department
@@ -102,7 +108,7 @@ export default function LandingPage({ kind = 'tenders' }) {
               {is404 ? 'This page does not exist' : 'Could not load tenders'}
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {is404 ? 'There are no open tenders for this state or department right now.' : 'Please try again in a moment.'}
+              {is404 ? `There are no open ${pmgsy ? 'PMGSY ' : ''}tenders for this ${pmgsy ? 'state' : 'state or department'} right now.` : 'Please try again in a moment.'}
             </p>
             <Link to={sectionPath} className="inline-flex items-center gap-1.5 text-sm font-semibold text-dalBlue dark:text-blue-300 hover:underline">
               Browse all {sectionName.toLowerCase()} <ArrowRight className="w-4 h-4" />
@@ -117,13 +123,15 @@ export default function LandingPage({ kind = 'tenders' }) {
               <div className="space-y-1.5 max-w-2xl">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
                   <Landmark className="w-3.5 h-3.5 text-dalBlue dark:text-blue-400" />
-                  <span>{gem ? 'Government e-Marketplace' : 'State e-Procurement'} • {data.state.name}</span>
+                  <span>{gem ? 'Government e-Marketplace' : pmgsy ? 'PMGSY Rural Roads' : 'State e-Procurement'} • {data.state?.name || 'Northern Region'}</span>
                 </div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
                   {data.seo.heading}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {gem
+                  {pmgsy
+                    ? `${data.total.toLocaleString('en-IN')} Pradhan Mantri Gram Sadak Yojana tenders are open${data.state ? ` in ${data.state.name}` : ''}: rural road construction, upgradation, bridges and maintenance, tendered by state rural road agencies. Listed by closing date.`
+                    : gem
                     ? `${data.total.toLocaleString('en-IN')} GeM bids are open for delivery in ${data.state.name}, listed by closing date.`
                     : data.department
                       ? `${data.total.toLocaleString('en-IN')} tenders from ${data.department.name} in ${data.state.name} are open for bidding, listed by closing date.`
@@ -157,6 +165,28 @@ export default function LandingPage({ kind = 'tenders' }) {
                       >
                         {d.name}
                         <span className="text-slate-400 tabular-nums">{d.count}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* PMGSY: tenders by state */}
+            {pmgsy && data.states?.length > 0 && (
+              <section className="bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                  {data.state ? 'PMGSY tenders in other states' : 'PMGSY tenders by state'}
+                </h2>
+                <ul className="flex flex-wrap gap-2">
+                  {data.states.map((st) => (
+                    <li key={st.slug}>
+                      <Link
+                        to={`/pmgsy-tenders/in/${st.slug}`}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-dalBlue hover:text-dalBlue dark:hover:text-blue-300 transition-colors"
+                      >
+                        {st.name}
+                        <span className="text-slate-400 tabular-nums">{st.count}</span>
                       </Link>
                     </li>
                   ))}
@@ -207,7 +237,7 @@ export default function LandingPage({ kind = 'tenders' }) {
             </section>
 
             {/* Other states */}
-            <section className="bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800">
+            {!pmgsy && <section className="bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{sectionName} in other states</h2>
               <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                 {LANDING_STATES.filter((s) => s.slug !== data.state.slug).map((s) => (
@@ -216,7 +246,7 @@ export default function LandingPage({ kind = 'tenders' }) {
                   </li>
                 ))}
               </ul>
-            </section>
+            </section>}
           </>
         )}
       </div>

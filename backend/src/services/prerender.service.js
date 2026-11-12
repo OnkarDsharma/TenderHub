@@ -335,6 +335,7 @@ export function renderNotFound(path, kind = 'tender') {
  * @param {string} path public path of the page
  */
 export function renderLandingPage(data, seo, path) {
+  if (data.kind === 'pmgsy') return renderPmgsyLandingPage(data, seo, path);
   const base = siteUrl();
   const e = escapeHtml;
   const gem = data.kind === 'gem';
@@ -380,6 +381,57 @@ ${data.tenders.map(listItem).join('\n')}
 ${deptLinks}
 ${categoryList}
 ${otherStates}`;
+
+  const breadcrumbs = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: `${base}${c.path}` })),
+  };
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: seo.heading,
+    numberOfItems: data.tenders.length,
+    itemListElement: data.tenders.slice(0, 50).map((t, i) => ({ '@type': 'ListItem', position: i + 1, url: `${base}${pathFor(t)}`, name: clamp(cleanTitle(t.title) || t.sourceTenderId, 110) })),
+  };
+
+  return layout({
+    title: `${clamp(seo.title, MAX_TITLE)} | ${SITE_NAME}`,
+    description: clamp(seo.description, MAX_DESCRIPTION),
+    canonical: `${base}${path}`,
+    robots: 'index, follow, max-image-preview:large',
+    body,
+    structuredData: [breadcrumbs, itemList],
+  });
+}
+
+/** Crawler HTML for the PMGSY hub (/pmgsy-tenders) and state pages (/pmgsy-tenders/in/:state). */
+function renderPmgsyLandingPage(data, seo, path) {
+  const base = siteUrl();
+  const e = escapeHtml;
+  const crumbs = [
+    { name: 'Home', path: '/' },
+    { name: 'PMGSY Tenders', path: '/pmgsy-tenders' },
+    ...(data.state ? [{ name: data.state.name, path }] : []),
+  ];
+  const where = data.state ? data.state.name : 'the states covered by tndrr';
+  const intro = `${data.total} PMGSY (Pradhan Mantri Gram Sadak Yojana) tenders are currently open in ${where}. `
+    + 'PMGSY funds all-weather rural roads: new connectivity, upgradation, bridges and five-year maintenance, tendered by state rural road agencies. '
+    + 'Tenders are listed by closing date, soonest first.';
+  const stateLinks = data.states?.length
+    ? `<section><h2>${data.state ? 'PMGSY tenders in other states' : 'PMGSY tenders by state'}</h2><ul>
+${data.states.map((st) => `<li><a href="${e(`${base}/pmgsy-tenders/in/${st.slug}`)}">PMGSY tenders in ${e(st.name)}</a> (${st.count} open)</li>`).join('\n')}
+</ul></section>`
+    : '';
+
+  const body = `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i === crumbs.length - 1 ? `<span>${e(c.name)}</span>` : `<a href="${e(base + c.path)}">${e(c.name)}</a>`)).join(' › ')}</nav>
+<h1>${e(seo.heading)}</h1>
+<p>${e(intro)}</p>
+${data.tenders.length ? `<section><h2>Open PMGSY tenders</h2><ul>
+${data.tenders.map(listItem).join('\n')}
+</ul></section>` : '<p>No open PMGSY tenders right now. New ones are added daily.</p>'}
+${stateLinks}
+<p><a href="${e(`${base}/tenders`)}">Browse all government tenders</a></p>`;
 
   const breadcrumbs = {
     '@context': 'https://schema.org',

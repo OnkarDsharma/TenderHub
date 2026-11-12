@@ -118,6 +118,7 @@ export function buildHandlers() {
       const same = pool.filter((x) => x.departmentName === t.departmentName || x.state === t.state);
       return { data: same.slice(0, 6).map(toSummary) };
     }],
+    ['get', '/seo/landing/:kind', ({ params }) => mockLanding(params.kind)],
     ['get', '/seo/landing/:kind/:state', ({ params }) => mockLanding(params.kind, params.state)],
     ['get', '/seo/landing/:kind/:state/:dept', ({ params }) => mockLanding(params.kind, params.state, params.dept)],
 
@@ -320,8 +321,34 @@ export function buildHandlers() {
   ];
 }
 
+/** Dev mock of GET /seo/landing/pmgsy[/:state] (see getPmgsyLanding in backend landing.service.js). */
+function mockPmgsyLanding(stateSlug, deptSlug) {
+  if (deptSlug) throw httpError(404, { error: 'Page not found' });
+  const open = STATE_TENDERS.filter((t) => t.scheme === 'PMGSY' && statusBucket(t) === 'active');
+  const states = LANDING_STATES
+    .map((s) => ({ slug: s.slug, name: s.name, count: open.filter((t) => t.state === s.name).length }))
+    .filter((s) => s.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const state = stateSlug ? LANDING_STATES.find((s) => s.slug === stateSlug) : null;
+  if (stateSlug && (!state || !states.some((s) => s.slug === stateSlug))) throw httpError(404, { error: 'Page not found' });
+  const tenders = state ? open.filter((t) => t.state === state.name) : open;
+  const heading = state ? `PMGSY Tenders in ${state.name}` : 'PMGSY Rural Road Tenders';
+  return {
+    kind: 'pmgsy',
+    state,
+    department: null,
+    total: tenders.length,
+    tenders: tenders.map(toSummary),
+    departments: [],
+    states: states.filter((s) => s.slug !== stateSlug),
+    seo: { heading, title: heading, description: `${tenders.length} open ${heading.toLowerCase()} (mock data).` },
+    path: `/pmgsy-tenders${state ? `/in/${state.slug}` : ''}`,
+  };
+}
+
 /** Dev mock of GET /seo/landing/:kind/:state[/:dept] (see backend landing.service.js). */
 function mockLanding(kind, stateSlug, deptSlug) {
+  if (kind === 'pmgsy') return mockPmgsyLanding(stateSlug, deptSlug);
   const state = LANDING_STATES.find((s) => s.slug === stateSlug);
   if (!state || (kind === 'gem' && deptSlug)) throw httpError(404, { error: 'Page not found' });
   const gem = kind === 'gem';

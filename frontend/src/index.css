@@ -1361,6 +1361,51 @@ html:not(.dark) [role="dialog"] > div {
 @media (min-width: 640px) {
   .gem-search-sticky { top: calc(5rem + var(--gem-sticky-gap)); }
 }
+/* Tender source chips (All / PMGSY / GeM) under the listing search bar. */
+.tender-source-chips {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .65rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tender-source-chips::-webkit-scrollbar { display: none; }
+.tender-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  flex: 0 0 auto;
+  height: 2rem;
+  padding: 0 .8rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.tender-source-chip:hover { border-color: #cbd5e1; background: #f1f5f9; color: #0f172a; }
+.tender-source-chip.is-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.tender-source-chip--pmgsy:not(.is-active) { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+.tender-source-chip--pmgsy.is-active { background: #047857; border-color: #047857; }
+.tender-source-chip-count {
+  min-width: 1.25rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: rgba(4, 120, 87, .12);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.tender-source-chip.is-active .tender-source-chip-count { background: rgba(255, 255, 255, .2); }
+.dark .tender-source-chip { border-color: #334155; background: #1e293b; color: #cbd5e1; }
+.dark .tender-source-chip:hover { border-color: #475569; color: #f8fafc; }
+.dark .tender-source-chip.is-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.dark .tender-source-chip--pmgsy:not(.is-active) { border-color: #065f46; background: rgba(6, 95, 70, .25); color: #6ee7b7; }
+.dark .tender-source-chip--pmgsy.is-active { background: #059669; border-color: #059669; color: #fff; }
+
 .gem-filter-panel {
   /* Let the full filter card flow with the page instead of trapping its
      lower controls in a nested, independently scrolling sidebar. */
@@ -3571,3 +3616,49 @@ body { background-color: #f7faff; }
   .gem-pagination input { height: 40px !important; }
   .gem-pagination > div > button { width: 40px; }
 }
+
+/* Home hero: tender source strip ("Live from …") beside the stat counters. */
+.home-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  flex-basis: 100%;
+  padding-top: .9rem;
+  border-top: 1px solid #edf0f3;
+}
+.dark .home-sources { border-top-color: #30333d; }
+.home-sources-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-right: .15rem;
+}
+.home-source {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  height: 2rem;
+  padding: 0 .8rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: .75rem;
+  font-weight: 600;
+  transition: border-color .15s, color .15s;
+}
+.home-source:hover { border-color: #2563eb; color: #2563eb; }
+.home-source--pmgsy { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+.home-source--pmgsy:hover { border-color: #047857; color: #065f46; }
+.home-source-count {
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: rgba(4, 120, 87, .12);
+  font-variant-numeric: tabular-nums;
+}
+.dark .home-sources-label { color: #94a3b8; }
+.dark .home-source { border-color: #334155; color: #cbd5e1; }
+.dark .home-source:hover { border-color: #60a5fa; color: #93c5fd; }
+.dark .home-source--pmgsy { border-color: #065f46; background: rgba(6, 95, 70, .25); color: #6ee7b7; }

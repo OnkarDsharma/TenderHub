@@ -22,8 +22,7 @@
 
 import 'dotenv/config';
 import { connectDB, closeDB } from '../config/db.js';
-import { JKTenderDateAdapter } from '../services/adapters/JKTenderDateAdapter.js';
-import { resolveNicPortals } from '../config/nicPortals.js';
+import { resolveNicPortals, createDateAdapter } from '../config/nicPortals.js';
 import { telegramService } from '../services/telegram.service.js';
 
 async function main() {
@@ -94,9 +93,9 @@ async function main() {
       totalChecked: 0, recoveredCount: 0, stillPendingCount: 0,
       totalPdfsSecured: 0, totalBoqsSecured: 0, totalCaptchaAttempts: 0, totalCaptchaSuccess: 0
     };
-    for (const { portalName, baseUrl, state } of portals) {
-      console.log(`\n🏛️ ${state} (${portalName})`);
-      adapter = new JKTenderDateAdapter(portalName, baseUrl, state);
+    for (const portal of portals) {
+      console.log(`\n🏛️ ${portal.scheme || portal.state} (${portal.portalName})`);
+      adapter = createDateAdapter(portal);
       try {
         const res = await adapter.fetchPendingDocuments({
           limit,
@@ -106,7 +105,7 @@ async function main() {
         });
         for (const key of Object.keys(summary)) summary[key] += res?.[key] || 0;
       } catch (portalErr) {
-        console.error(`❌ ${portalName} recovery failed: ${portalErr.message}`);
+        console.error(`❌ ${portal.portalName} recovery failed: ${portalErr.message}`);
       }
     }
 

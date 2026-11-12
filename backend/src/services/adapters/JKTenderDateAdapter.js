@@ -122,11 +122,19 @@ export function normalizeTargetDate(inputDate) {
 }
 
 export class JKTenderDateAdapter extends TenderSourceAdapter {
-  constructor(portalName = 'JK_TENDERS', baseUrl = 'https://jktenders.gov.in', state = 'Jammu & Kashmir') {
+  /**
+   * @param {Object} [options]
+   * @param {string} [options.scheme] - Scheme tag saved on every tender (e.g. 'PMGSY')
+   * @param {(orgName: string) => string|null} [options.stateForOrganisation] - For nationwide portals: returns the
+   *   organisation's state, or null to skip that organisation entirely
+   */
+  constructor(portalName = 'JK_TENDERS', baseUrl = 'https://jktenders.gov.in', state = 'Jammu & Kashmir', options = {}) {
     super(portalName);
     this.portalName = portalName;
     this.baseUrl = baseUrl;
     this.state = state;
+    this.scheme = options.scheme || null;
+    this.stateForOrganisation = options.stateForOrganisation || null;
     this.departmentRootUrl = `${baseUrl}/nicgep/app?page=FrontEndTendersByOrganisation&service=page`;
     this.browser = null;
     this.context = null;
@@ -134,6 +142,23 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
     this.captchaCount = 0;
     this.captchaAttempts = 0;
     this.captchaSuccesses = 0;
+  }
+
+  /** Whether an organisation on the portal should be crawled (nationwide portals skip out-of-scope states). */
+  includesOrganisation(orgName) {
+    if (!this.stateForOrganisation) return true;
+    const state = this.stateForOrganisation(orgName);
+    if (!state) logger.info(`⏩ [${this.portalName}] Skipping organisation outside configured states: "${orgName}"`);
+    return !!state;
+  }
+
+  /** The state a tender is filed under: per organisation on nationwide portals, otherwise the portal's state. */
+  resolveTenderState(item) {
+    if (this.stateForOrganisation) {
+      const orgName = item.departmentName || String(item.organisationChain || '').split('||')[0];
+      return this.stateForOrganisation(orgName) || this.state;
+    }
+    return this.state || item.state || 'Jammu & Kashmir';
   }
 
   async humanDelay(page, minMs = 300, maxMs = 600) {
@@ -235,6 +260,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
           console.log(`⏩ Skipping excluded organisation: "${org.orgName}"`);
           continue;
         }
+        if (!this.includesOrganisation(org.orgName)) continue;
 
         console.log(`\n----------------------------------------------------------------------`);
         console.log(`🏛️ [${o + 1}/${organisations.length}]${shardTotal ? ` [Shard ${shardPart}/${shardTotal}]` : ''} Organisation: "${org.orgName}" (${org.tenderCount} active tenders on portal)`);
@@ -593,7 +619,7 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       })).filter(org => {
         if (orgFilter && !org.orgName.toLowerCase().includes(orgFilter.toLowerCase())) return false;
         if (excludeOrg && org.orgName.toLowerCase().includes(excludeOrg.toLowerCase())) return false;
-        return true;
+        return this.includesOrganisation(org.orgName);
       });
 
       console.log(`🏛️ ${organisations.length} organisations to sweep.\n`);
@@ -1707,7 +1733,8 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
 
     const docToSave = {
       sourcePortal: item.sourcePortal || this.portalName || 'JK_TENDERS',
-      state: item.state || this.state || 'Jammu & Kashmir',
+      state: this.resolveTenderState(item),
+      ...(this.scheme ? { scheme: this.scheme } : {}),
       sourceTenderId: item.sourceTenderId,
       title: item.title,
       departmentCode: deptCode,
@@ -1812,7 +1839,6 @@ export class JKTenderDateAdapter extends TenderSourceAdapter {
       baseTenderId: item.baseTenderId || null,
       relatedTenderIds: Array.isArray(item.relatedTenderIds) ? item.relatedTenderIds : [],
       r2StorageKey: folderKey,
-      state: this.state || item.state || 'Jammu & Kashmir',
       status: 'ACTIVE',
       updatedAt: new Date()
     };

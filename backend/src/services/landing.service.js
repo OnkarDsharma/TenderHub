@@ -7,6 +7,8 @@
  *   /tenders/in/:state           open state-portal tenders in a state
  *   /tenders/in/:state/:dept     open tenders from one department in a state
  *   /gem-tenders/in/:state       open GeM bids delivered to a state
+ *   /pmgsy-tenders               open PMGSY rural road tenders in every covered state
+ *   /pmgsy-tenders/in/:state     open PMGSY rural road tenders in a state (only when it has any)
  *
  * Only pages with real content exist: a department page needs at least
  * MIN_DEPARTMENT_TENDERS open tenders, so search engines never see thin pages.
@@ -37,7 +39,7 @@ const stateMatch = (name) => ({ $regex: `^${escapeRegex(name)}$`, $options: 'i' 
 
 /** Fields a tender card needs (no internal storage fields). */
 export const CARD_FIELDS = [
-  '_id', 'title', 'sourceTenderId', 'tenderReferenceNumber', 'sourcePortal', 'departmentCode', 'departmentName',
+  '_id', 'title', 'sourceTenderId', 'tenderReferenceNumber', 'sourcePortal', 'scheme', 'departmentCode', 'departmentName',
   'organisationChain', 'location', 'locationVerificationStatus', 'state', 'consigneeStates', 'productCategory',
   'estimatedValue', 'emdAmount', 'publishedDate', 'publishedDateStr', 'closingDate', 'closingDateStr',
   'bidSubmissionEndDate', 'bidSubmissionEndDateStr', 'isMultiTender', 'pdfParseStatus', 'pdfUrls', 'nitDocuments', 'detailsUrl',
@@ -91,6 +93,44 @@ async function gemCategoriesInState(state, now = new Date()) {
 
 const publicDepartment = ({ slug, name, count: n }) => ({ slug, name, count: n });
 
+const activePmgsyFilter = (now) => ({ ...activeTenderFilter(now), scheme: 'PMGSY' });
+
+/** Open PMGSY tender counts per covered state, biggest first (states with none are left out). */
+async function pmgsyStateCounts(now = new Date()) {
+  const rows = await Tender.aggregate([
+    { $match: activePmgsyFilter(now) },
+    { $group: { _id: '$state', count: { $sum: 1 } } },
+  ]).option({ maxTimeMS: 15000 });
+  const byName = new Map(rows.map((r) => [String(r._id).toLowerCase(), r.count]));
+  return LANDING_STATES
+    .map((st) => ({ slug: st.slug, name: st.name, count: byName.get(st.name.toLowerCase()) || 0 }))
+    .filter((st) => st.count > 0)
+    .sort((a, b) => b.count - a.count);
+}
+
+/** PMGSY hub (no state) or state page; a state page exists only while it has open tenders. */
+async function getPmgsyLanding(stateSlug, now) {
+  const states = await pmgsyStateCounts(now);
+  if (!stateSlug) {
+    const filter = { ...activePmgsyFilter(now), state: { $in: LANDING_STATES.map((st) => st.name) } };
+    const [total, tenders] = await Promise.all([count(filter), listTenders(filter)]);
+    return { kind: 'pmgsy', state: null, department: null, total, tenders, departments: [], states };
+  }
+  const state = stateBySlug(stateSlug);
+  const entry = state && states.find((st) => st.slug === state.slug);
+  if (!entry) return null;
+  const tenders = await listTenders({ ...activePmgsyFilter(now), state: stateMatch(state.name) });
+  return {
+    kind: 'pmgsy',
+    state: { slug: state.slug, name: state.name },
+    department: null,
+    total: entry.count,
+    tenders,
+    departments: [],
+    states: states.filter((st) => st.slug !== state.slug),
+  };
+}
+
 /**
  * Landing page data, or null when the page should not exist (unknown state or
  * department, or a department below the thin-content threshold).
@@ -99,6 +139,7 @@ const publicDepartment = ({ slug, name, count: n }) => ({ slug, name, count: n }
  * @param {string} [deptSlug]
  */
 export async function getLanding(kind, stateSlug, deptSlug, now = new Date()) {
+  if (kind === 'pmgsy') return deptSlug ? null : getPmgsyLanding(stateSlug, now);
   const state = stateBySlug(stateSlug);
   if (!state) return null;
 
@@ -135,7 +176,7 @@ export async function getLanding(kind, stateSlug, deptSlug, now = new Date()) {
 
 /** Public paths of every landing page that currently has content (for the sitemap). */
 export async function allLandingPaths(now = new Date()) {
-  const paths = [];
+  const paths = ['/pmgsy-tenders', ...(await pmgsyStateCounts(now)).map((st) => `/pmgsy-tenders/in/${st.slug}`)];
   for (const state of LANDING_STATES) {
     paths.push(`/tenders/in/${state.slug}`, `/gem-tenders/in/${state.slug}`);
     const departments = await departmentsInState(state, now);
@@ -145,12 +186,22 @@ export async function allLandingPaths(now = new Date()) {
 }
 
 /** Path for a landing page. */
-export const landingPath = (kind, stateSlug, deptSlug) =>
-  `/${kind === 'gem' ? 'gem-tenders' : 'tenders'}/in/${stateSlug}${deptSlug ? `/${deptSlug}` : ''}`;
+export const landingPath = (kind, stateSlug, deptSlug) => {
+  if (kind === 'pmgsy') return `/pmgsy-tenders${stateSlug ? `/in/${stateSlug}` : ''}`;
+  return `/${kind === 'gem' ? 'gem-tenders' : 'tenders'}/in/${stateSlug}${deptSlug ? `/${deptSlug}` : ''}`;
+};
 
 /** Title and description shared by the React page and the crawler HTML. */
 export function landingSeo(data) {
   const { kind, state, department, total } = data;
+  if (kind === 'pmgsy') {
+    const where = state ? state.name : 'J&K, Himachal, Punjab, Ladakh, Haryana and Delhi';
+    return {
+      heading: state ? `PMGSY Tenders in ${state.name}` : 'PMGSY Rural Road Tenders',
+      title: state ? `PMGSY Tenders in ${state.name}: ${total} Open Rural Road Works` : `PMGSY Tenders: ${total} Open Rural Road Works`,
+      description: `${total} open PMGSY (Pradhan Mantri Gram Sadak Yojana) tenders in ${where}: rural road construction, upgradation, bridges and maintenance. See values, EMD, closing dates and download documents and BOQs on tndrr.`,
+    };
+  }
   if (kind === 'gem') {
     return {
       heading: `GeM Bids in ${state.name}`,

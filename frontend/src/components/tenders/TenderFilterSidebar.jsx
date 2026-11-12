@@ -26,7 +26,8 @@ export const PORTAL_OPTIONS = [
   { value: 'GEM', label: 'Government e-Marketplace (GeM)', description: 'bidplus.gem.gov.in' },
   { value: 'CPPP', label: 'Central PPP (CPPP)', description: 'eprocure.gov.in (Central Public Procurement)' },
   { value: 'HP_TENDERS', label: 'Himachal Pradesh Tenders', description: 'hptenders.gov.in' },
-  { value: 'PUNJAB_TENDERS', label: 'Punjab Tenders', description: 'eproc.punjab.gov.in' },
+  { value: 'PB_TENDERS', label: 'Punjab Tenders', description: 'eproc.punjab.gov.in' },
+  { value: 'LADAKH_TENDERS', label: 'Ladakh Tenders', description: 'tenders.ladakh.gov.in' },
   { value: 'HR_TENDERS', label: 'Haryana Tenders', description: 'etenders.hry.nic.in' },
   { value: 'DL_TENDERS', label: 'Delhi Tenders', description: 'govtprocurement.delhi.gov.in' },
 ];
@@ -261,7 +262,9 @@ export function TenderFilterSidebar({
   // Helper labels for subtitle display
   const getPortalLabel = () => {
     if (!portal || portal === 'ALL') return 'All';
-    const found = PORTAL_OPTIONS.find((p) => p.value === portal);
+    // Older links used PUNJAB_TENDERS; the stored portal value is PB_TENDERS.
+    const value = portal === 'PUNJAB_TENDERS' ? 'PB_TENDERS' : portal;
+    const found = PORTAL_OPTIONS.find((p) => p.value === value);
     return found ? found.label.split('(')[0].trim() : portal;
   };
 

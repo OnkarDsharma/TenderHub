@@ -120,6 +120,12 @@ jobs:
             state: delhi
             name: "🏙️ Delhi"
             extra: ""
+          # One nationwide PMGSY database; organisations outside the configured states
+          # (config/pmgsy.js, PMGSY_STATES env) are skipped and each tender gets its organisation's state.
+          - key: pmgsy
+            state: pmgsy
+            name: "🛣️ PMGSY Rural Roads"
+            extra: ""
     steps:
       - uses: actions/checkout@v4
 

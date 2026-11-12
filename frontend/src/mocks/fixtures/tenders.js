@@ -228,7 +228,36 @@ const SPECS = [
   { ...PB_PWD, seqNo: 407750, title: 'Construction of boundary wall and approach road for new bus stand Khanna', location: 'Khanna, Ludhiana', pincode: '141401', value: 8100000, emd: 162000, publishedDaysAgo: 60, closingInDays: -31, status: 'ARCHIVED' },
 ];
 
-export const STATE_TENDERS = SPECS.map(buildTender);
+// PMGSY rural road tenders: one nationwide portal, state taken from the issuing organisation.
+const PMGSY_KASHMIR = {
+  dept: 'KSRRD', deptName: 'PMGSY Kashmir and CE PW (R and B) Kashmir', state: 'Jammu & Kashmir',
+  chain: 'PMGSY Kashmir and CE PW (R and B) Kashmir||Executive Engineer PMGSY Division Kupwara',
+  authority: 'Executive Engineer PMGSY Division Kupwara', address: 'PMGSY Division Office, Kupwara, J&K 193222',
+};
+const PMGSY_JAMMU = {
+  dept: 'JSRRD', deptName: 'PMGSY Jammu and CE PW (R and B) Jammu', state: 'Jammu & Kashmir',
+  chain: 'PMGSY Jammu and CE PW (R and B) Jammu||Executive Engineer PMGSY Division Chhatroo',
+  authority: 'Executive Engineer PMGSY Division Chhatroo', address: 'PMGSY Division Chhatroo, Kishtwar, J&K 182204',
+};
+const PMGSY_HP = {
+  dept: 'HPPWD', deptName: 'HPPWD', state: 'Himachal Pradesh',
+  chain: 'HPPWD||Executive Engineer PMGSY Division Chamba',
+  authority: 'Executive Engineer PMGSY Division Chamba', address: 'HPPWD PMGSY Division, Chamba 176310',
+};
+const PMGSY_SPECS = [
+  { ...PMGSY_KASHMIR, seqNo: 150018, title: 'Maintenance of road from L045-T02 km 1st Waripora including initial pothole repair (PMGSY 5-year maintenance)', location: 'Waripora, Kupwara', pincode: '193222', value: 6420000, emd: 128400, publishedDaysAgo: 1, closingInDays: 9, category: 'Civil Works - Roads', workDays: 1825 },
+  { ...PMGSY_KASHMIR, seqNo: 150068, title: 'Construction of 04 bridges of span 50 m on PMGSY roads in Kupwara district', location: 'Kupwara', pincode: '193222', value: 148000000, emd: 2960000, fee: 5000, publishedDaysAgo: 0, closingInDays: 6, category: 'Civil Works - Bridge Construction', tendererClass: 'Class A', workDays: 540 },
+  { ...PMGSY_JAMMU, seqNo: 236703, title: 'Upgradation of Chhatroo-Singhpora road km 0 to 8.4 under PMGSY-III', location: 'Chhatroo, Kishtwar', pincode: '182204', value: 39400000, emd: 788000, publishedDaysAgo: 3, closingInDays: 4, category: 'Civil Works - Roads', workDays: 365 },
+  { ...PMGSY_HP, seqNo: 149870, title: 'Construction of Saloon-Bharmour link road km 0 to 6.2 with cross drainage works under PMGSY', location: 'Bharmour, Chamba', pincode: '176315', value: 28700000, emd: 574000, publishedDaysAgo: 5, closingInDays: 12, category: 'Civil Works - Roads', workDays: 450 },
+];
+const PMGSY_TENDERS = PMGSY_SPECS.map((spec) => ({
+  ...buildTender(spec),
+  sourcePortal: 'PMGSY',
+  scheme: 'PMGSY',
+  detailsUrl: `https://pmgsytendersjk.gov.in/nicgep/app?page=FrontEndViewTender&service=direct&tenderId=${spec.seqNo}`,
+}));
+
+export const STATE_TENDERS = [...SPECS.map(buildTender), ...PMGSY_TENDERS];
 
 // Mark the multi-work NIT's siblings
 const multi = STATE_TENDERS.find((t) => t.isMultiTender);
@@ -331,7 +360,7 @@ const LIST_FIELDS = [
   'publishedDate', 'publishedDateStr', 'publishedTime', 'bidOpeningDate', 'bidOpeningDateStr', 'bidOpeningTime', 'bidSubmissionEndDate',
   'bidSubmissionEndDateStr', 'bidSubmissionEndTime', 'estimatedValue', 'location', 'pincode', 'tenderCategory', 'productCategory', 'contractType',
   'status', 'isMultiTender', 'relatedTenderIds', 'isDocumentAvailable', 'tenderReferenceNumber', 'state', 'emdAmount', 'emdExemptionAllowed',
-  'sourcePortal', 'tenderFee', 'tenderFeeExemptionAllowed', 'tenderType', 'pdfUrls', 'nitDocuments', 'detailsUrl', 'tendererClass',
+  'sourcePortal', 'scheme', 'tenderFee', 'tenderFeeExemptionAllowed', 'tenderType', 'pdfUrls', 'nitDocuments', 'detailsUrl', 'tendererClass',
   'consigneeStates', 'pdfParseStatus', 'gemStatus',
 ];
 export const toSummary = (t) => Object.fromEntries(LIST_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
@@ -361,6 +390,7 @@ export function filterTenders(source, q = {}) {
       .some((v) => String(v || '').toLowerCase().includes(search)));
   }
   if (q.state) rows = rows.filter((t) => t.state.toLowerCase() === String(q.state).toLowerCase());
+  if (/^pmgsy$/i.test(q.scheme || '')) rows = rows.filter((t) => t.scheme === 'PMGSY');
   const org = q.organisation || q.organization || q.department;
   if (org) rows = rows.filter((t) => (t.departmentName || '').toLowerCase() === String(org).toLowerCase());
   if (q.category) rows = rows.filter((t) => [t.productCategory, t.tenderCategory].some((v) => String(v || '').toLowerCase().includes(String(q.category).toLowerCase())));
@@ -417,6 +447,7 @@ export function tenderCounts(source) {
 export function tenderStats(q = {}) {
   let rows = STATE_TENDERS.filter((t) => statusBucket(t) === 'active');
   if (q.state) rows = rows.filter((t) => t.state.toLowerCase() === String(q.state).toLowerCase());
+  if (/^pmgsy$/i.test(q.scheme || '')) rows = rows.filter((t) => t.scheme === 'PMGSY');
   const group = (keyFn) => {
     const map = new Map();
     for (const t of rows) {
