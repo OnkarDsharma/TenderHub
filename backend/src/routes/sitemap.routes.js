@@ -45,10 +45,17 @@ async function cached(key, build) {
 function sendXml(res, xml) {
   res.set({
     'Content-Type': 'application/xml; charset=utf-8',
-    // Shared caches (CDN / frontend proxy) can hold it for the same hour as Redis.
-    'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}`,
-    // The sitemap itself should never appear in search results.
-    'X-Robots-Tag': 'noindex',
+    // Let the frontend CDN (Vercel) keep a copy: s-maxage makes it cacheable at
+    // the edge, and the stale-* directives let the CDN keep serving the last good
+    // sitemap while this free-tier backend is asleep, restarting or redeploying,
+    // so Google never gets an error when it fetches /sitemap.xml.
+    // The sitemap is the same for every visitor, so edge caching is safe here
+    // (unlike the crawler HTML in prerender.routes.js).
+    'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=86400, stale-if-error=604800`,
+    'CDN-Cache-Control': `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=86400, stale-if-error=604800`,
+    // No X-Robots-Tag here: Search Console's URL Inspection flags a noindex
+    // header on the sitemap, which is confusing while debugging fetch issues,
+    // and search engines don't show XML sitemaps in results anyway.
   });
   res.status(200).send(xml);
 }

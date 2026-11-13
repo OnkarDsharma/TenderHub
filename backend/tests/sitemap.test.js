@@ -124,7 +124,8 @@ test('sitemap index lists static file and one chunk per CHUNK_SIZE records', asy
   const res = await get('/sitemap.xml');
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /application\/xml/);
-  assert.equal(res.headers.get('x-robots-tag'), 'noindex');
+  assert.equal(res.headers.get('x-robots-tag'), null, 'sitemaps carry no noindex header');
+  assert.match(res.headers.get('cache-control'), /s-maxage=3600.*stale-if-error/, 'CDN may serve a stale copy if the backend is down');
   const xml = await res.text();
   assert.ok(xml.includes(`<loc>${SITE}/sitemap-static.xml</loc>`));
   assert.ok(xml.includes(`<loc>${SITE}/sitemap-tenders-1.xml</loc>`));
