@@ -304,7 +304,7 @@ export class JKTenderStatusAdapter {
       if (!imgBuffer) continue;
 
       this.stats.captchaAttempts++;
-      const { text: solved, provider } = await captchaService.solveImageCaptcha(imgBuffer).catch(() => ({}));
+      const { text: solved, provider } = await captchaService.solveStatusCaptcha(imgBuffer).catch(() => ({}));
       // The portal's form only submits a 6-character captcha (anything else just raises an alert)
       if (!solved || solved.trim().length !== 6) {
         console.log(`   ↩️ Attempt ${attempt}: solver returned "${solved || ''}" (not 6 characters) — new captcha`);
