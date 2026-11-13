@@ -8,7 +8,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, MapPin, Clock, Sparkles } from 'lucide-react';
+import { Building2, MapPin } from 'lucide-react';
 
 import { api } from '@/services/api';
 import { tenderPath } from '@/utils/tenderUrl';
@@ -30,38 +30,35 @@ export function SimilarTenders({ tender, isClosed = false }) {
   if (!data?.length) return null;
 
   return (
-    <section aria-labelledby="similar-tenders-heading" className="td-scope td-card">
-      <header className="td-card-head">
-        <div className="td-card-heading">
-          <span className="td-card-icon" aria-hidden="true"><Sparkles /></span>
-          <div className="min-w-0">
-          <h2 id="similar-tenders-heading" className="td-card-title">
+    <section aria-labelledby="similar-tenders-heading" className="td-scope td-panel">
+      <header className="td-panel-head">
+        <div className="min-w-0">
+          <h2 id="similar-tenders-heading" className="td-panel-title">
             {isClosed ? 'Open tenders you can still bid on' : 'Similar open tenders'}
           </h2>
-            <p className="td-card-desc">Open tenders from the same department, state or category</p>
-          </div>
+          <p className="td-panel-desc">Open tenders from the same department, state or category</p>
         </div>
       </header>
-      <ul className="td-similar">
+      <ul className="td-rows">
         {data.map((t) => {
           const closes = t.bidSubmissionEndDate || t.closingDate;
           const dept = t.departmentName || String(t.organisationChain || '').split('||')[0];
           return (
             <li key={t._id}>
-              <Link to={tenderPath(t)} className="td-similar-card">
-                {(t.estimatedValue > 0 || closes) && (
-                  <span className="td-similar-top">
-                    <span className="td-similar-value">{t.estimatedValue > 0 ? formatCurrencyINR(t.estimatedValue) : ''}</span>
-                    {closes && <span className="td-similar-close"><Clock />Closes {formatDateDisplay(closes)}</span>}
-                  </span>
-                )}
-                <span className="td-similar-title">{cleanTitle(t.title) || t.sourceTenderId}</span>
-                {(dept || t.location) && (
-                  <span className="td-similar-meta">
-                    {dept && <span><Building2 />{dept}</span>}
-                    {t.location && <span><MapPin />{t.location}</span>}
-                  </span>
-                )}
+              <Link to={tenderPath(t)} className="td-row">
+                <span className={`td-row-value ${t.estimatedValue > 0 ? '' : 'td-blank'}`}>
+                  {t.estimatedValue > 0 ? formatCurrencyINR(t.estimatedValue) : '—'}
+                </span>
+                <span className="td-row-main">
+                  <span className="td-row-title">{cleanTitle(t.title) || t.sourceTenderId}</span>
+                  {(dept || t.location) && (
+                    <span className="td-row-meta">
+                      {dept && <span><Building2 aria-hidden="true" />{dept}</span>}
+                      {t.location && <span><MapPin aria-hidden="true" />{t.location}</span>}
+                    </span>
+                  )}
+                </span>
+                {closes && <span className="td-row-date">Closes {formatDateDisplay(closes)}</span>}
               </Link>
             </li>
           );

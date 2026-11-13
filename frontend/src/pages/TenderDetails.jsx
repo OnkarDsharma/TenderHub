@@ -5,44 +5,29 @@
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Building2, 
-  FileText, 
-  FileSpreadsheet, 
-  Heart, 
-  ExternalLink, 
-  AlertCircle, 
-  Download, 
-  Layers, 
-  MapPin, 
-  Map, 
-  Compass, 
-  Copy, 
-  Check, 
-  X, 
-  Info, 
-  FileClock, 
-  Eye, 
-  FolderArchive, 
-  Loader2, 
-  Sparkles,
-  IndianRupee,
-  Wallet,
-  CalendarClock,
-  CalendarDays,
-  Timer,
-  ScrollText,
-  Hash,
-  Scale,
-  ClipboardList,
-  CreditCard,
-  Navigation,
-  Briefcase,
-  ShieldCheck,
-  Landmark,
-  Files
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  FileText,
+  FileSpreadsheet,
+  Heart,
+  ExternalLink,
+  AlertCircle,
+  Download,
+  Layers,
+  MapPin,
+  Map,
+  Compass,
+  Copy,
+  Check,
+  X,
+  Info,
+  FileClock,
+  Eye,
+  FolderArchive,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 
 import { useTender } from '@/hooks/useTenders';
@@ -50,7 +35,9 @@ import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatCurrencyINR, formatDateDisplay, formatDateTimeDisplay, extractDetailedWorkLocation } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
-import { Section, SheetGroup, Fields, Field, Stat, Badge, DocRow } from '@/components/tenders/detail/TenderDetailUI';
+import { Section, SheetGroup, Fields, Field, Flags, Flag, Chip } from '@/components/tenders/detail/TenderDetailUI';
+import { CriticalDatesTrack } from '@/components/tenders/detail/CriticalDatesTrack';
+import { BidBar, ScrollSentinel } from '@/components/tenders/detail/BidBar';
 import { formatSizeKb, toDate, relativeDays, noticeCategory } from '@/components/tenders/detail/detailFormat';
 import '@/components/tenders/detail/tender-details.css';
 import { useSeo, isStaleTender } from '@/hooks/useSeo';
@@ -183,6 +170,8 @@ export default function TenderDetails() {
   const { toggleBookmark, isBookmarked } = useBookmarkStore();
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  // Slim bid bar appears once the header has scrolled away.
+  const [showBidBar, setShowBidBar] = useState(false);
   const officialPortal = getOfficialPortal(tender);
 
   // Sync latest viewsInfo with global auth store immediately upon viewing tender
@@ -375,9 +364,9 @@ export default function TenderDetails() {
     { label: 'Download End', raw: tender.documentDownloadEndDate, str: tender.documentDownloadEndDateStr },
     { label: 'Clarification Start', raw: tender.clarificationStartDate, str: tender.clarificationStartDateStr, optional: true },
     { label: 'Clarification End', raw: tender.clarificationEndDate, str: tender.clarificationEndDateStr, optional: true },
-    { label: 'Bid Start', raw: tender.bidSubmissionStartDate, str: tender.bidSubmissionStartDateStr, tone: 'is-start' },
-    { label: 'Bid End', raw: tender.bidSubmissionEndDate, str: tender.bidSubmissionEndDateStr, tone: 'is-end' },
-    { label: 'Bid Opening', raw: tender.bidOpeningDate, str: tender.bidOpeningDateStr, tone: 'is-open' },
+    { label: 'Bid Start', raw: tender.bidSubmissionStartDate, str: tender.bidSubmissionStartDateStr },
+    { label: 'Bid End', raw: tender.bidSubmissionEndDate, str: tender.bidSubmissionEndDateStr },
+    { label: 'Bid Opening', raw: tender.bidOpeningDate, str: tender.bidOpeningDateStr },
   ]
     .filter((d) => !d.optional || ((d.str || d.raw) && d.raw !== 'NA'))
     .map((d) => {
@@ -385,8 +374,7 @@ export default function TenderDetails() {
       const when = toDate(d.raw);
       return { ...d, datePart, timePart, when, passed: Boolean(when && when.getTime() <= nowMs) };
     });
-  // Next milestone = earliest upcoming one. Portal milestones are not always in time order
-  // (Bid Start can fall before Download End), and on a tie the later, bid-side milestone wins.
+  // Next milestone = earliest upcoming one; on a tie the later, bid-side milestone wins.
   const nextIndex = criticalDates.reduce((best, d, i) => {
     if (!d.when || d.passed) return best;
     if (best < 0) return i;
@@ -394,48 +382,72 @@ export default function TenderDetails() {
   }, -1);
   const nextDate = nextIndex >= 0 ? criticalDates[nextIndex] : null;
 
-  // Headline facts for the header strip (all derived from fields shown in full below)
   const bidEnd = criticalDates.find((d) => d.label === 'Bid End');
   const bidClosed = Boolean(bidEnd?.passed);
+  const timeToClose = bidEnd?.when ? (bidClosed ? 'Closed' : relativeDays(bidEnd.when, nowMs)) : 'N/A';
   const orgChain = (tender.organisationChain || '').split('||').map((p) => p.trim()).filter(Boolean);
+
+  // Covers grouped by cover number, keeping portal order.
+  const coverGroups = [];
+  genuineCovers.forEach((cover, idx) => {
+    const no = cover.coverNo || idx + 1;
+    let group = coverGroups.find((g) => String(g.no) === String(no));
+    if (!group) { group = { no, rows: [] }; coverGroups.push(group); }
+    group.rows.push(cover);
+  });
+
+  const preBidMeeting = tender.preBidMeetingAddress && tender.preBidMeetingAddress !== 'NA'
+    ? tender.preBidMeetingAddress
+    : (tender.preBidMeetingPlace && tender.preBidMeetingPlace !== 'NA' ? tender.preBidMeetingPlace : 'No Pre-Bid Meeting Scheduled');
 
   return (
     <div className="td-page min-h-screen py-6 sm:py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
+      <BidBar
+        show={showBidBar}
+        tenderId={tender.sourceTenderId}
+        value={formatCurrencyINR(tender.estimatedValue)}
+        emd={formatCurrencyINR(tender.emdAmount)}
+        timeToClose={timeToClose}
+        closed={bidClosed || !bidEnd?.when}
+        bookmarked={bookmarked}
+        onSave={() => toggleBookmark(tender)}
+      />
+
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
         <button type="button" onClick={() => navigate(-1)} className="td-back cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Back to Directory
         </button>
 
-        {/* ── Tender summary ─────────────────────────────────────────── */}
-        <header className="td-card td-hero">
-          <div className="td-hero-body">
+        {/* ── Header: straight on the page ───────────────────────────── */}
+        <header>
+          <div className="td-head">
             <div className="min-w-0">
-              <div className="td-hero-top">
-                <span className={`td-status ${bidClosed ? 'td-status--closed' : ''}`}>{tender.status || 'Active'}</span>
-                <Badge tone="id"><b>ID</b>{tender.sourceTenderId}</Badge>
-                {tender.tenderCategory && <Badge tone="neutral">{tender.tenderCategory}</Badge>}
+              <div className="td-head-chips">
+                <Chip tone="cobalt" className="td-chip--status">{tender.status || 'Active'}</Chip>
+                <Chip tone="code"><b>ID</b>{tender.sourceTenderId}</Chip>
+                {tender.tenderCategory && <Chip>{tender.tenderCategory}</Chip>}
                 {docsPending && (
-                  <Badge tone="warning" title={docsAvailableAt ? `Documents available on ${formatDateTimeDisplay(docsAvailableAt)}` : 'Pending portal release'}>
+                  <Chip title={docsAvailableAt ? `Documents available on ${formatDateTimeDisplay(docsAvailableAt)}` : 'Pending portal release'}>
                     <FileClock />
                     Docs Available: {docsAvailableAt ? formatDateTimeDisplay(docsAvailableAt) : 'Pending Release'}
-                  </Badge>
+                  </Chip>
                 )}
               </div>
 
-              <h1 className="td-hero-title">{tender.title?.replace(/[[\]]/g, '')}</h1>
+              <h1 className="td-title">{tender.title?.replace(/[[\]]/g, '')}</h1>
 
-              <div className="td-hero-meta">
+              <div className="td-head-meta">
                 <span><Building2 />{primaryOrg}</span>
                 <span>
                   <MapPin />
                   <span>Site: <strong>{workLoc.famousLocation}</strong>
-                    {workLoc.pincode && workLoc.pincode !== 'N/A' && <span className="td-mono"> · PIN {workLoc.pincode}</span>}
+                    {workLoc.pincode && workLoc.pincode !== 'N/A' && <span className="td-tnum"> · PIN {workLoc.pincode}</span>}
                   </span>
                 </span>
               </div>
 
-              <dl className="td-hero-authority">
+              <dl className="td-authority">
                 <div>
                   <dt>Inviting officer</dt>
                   <dd>{tender.invitingAuthorityName || 'Competent Authority / Executive Engineer'}</dd>
@@ -447,8 +459,7 @@ export default function TenderDetails() {
               </dl>
             </div>
 
-            <div className="td-hero-side">
-              <p className="td-hero-side-label">Actions</p>
+            <div className="td-actions">
               <button
                 type="button"
                 onClick={() => toggleBookmark(tender)}
@@ -458,72 +469,70 @@ export default function TenderDetails() {
                 <Heart className={bookmarked ? 'fill-current' : ''} />
                 {bookmarked ? 'Saved in Watchlist' : 'Save Tender'}
               </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/services/${tender._id || tender.sourceTenderId}`)}
-                className="td-btn td-btn--accent"
-              >
+              <button type="button" onClick={() => navigate(`/services/${tender._id || tender.sourceTenderId}`)} className="td-btn td-btn--quiet">
                 <Sparkles /> Contractor AI Dossier
               </button>
-              <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--secondary">
+              <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--quiet">
                 Original Portal <ExternalLink />
               </button>
             </div>
           </div>
 
-          <dl className="td-facts">
-            <div className="td-fact td-fact--accent">
-              <dt><IndianRupee /> Tender value</dt>
+          {/* Key figures: value and deadline wide, EMD and time-to-close narrow */}
+          <dl className="td-figures">
+            <div className="td-figure td-figure--wide">
+              <dt>Tender value</dt>
               <dd>{formatCurrencyINR(tender.estimatedValue)}</dd>
             </div>
-            <div className="td-fact">
-              <dt><Wallet /> EMD deposit</dt>
+            <div className="td-figure">
+              <dt>EMD deposit</dt>
               <dd>{formatCurrencyINR(tender.emdAmount)}</dd>
-              <dd className="td-fact-hint">Tender fee {formatCurrencyINR(tender.tenderFee)}</dd>
+              <dd className="td-figure-sub">Tender fee {formatCurrencyINR(tender.tenderFee)}</dd>
             </div>
-            <div className={`td-fact ${bidClosed ? '' : 'td-fact--danger'}`}>
-              <dt><CalendarClock /> Bid submission closes</dt>
+            <div className={`td-figure td-figure--wide ${bidClosed ? '' : 'td-figure--deadline'}`}>
+              <dt>Bid submission closes</dt>
               <dd>{bidEnd?.datePart || 'N/A'}</dd>
-              {bidEnd?.timePart && <dd className="td-fact-hint">{bidEnd.timePart}</dd>}
+              {bidEnd?.timePart && <dd className="td-figure-sub">{bidEnd.timePart}</dd>}
             </div>
-            <div className="td-fact">
-              <dt><Timer /> Time to close</dt>
-              <dd>{bidEnd?.when ? (bidClosed ? 'Closed' : relativeDays(bidEnd.when, nowMs)) : 'N/A'}</dd>
-              {bidEnd?.when && bidClosed && <dd className="td-fact-hint">{relativeDays(bidEnd.when, nowMs)}</dd>}
-              {!bidClosed && nextDate && <dd className="td-fact-hint">Next: {nextDate.label}</dd>}
+            <div className="td-figure">
+              <dt>Time to close</dt>
+              <dd>{timeToClose}</dd>
+              {bidEnd?.when && bidClosed && <dd className="td-figure-sub">{relativeDays(bidEnd.when, nowMs)}</dd>}
+              {!bidClosed && nextDate && <dd className="td-figure-sub">Next: {nextDate.label}</dd>}
             </div>
           </dl>
+          <ScrollSentinel onChange={setShowBidBar} />
         </header>
 
         {/* ── Multi-work NIT notice ──────────────────────────────────── */}
         {tender.relatedTenders && tender.relatedTenders.length > 0 && (
-          <section className="td-notice" aria-labelledby="multi-work-heading">
+          <section className="td-info" aria-labelledby="multi-work-heading">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Layers className="w-4 h-4 text-amber-700 dark:text-amber-300" />
-                <h2 id="multi-work-heading" className="td-card-title">Multiple Works Detected for this NIT</h2>
-                <Badge tone="warning">{tender.relatedTenders.length + 1} Total Works</Badge>
+                <Layers className="w-4 h-4" style={{ color: 'var(--td-cobalt)' }} />
+                <h2 id="multi-work-heading" className="td-info-title">Multiple Works Detected for this NIT</h2>
+                <Chip tone="cobalt">{tender.relatedTenders.length + 1} Total Works</Chip>
               </div>
               {(tender.tenderReferenceNumber || tender.baseTenderId) && (
-                <Badge tone="id"><b>Ref</b>{tender.tenderReferenceNumber || tender.baseTenderId}</Badge>
+                <Chip tone="code"><b>Ref</b>{tender.tenderReferenceNumber || tender.baseTenderId}</Chip>
               )}
             </div>
-            <p className="td-card-desc mt-2 mb-4 max-w-3xl">
+            <p className="td-panel-desc mt-2 mb-3 max-w-3xl">
               This tender is part of a multi-work contract notice issued by the department. Each work item has its own distinct scope, BOQ, and estimated budget. Explore the other works under this notice below:
             </p>
-            <ul className="td-similar">
+            <ul className="td-rows">
               {tender.relatedTenders.map((sibling) => (
                 <li key={sibling._id || sibling.sourceTenderId}>
-                  <button type="button" onClick={() => navigate(tenderPath(sibling))} className="td-similar-card w-full text-left cursor-pointer">
-                    <span className="td-similar-top">
-                      <span className="td-mono text-xs font-semibold text-slate-500 dark:text-slate-400">{sibling.sourceTenderId}</span>
-                      <span className="td-similar-value">{sibling.estimatedValue ? formatCurrencyINR(sibling.estimatedValue) : 'Value N/A'}</span>
+                  <button type="button" onClick={() => navigate(tenderPath(sibling))} className="td-row">
+                    <span className={`td-row-value ${sibling.estimatedValue ? '' : 'td-blank'}`}>{sibling.estimatedValue ? formatCurrencyINR(sibling.estimatedValue) : 'Value N/A'}</span>
+                    <span className="td-row-main">
+                      <span className="td-row-title">{sibling.title}</span>
+                      <span className="td-row-meta">
+                        <span className="td-mono">{sibling.sourceTenderId}</span>
+                        <span style={{ color: 'var(--td-cobalt)', fontWeight: 600 }}>View Work <ArrowRight /></span>
+                      </span>
                     </span>
-                    <span className="td-similar-title">{sibling.title}</span>
-                    <span className="td-similar-meta justify-between">
-                      <span>Pub: {formatDateDisplay(sibling.publishedDate || sibling.publishedDateStr)}</span>
-                      <span className="font-semibold text-dalBlue dark:text-blue-300">View Work <ArrowRight /></span>
-                    </span>
+                    <span className="td-row-date">Pub: {formatDateDisplay(sibling.publishedDate || sibling.publishedDateStr)}</span>
                   </button>
                 </li>
               ))}
@@ -534,164 +543,112 @@ export default function TenderDetails() {
         {/* ── Critical dates ─────────────────────────────────────────── */}
         <Section
           id="critical-dates"
-          variant="tint"
-          icon={<CalendarDays />}
           title="Critical dates"
           description="Portal milestones from publication to bid opening"
           action={nextDate && (
             <span className="td-next">
-              <Timer />
               Next: <strong>{nextDate.label}</strong>
-              <span className="td-mono">{nextDate.datePart}{nextDate.timePart ? `, ${nextDate.timePart}` : ''}</span>
+              <span className="td-tnum">{nextDate.datePart}{nextDate.timePart ? `, ${nextDate.timePart}` : ''}</span>
               <em>{relativeDays(nextDate.when, nowMs)}</em>
             </span>
           )}
         >
-          <ol className="td-dates" style={{ '--td-date-count': criticalDates.length }}>
-            {criticalDates.map((d, i) => {
-              const trackDone = Boolean(criticalDates[i + 1]?.passed);
-              const isNext = i === nextIndex;
-              return (
-                <li
-                  key={d.label}
-                  className={`td-date ${d.tone || ''} ${d.passed ? 'is-passed' : ''} ${isNext ? 'is-next' : ''} ${trackDone ? 'is-track-done' : ''}`}
-                  aria-current={isNext ? 'step' : undefined}
-                >
-                  <span className="td-date-dot" aria-hidden="true">{d.passed && <Check />}</span>
-                  <span className="td-date-body">
-                    <span className="td-date-label">{d.label}</span>
-                    <span className="td-date-day">{d.datePart}</span>
-                    {d.timePart && <span className="td-date-time">{d.timePart}</span>}
-                    {d.when && (isNext || !d.passed) && <span className="td-date-rel">{isNext ? `Next · ${relativeDays(d.when, nowMs)}` : relativeDays(d.when, nowMs)}</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+          <CriticalDatesTrack dates={criticalDates} nowMs={nowMs} />
         </Section>
 
         {/* Post-closing progress: bid opening → evaluation → award, from the portal's Tenders Status page */}
         <TenderProgress tender={tender} nowMs={nowMs} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
           {/* ── Main column ──────────────────────────────────────────── */}
-          <div className="lg:col-span-2 space-y-5 sm:space-y-6 min-w-0">
+          <div className="lg:col-span-2 space-y-6 min-w-0">
 
-            <Section id="basic-details" icon={<ScrollText />} title="Basic details" description="Tender identity, contract form and bidding rules">
-              <SheetGroup title="Identification" icon={<Hash />}>
+            <Section id="basic-details" title="Basic details" description="Tender identity, contract form and bidding rules">
+              <SheetGroup title="Identification">
                 <Fields>
-                  <Field
-                    wide
-                    label="Organisation Chain"
-                    value={orgChain.length ? <span className="td-chain">{orgChain.map((p, i) => <span key={i}>{p}</span>)}</span> : undefined}
-                  />
+                  <Field wide label="Organisation Chain">
+                    {orgChain.length ? <ol className="td-chain">{orgChain.map((p, i) => <li key={i}>{p}</li>)}</ol> : undefined}
+                  </Field>
                   <Field label="Tender Reference Number" value={tender.tenderReferenceNumber} mono />
                   <Field label="Tender ID" value={tender.sourceTenderId} mono />
                   <Field label="Tender Type" value={tender.tenderType} />
                   <Field label="Tender Category" value={tender.tenderCategory} />
                 </Fields>
               </SheetGroup>
-              <SheetGroup title="Contract & bidding" icon={<Scale />}>
+              <SheetGroup title="Contract & bidding">
                 <Fields>
                   <Field label="Form Of Contract" value={tender.formOfContract} />
                   <Field label="No. of Covers" value={tender.noOfCovers} />
-                  <Field label="Two Stage Bidding" value={tender.allowTwoStageBidding} />
-                  <Field label="Withdrawal Allowed" value={tender.withdrawalAllowed} />
                 </Fields>
+                <Flags>
+                  <Flag label="Two Stage Bidding" value={tender.allowTwoStageBidding} />
+                  <Flag label="Withdrawal Allowed" value={tender.withdrawalAllowed} />
+                </Flags>
               </SheetGroup>
-              <SheetGroup title="Evaluation" icon={<ClipboardList />}>
-                <Fields>
-                  <Field label="Technical Evaluation" value={tender.generalTechnicalEvaluationAllowed} />
-                  <Field label="ItemWise Tech Eval" value={tender.itemWiseTechnicalEvaluationAllowed} />
-                </Fields>
+              <SheetGroup title="Evaluation">
+                <Flags>
+                  <Flag label="Technical Evaluation" value={tender.generalTechnicalEvaluationAllowed} />
+                  <Flag label="ItemWise Tech Eval" value={tender.itemWiseTechnicalEvaluationAllowed} />
+                </Flags>
               </SheetGroup>
-              <SheetGroup title="Payment" icon={<CreditCard />}>
+              <SheetGroup title="Payment">
                 <Fields>
                   <Field wide label="Payment Mode" value={tender.paymentMode} />
-                  <Field label="Multi Currency BOQ" value={tender.isMultiCurrencyAllowedForBOQ} />
-                  <Field label="Multi Currency Fee" value={tender.isMultiCurrencyAllowedForFee} />
                 </Fields>
+                <Flags>
+                  <Flag label="Multi Currency BOQ" value={tender.isMultiCurrencyAllowedForBOQ} />
+                  <Flag label="Multi Currency Fee" value={tender.isMultiCurrencyAllowedForFee} />
+                </Flags>
               </SheetGroup>
             </Section>
 
             <Section
               id="work-location"
-              icon={<Navigation />}
               title="Work execution location"
               description="Geographic execution site and administrative jurisdiction"
               action={(
-                <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="ai-tile-link glass-btn">
-                  <Map className="w-3.5 h-3.5" />
-                  <span>Google Maps</span>
-                  <ExternalLink className="w-3 h-3 opacity-60" />
+                <a href={workLoc.mapSearchUrl} target="_blank" rel="noreferrer" className="td-btn td-btn--text">
+                  <Map /> Google Maps <ExternalLink />
                 </a>
               )}
             >
-              <div className="td-loc-hero">
-                <span className="td-loc-pin" aria-hidden="true"><MapPin /></span>
+              <div className="td-place">
                 <div className="min-w-0">
-                  <span className="td-loc-label"><Compass /> Project Site / Area Description</span>
-                  <p className="td-loc-site">{workLoc.specificSite || 'Execution site as specified in tender document.'}</p>
-                  <dl className="td-loc-chips">
-                    <div className="td-loc-chip">
-                      <dt>District / City</dt>
-                      <dd>{workLoc.famousLocation}{tender.state ? `, ${tender.state}` : ''}</dd>
-                    </div>
-                    <div className="td-loc-chip">
-                      <dt>Postal Pincode</dt>
-                      <dd className="td-mono">{workLoc.pincode}</dd>
-                    </div>
-                    <div className="td-loc-chip">
-                      <dt>Portal Location</dt>
-                      <dd>{workLoc.rawLocation || 'Refer to Notice'}</dd>
-                    </div>
+                  <span className="td-place-label"><Compass /> Project Site / Area Description</span>
+                  <p className="td-place-site"><MapPin aria-hidden="true" />{workLoc.specificSite || 'Execution site as specified in tender document.'}</p>
+                </div>
+                <div className="min-w-0">
+                  <dl className="td-facts">
+                    <div><dt>District / City</dt><dd>{workLoc.famousLocation}{tender.state ? `, ${tender.state}` : ''}</dd></div>
+                    <div><dt>Postal Pincode</dt><dd>{workLoc.pincode}</dd></div>
+                    <div><dt>Portal Location</dt><dd>{workLoc.rawLocation || 'Refer to Notice'}</dd></div>
+                  </dl>
+                  <dl className="td-facts">
+                    <div><dt>Portal Location (NIT)</dt><dd>{tender.location || 'As specified in NIT'}</dd></div>
+                    <div><dt>Bid Opening Office</dt><dd>{tender.bidOpeningPlace && tender.bidOpeningPlace !== 'NA' ? tender.bidOpeningPlace : 'N/A'}</dd></div>
+                    <div><dt>Pre-Bid Meeting</dt><dd>{preBidMeeting}</dd></div>
                   </dl>
                 </div>
               </div>
-
-              <div className="td-group">
-                <Fields>
-                  <Field wide label="Portal Location (NIT)" value={tender.location || 'As specified in NIT'} />
-                  <Field label="Bid Opening Office" value={tender.bidOpeningPlace && tender.bidOpeningPlace !== 'NA' ? tender.bidOpeningPlace : 'N/A'} />
-                  <Field
-                    label="Pre-Bid Meeting"
-                    value={tender.preBidMeetingAddress && tender.preBidMeetingAddress !== 'NA'
-                      ? tender.preBidMeetingAddress
-                      : (tender.preBidMeetingPlace && tender.preBidMeetingPlace !== 'NA'
-                          ? tender.preBidMeetingPlace
-                          : 'No Pre-Bid Meeting Scheduled')}
-                  />
-                </Fields>
-              </div>
             </Section>
 
-            <Section id="work-item" icon={<Briefcase />} title="Work item details" description="Scope, commercial terms, timelines and eligibility">
-              <SheetGroup title="Work description" icon={<FileText />}>
-                <div className="pt-2">
-                  <div className="td-quote">
-                    <p className="td-prose-label">Title</p>
-                    <p className="td-prose td-prose--strong">{tender.title}</p>
-                  </div>
+            <Section id="work-item" title="Work item details" description="Scope, commercial terms, timelines and eligibility">
+              <SheetGroup title="Work description">
+                <Fields>
+                  <Field wide label="Title" value={tender.title} variant="prose-strong" />
                   {tender.workDescription && tender.workDescription !== tender.title && (
-                    <div className="td-quote">
-                      <p className="td-prose-label">Work Description</p>
-                      <p className="td-prose">{tender.workDescription}</p>
-                    </div>
+                    <Field wide label="Work Description" value={tender.workDescription} variant="prose" />
                   )}
-                </div>
+                </Fields>
               </SheetGroup>
 
-              <SheetGroup title="Financial & contract" icon={<IndianRupee />}>
-                <dl className="td-stats">
-                  <Stat
-                    tone="accent"
-                    label="Tender Value in ₹"
-                    value={formatCurrencyINR(tender.estimatedValue)}
-                    hint={tender.estimatedValue ? `(${tender.estimatedValue.toLocaleString('en-IN')})` : null}
-                  />
-                </dl>
+              <SheetGroup title="Financial & contract">
                 <Fields>
+                  <Field wide label="Tender Value in ₹" variant="emphasis">
+                    {formatCurrencyINR(tender.estimatedValue)}
+                    {tender.estimatedValue ? <span className="td-sub td-tnum">({tender.estimatedValue.toLocaleString('en-IN')})</span> : null}
+                  </Field>
                   <Field label="Product Category" value={tender.productCategory} />
                   <Field label="Sub category" value={tender.subCategory} />
                   <Field label="Contract Type" value={tender.contractType} />
@@ -699,23 +656,20 @@ export default function TenderDetails() {
                 </Fields>
               </SheetGroup>
 
-              <SheetGroup title="Location" icon={<MapPin />}>
+              <SheetGroup title="Location">
                 <Fields>
                   <Field label="Location" value={tender.location || 'As specified in NIT'} />
-                  <Field label="Pincode" value={tender.pincode || 'N/A'} mono />
+                  <Field label="Pincode" value={tender.pincode || 'N/A'} />
                 </Fields>
               </SheetGroup>
 
-              <SheetGroup title="Timeline & bid conditions" icon={<CalendarClock />}>
-                <dl className="td-stats">
-                  <Stat label="Bid Validity(Days)" value={tender.bidValidityDays ? `${tender.bidValidityDays}` : 'N/A'} />
-                  <Stat label="Period Of Work(Days)" value={tender.periodOfWorkDays ? `${tender.periodOfWorkDays} Days` : 'N/A'} />
-                </dl>
+              <SheetGroup title="Timeline & bid conditions">
                 <Fields>
+                  <Field label="Bid Validity(Days)" value={tender.bidValidityDays ? `${tender.bidValidityDays}` : 'N/A'} />
+                  <Field label="Period Of Work(Days)" value={tender.periodOfWorkDays ? `${tender.periodOfWorkDays} Days` : 'N/A'} />
                   <Field
                     label="Pre Bid Meeting Date"
                     value={tender.preBidMeetingPlace === 'NA' || !tender.preBidMeetingDate ? 'NA' : formatDateTimeDisplay(parseDate(tender.preBidMeetingDate))}
-                    mono
                   />
                   <Field label="Pre Bid Meeting Place" value={tender.preBidMeetingPlace} />
                   <Field label="Pre Bid Meeting Address" value={tender.preBidMeetingAddress} />
@@ -723,55 +677,48 @@ export default function TenderDetails() {
                 </Fields>
               </SheetGroup>
 
-              <SheetGroup title="Eligibility & conditions" icon={<ShieldCheck />}>
+              <SheetGroup title="Eligibility & conditions">
                 <Fields>
-                  <Field label="NDA/Pre Qualification" value={tender.ndaPreQualification} />
-                  <Field label="Should Allow NDA Tender" value={tender.shouldAllowNDATender} />
-                  <Field label="Allow Preferential Bidder" value={tender.allowPreferentialBidder} />
+                  <Field wide label="NDA/Pre Qualification" value={tender.ndaPreQualification} />
                   <Field wide label="Independent External Monitor/Remarks" value={tender.independentExternalMonitorRemarks} />
                 </Fields>
+                <Flags>
+                  <Flag label="Should Allow NDA Tender" value={tender.shouldAllowNDATender} />
+                  <Flag label="Allow Preferential Bidder" value={tender.allowPreferentialBidder} />
+                </Flags>
               </SheetGroup>
             </Section>
 
-            <Section
-              id="covers"
-              icon={<Layers />}
-              title="Covers information"
-              description={`No. of Covers: ${tender.noOfCovers || 2}`}
-            >
-              {genuineCovers.length > 0 ? (
-                <div className="td-table-wrap">
-                  <table className="td-table">
-                    <thead>
-                      <tr>
-                        <th className="td-col-num">Cover</th>
-                        <th>Cover Type</th>
-                        <th>Description</th>
-                        <th>Doc Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {genuineCovers.map((cover, idx) => {
-                        const docType = String(cover.documentType || '');
-                        const isSheet = /xls/i.test(docType);
-                        return (
-                          <tr key={idx}>
-                            <td data-label="Cover" className="td-col-num"><span className="td-index">{cover.coverNo || idx + 1}</span></td>
-                            <td data-label="Cover Type" className="td-strong">{cover.coverType || 'Fee/PreQual/Technical'}</td>
-                            <td data-label="Description">{cover.description || 'Document requirement as per NIT'}</td>
-                            <td data-label="Doc Type">
-                              {docType ? <Badge tone={isSheet ? 'xls' : 'pdf'} className="uppercase">{docType}</Badge> : <span className="text-slate-400">N/A</span>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+            <Section id="covers" title="Covers information" description={`No. of Covers: ${tender.noOfCovers || 2}`}>
+              {coverGroups.length > 0 ? (
+                coverGroups.map((group) => {
+                  const types = [...new Set(group.rows.map((c) => c.coverType || 'Fee/PreQual/Technical'))];
+                  return (
+                    <div key={group.no} className="td-cover">
+                      <h3 className="td-cover-head">Cover {group.no}{types.length === 1 && <span>, <span className="sr-only">Cover Type: </span>{types[0]}</span>}</h3>
+                      <ul className="td-checklist">
+                        <li className="td-checklist-cols" aria-hidden="true"><span /><span>Description{types.length > 1 ? ' / Cover Type' : ''}</span><span>Doc Type</span></li>
+                        {group.rows.map((cover, idx) => {
+                          const docType = String(cover.documentType || '');
+                          return (
+                            <li key={idx}>
+                              <span className="td-checkbox" aria-hidden="true" />
+                              <span className="td-checklist-text">
+                                {cover.description || 'Document requirement as per NIT'}
+                                {types.length > 1 && <small>{cover.coverType || 'Fee/PreQual/Technical'}</small>}
+                              </span>
+                              {docType ? <Chip className="uppercase">{docType}</Chip> : <Chip>N/A</Chip>}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })
               ) : (
-                <div className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
+                <div className="space-y-2">
                   <p>Standard {tender.noOfCovers || 2}-cover bidding system:</p>
-                  <ul className="list-disc list-inside space-y-1">
+                  <ul className="list-disc list-inside space-y-1" style={{ color: 'var(--td-text-2)' }}>
                     <li>Cover 1: Fee / Pre-Qualification / Technical (.pdf)</li>
                     <li>Cover 2: Finance / BOQ Schedule (.xls)</li>
                   </ul>
@@ -781,271 +728,269 @@ export default function TenderDetails() {
 
             {/* Mandatory bidder checklist */}
             {tender.otherImportantDocuments && tender.otherImportantDocuments.length > 0 && (
-              <Section
-                id="other-documents"
-                icon={<ClipboardList />}
-                title="Other important documents"
-                description={`${tender.otherImportantDocuments.length} mandatory document(s)`}
-              >
-                <div className="td-table-wrap">
-                  <table className="td-table">
-                    <thead>
-                      <tr>
-                        <th className="td-col-num">S.No</th>
-                        <th>Category</th>
-                        <th>Sub Category</th>
-                        <th>Sub Category Description</th>
-                        <th>Format/File</th>
+              <Section id="other-documents" title="Other important documents" description={`${tender.otherImportantDocuments.length} mandatory document(s)`}>
+                <table className="td-table">
+                  <thead>
+                    <tr>
+                      <th className="td-c-num">S.No</th>
+                      <th>Category</th>
+                      <th>Sub Category</th>
+                      <th>Sub Category Description</th>
+                      <th>Format/File</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tender.otherImportantDocuments.map((doc, idx) => (
+                      <tr key={idx}>
+                        <td data-label="S.No" className="td-c-num">{doc.sNo || idx + 1}</td>
+                        <td data-label="Category">{doc.category}</td>
+                        <td data-label="Sub Category" style={{ fontWeight: 600 }}>{doc.subCategory}</td>
+                        <td data-label="Description">{doc.description}</td>
+                        <td data-label="Format/File" className="td-mono">{doc.format || 'N/A'}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {tender.otherImportantDocuments.map((doc, idx) => (
-                        <tr key={idx}>
-                          <td data-label="S.No" className="td-col-num"><span className="td-index">{doc.sNo || idx + 1}</span></td>
-                          <td data-label="Category">{doc.category}</td>
-                          <td data-label="Sub Category" className="td-strong">{doc.subCategory}</td>
-                          <td data-label="Description">{doc.description}</td>
-                          <td data-label="Format/File" className="td-mono text-xs">{doc.format || 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </Section>
             )}
           </div>
 
-          {/* ── Side column: money first ─────────────────────────────── */}
-          <aside className="order-first lg:order-none space-y-5 sm:space-y-6 min-w-0 lg:sticky lg:top-24">
-            <Section id="fees" variant="navy" icon={<Landmark />} title="Fee & EMD details" description="Payable before bid submission">
-              <div className="td-money-block td-money-block--lead">
-                <p className="td-money-label">
-                  EMD Deposit
-                  <span className="td-money-tag">{tender.emdFeeType || 'Fixed'}</span>
-                </p>
-                <p className="td-money-amount">{formatCurrencyINR(tender.emdAmount)}</p>
-                <dl className="td-money-list">
+          {/* ── Right rail: payment slip ─────────────────────────────── */}
+          <aside className="min-w-0 lg:sticky lg:top-36">
+            <section id="fees" aria-labelledby="fees-heading" className="td-slip">
+              <h2 id="fees-heading" className="td-slip-title">Fee &amp; EMD details</h2>
+              <p className="td-slip-desc">Payable before bid submission</p>
+
+              <div className="td-slip-item">
+                <div className="td-slip-line">
+                  <span className="td-slip-name">EMD Deposit <span className="td-slip-tag">{tender.emdFeeType || 'Fixed'}</span></span>
+                  <span className="td-slip-amount">{formatCurrencyINR(tender.emdAmount)}</span>
+                </div>
+                <dl className="td-slip-sub">
                   <div><dt>Payable To</dt><dd>{tender.emdPayableTo || 'N/A'}</dd></div>
                   <div><dt>Payable At</dt><dd>{tender.emdPayableAt || 'N/A'}</dd></div>
                   <div><dt>Exemption</dt><dd>{tender.emdExemptionAllowed || 'No'}</dd></div>
                 </dl>
               </div>
-              <div className="td-money-block">
-                <p className="td-money-label">Tender Fee</p>
-                <p className="td-money-amount">{formatCurrencyINR(tender.tenderFee)}</p>
-                <dl className="td-money-list">
+              <hr className="td-slip-cut" />
+              <div className="td-slip-item">
+                <div className="td-slip-line">
+                  <span className="td-slip-name">Tender Fee</span>
+                  <span className="td-slip-amount">{formatCurrencyINR(tender.tenderFee)}</span>
+                </div>
+                <dl className="td-slip-sub">
                   <div><dt>Payable To</dt><dd>{tender.feePayableTo || 'N/A'}</dd></div>
                   <div><dt>Payable At</dt><dd>{tender.feePayableAt || 'N/A'}</dd></div>
                   <div><dt>Fee Exemption</dt><dd>{tender.tenderFeeExemptionAllowed || 'No'}</dd></div>
                 </dl>
               </div>
-            </Section>
-
-            <Section id="payment-instruments" variant="tint" icon={<CreditCard />} title="Payment instruments">
-              {genuineInstruments.length > 0 ? (
-                <div className="td-table-wrap bg-white dark:bg-transparent">
-                  <table className="td-table">
-                    <thead>
-                      <tr>
-                        <th className="td-col-num">S.No</th>
-                        <th>Instrument Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {genuineInstruments.map((inst, idx) => (
-                        <tr key={idx}>
-                          <td data-label="S.No" className="td-col-num"><span className="td-index">{inst.sNo || idx + 1}</span></td>
-                          <td data-label="Instrument" className="td-strong">{inst.instrumentType}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="td-prose">
-                  {tender.paymentMode === 'Offline'
-                    ? 'Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).'
-                    : 'Online payment mode (e-Payment / Net Banking / RTGS / NEFT).'}
-                </p>
-              )}
-            </Section>
+              <hr className="td-slip-cut" />
+              <div id="payment-instruments" className="td-slip-foot">
+                <h3>Payment instruments</h3>
+                {genuineInstruments.length > 0 ? (
+                  <>
+                  <p className="td-slip-cols" aria-hidden="true"><span>S.No</span><span>Instrument Type</span></p>
+                  <ol aria-label="S.No and Instrument Type">
+                    {genuineInstruments.map((inst, idx) => (
+                      <li key={idx}><span>{inst.sNo || idx + 1}</span><span>{inst.instrumentType}</span></li>
+                    ))}
+                  </ol>
+                  </>
+                ) : (
+                  <p>
+                    {tender.paymentMode === 'Offline'
+                      ? 'Offline payment mode (acceptable instruments: Demand Draft / Bank Guarantee / CDR / FDR as per NIT).'
+                      : 'Online payment mode (e-Payment / Net Banking / RTGS / NEFT).'}
+                  </p>
+                )}
+              </div>
+            </section>
           </aside>
         </div>
 
         {/* ── Documents ──────────────────────────────────────────────── */}
         <Section
           id="documents"
-          icon={<Files />}
           title="Tender documents & attachments"
           description="Official notices, corrigenda, BOQ and work documents from the portal"
           action={totalDocsCount > 0
-            ? <Badge tone="accent">{totalDocsCount} {totalDocsCount === 1 ? 'file' : 'files'}</Badge>
-            : <Badge tone="warning">Pending Release</Badge>}
+            ? <Chip tone="cobalt">{totalDocsCount} {totalDocsCount === 1 ? 'file' : 'files'}</Chip>
+            : <Chip>Pending Release</Chip>}
         >
-          <div className="td-fm">
-            {/* 1. Official tender notices & corrigenda */}
-            {nitDocs.length > 0 && (
-              <div className="td-fm-group">
-                <div className="td-fm-head">
-                  <h3 className="td-fm-title">
-                    <FileText className="text-rose-600 dark:text-rose-300" /> Tender Notices &amp; Corrigenda
-                    <span className="td-fm-count">{nitDocs.length}</span>
-                  </h3>
-                  <span className="td-fm-note">PDF Format</span>
-                </div>
-                <ul className="td-docs">
+          {/* 1. Official tender notices & corrigenda */}
+          {nitDocs.length > 0 && (
+            <div className="td-docgroup">
+              <div className="td-docgroup-head">
+                <h3 className="td-docgroup-title">Tender Notices &amp; Corrigenda <span>({nitDocs.length})</span></h3>
+                <span className="td-docgroup-note">PDF Format</span>
+              </div>
+              <table className="td-table">
+                <thead>
+                  <tr><th>Name</th><th className="td-c-label">Label</th><th className="td-c-size">Size</th><th className="td-c-actions"><span className="sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
                   {nitDocs.map((doc, index) => {
-                    const category = noticeCategory(doc);
+                    const strong = noticeCategory(doc).weight === 'strong';
                     return (
-                      <DocRow
-                        key={index}
-                        icon={<FileText />}
-                        tone={category.tone}
-                        weight={category.weight}
-                        name={doc.documentName || `Tendernotice_${index + 1}.pdf`}
-                        typeLabel="PDF"
-                        description={doc.description || `Notice Inviting Tender #${index + 1}`}
-                        size={formatSizeKb(doc.documentSizeKb)}
-                        actions={(
-                          <>
-                            <a href={`${docBase}/notice/${index}`} target="_blank" rel="noopener noreferrer" className={`td-btn td-btn--sm ${category.weight === 'strong' ? 'td-btn--primary' : 'td-btn--accent'}`}>
+                      <tr key={index}>
+                        <td className="td-c-main">
+                          <span className="td-file"><FileText aria-hidden="true" />
+                            <span className="min-w-0">
+                              <span className={`td-file-name ${strong ? 'is-strong' : ''}`} style={{ display: 'block' }}>{doc.documentName || `Tendernotice_${index + 1}.pdf`}</span>
+                              <span className="td-file-desc">{doc.description || `Notice Inviting Tender #${index + 1}`}</span>
+                            </span>
+                          </span>
+                        </td>
+                        <td data-label="Label" className="td-c-label"><Chip>PDF</Chip></td>
+                        <td data-label="Size" className="td-c-size">{formatSizeKb(doc.documentSizeKb) || '—'}</td>
+                        <td className="td-c-actions">
+                          <span className="td-row-actions">
+                            <a href={`${docBase}/notice/${index}`} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--quiet td-btn--sm">
                               <Eye /> View Notice
                             </a>
-                            <a href={`${docBase}/notice/${index}?download=1`} className="td-btn td-btn--secondary td-btn--icon" title="Download Notice" aria-label="Download Notice">
+                            <a href={`${docBase}/notice/${index}?download=1`} className="td-btn td-btn--quiet td-btn--icon" title="Download Notice" aria-label="Download Notice">
                               <Download />
                             </a>
-                          </>
-                        )}
-                      />
+                          </span>
+                        </td>
+                      </tr>
                     );
                   })}
-                </ul>
-              </div>
-            )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-            {/* 2. Work item documents & BOQ archive (.zip) */}
-            {zipUrl && (
-              <div className="td-fm-group td-fm-group--package">
-                <div className="td-fm-head">
-                  <h3 className="td-fm-title"><FolderArchive className="text-emerald-600 dark:text-emerald-400" /> Work Item Documents &amp; BOQ Package</h3>
-                  <span className="td-fm-note">Direct ZIP Archive</span>
+          {/* 2. Work item documents & BOQ archive (.zip) */}
+          {zipUrl && (
+            <div className="td-docgroup">
+              <div className="td-docgroup-head">
+                <h3 className="td-docgroup-title">Work Item Documents &amp; BOQ Package</h3>
+                <span className="td-docgroup-note">Direct ZIP Archive</span>
+              </div>
+
+              <div className="td-package">
+                <div className="td-package-main">
+                  <FolderArchive aria-hidden="true" />
+                  <div className="min-w-0">
+                    <div className="td-package-name">
+                      <span className="td-file-name">{zipName}</span>
+                      <Chip>ZIP Archive</Chip>
+                      {tender.zipFileSizeKb && <span className="td-file-desc td-tnum">{formatSizeKb(tender.zipFileSizeKb)}</span>}
+                    </div>
+                    <p className="td-package-desc">Contains official BOQ spreadsheets (.xls/.xlsx), technical drawings, and work specifications.</p>
+                  </div>
+                  <div className="td-package-actions">
+                    <button type="button" onClick={handleDownloadZip} className="td-btn td-btn--primary td-btn--sm" title="Directly download the complete .zip file">
+                      <Download /> Download ZIP
+                    </button>
+                    <button type="button" onClick={handleUnzip} disabled={isUnzipping} className={`td-btn td-btn--sm ${extractedFiles ? 'td-btn--ready' : 'td-btn--quiet'}`}>
+                      {isUnzipping ? (
+                        <><Loader2 className="animate-spin" /> Unpacking...</>
+                      ) : extractedFiles ? (
+                        <><Check /> Unpacked ({extractedFiles.length} files)</>
+                      ) : (
+                        <><FolderArchive /> Inspect &amp; Unzip Files</>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                <ul className="td-docs">
-                  <DocRow
-                    icon={<FolderArchive />}
-                    tone="zip"
-                    weight="strong"
-                    name={zipName}
-                    typeLabel="ZIP Archive"
-                    description="Contains official BOQ spreadsheets (.xls/.xlsx), technical drawings, and work specifications."
-                    size={formatSizeKb(tender.zipFileSizeKb)}
-                    actions={(
-                      <>
-                        <button type="button" onClick={handleDownloadZip} className="td-btn td-btn--success td-btn--sm" title="Directly download the complete .zip file">
-                          <Download /> Download ZIP
-                        </button>
-                        <button type="button" onClick={handleUnzip} disabled={isUnzipping} className="td-btn td-btn--secondary td-btn--sm">
-                          {isUnzipping ? (
-                            <><Loader2 className="animate-spin text-emerald-600" /> Unpacking...</>
-                          ) : extractedFiles ? (
-                            <><Check className="text-emerald-600" /> Unpacked ({extractedFiles.length} files)</>
-                          ) : (
-                            <><FolderArchive className="text-emerald-600" /> Inspect &amp; Unzip Files</>
-                          )}
-                        </button>
-                      </>
-                    )}
-                  />
-                </ul>
-
                 {!extractedFiles && !isUnzipping && (
-                  <div className="td-callout">
+                  <p className="td-note">
                     <Info />
                     <span>
                       Looking for individual files without downloading the full archive? Click <strong>&quot;Inspect &amp; Unzip Files&quot;</strong> to unpack and download specific BOQ sheets (as the original Excel file or as CSV) or PDFs directly in your browser. (Note: Extraction may take a few moments depending on archive size).
                     </span>
-                  </div>
+                  </p>
                 )}
 
                 {isUnzipping && (
-                  <div className="td-callout">
+                  <p className="td-note" role="status">
                     <Loader2 className="animate-spin" />
                     <span>Unpacking archive contents in your browser... Please wait a moment.</span>
-                  </div>
+                  </p>
                 )}
 
                 {unzipError && (
-                  <div className="td-callout td-callout--error" role="alert">
+                  <div className="td-note td-note--error" role="alert">
                     <span className="flex items-center gap-2"><AlertCircle />{unzipError}</span>
-                    <button type="button" onClick={() => { setExtractedFiles(null); handleUnzip(); }} className="underline font-semibold cursor-pointer">
+                    <button type="button" onClick={() => { setExtractedFiles(null); handleUnzip(); }} className="td-btn td-btn--text">
                       Retry
                     </button>
                   </div>
                 )}
 
                 {extractedFiles && extractedFiles.length > 0 && (
-                  <div className="td-fm-sub">
-                    <div className="td-fm-sub-head">
-                      <span><Check /> Extracted Files Available for Download ({extractedFiles.length})</span>
-                      <Badge tone="success">Ready in Browser</Badge>
+                  <div className="td-nested">
+                    <div className="td-nested-head">
+                      <span>Extracted Files Available for Download ({extractedFiles.length})</span>
+                      <Chip tone="ready">Ready in Browser</Chip>
                     </div>
-                    <ul className="td-docs">
-                      {extractedFiles.map((file, idx) => {
-                        const isXls = file.type === 'BOQ';
-                        const isPdf = file.type === 'PDF';
-                        return (
-                          <DocRow
-                            key={idx}
-                            icon={isXls ? <FileSpreadsheet /> : <FileText />}
-                            tone={isXls ? 'xls' : isPdf ? 'pdf' : 'neutral'}
-                            weight={isXls ? 'strong' : 'normal'}
-                            name={file.name}
-                            typeLabel={file.type}
-                            size={file.sizeKb > 0 ? formatSizeKb(file.sizeKb) : null}
-                            actions={(
-                              <>
-                                {isPdf && (
-                                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--primary td-btn--sm">
-                                    <Eye /> View
+                    <table className="td-table">
+                      <thead>
+                        <tr><th>Name</th><th className="td-c-label">Label</th><th className="td-c-size">Size</th><th className="td-c-actions"><span className="sr-only">Actions</span></th></tr>
+                      </thead>
+                      <tbody>
+                        {extractedFiles.map((file, idx) => {
+                          const isXls = file.type === 'BOQ';
+                          const isPdf = file.type === 'PDF';
+                          return (
+                            <tr key={idx}>
+                              <td className="td-c-main">
+                                <span className={`td-file ${isXls ? 'td-file--sheet' : ''}`}>
+                                  {isXls ? <FileSpreadsheet aria-hidden="true" /> : <FileText aria-hidden="true" />}
+                                  <span className={`td-file-name ${isXls ? 'is-strong' : ''}`}>{file.name}</span>
+                                </span>
+                              </td>
+                              <td data-label="Label" className="td-c-label"><Chip>{file.type}</Chip></td>
+                              <td data-label="Size" className="td-c-size">{file.sizeKb > 0 ? formatSizeKb(file.sizeKb) : '—'}</td>
+                              <td className="td-c-actions">
+                                <span className="td-row-actions">
+                                  {isPdf && (
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--quiet td-btn--sm">
+                                      <Eye /> View
+                                    </a>
+                                  )}
+                                  <a href={file.url} download={file.name} className="td-btn td-btn--quiet td-btn--sm">
+                                    <Download /> {isXls ? 'Excel' : 'Download'}
                                   </a>
-                                )}
-                                <a href={file.url} download={file.name} className={`td-btn td-btn--sm ${isXls ? 'td-btn--success' : 'td-btn--secondary'}`}>
-                                  <Download /> {isXls ? 'Excel' : 'Download'}
-                                </a>
-                                {isXls && (
-                                  <a
-                                    href={`${api.defaults.baseURL}/tenders/${tender._id || id}/zip/csv?entry=${encodeURIComponent(file.path || file.name)}`}
-                                    download
-                                    aria-label={`Download ${file.name} as CSV`}
-                                    title="Cell values only, opens in any app. Bid with the Excel file."
-                                    className="td-btn td-btn--secondary td-btn--sm"
-                                  >
-                                    <Download /> CSV
-                                  </a>
-                                )}
-                              </>
-                            )}
-                          />
-                        );
-                      })}
-                    </ul>
+                                  {isXls && (
+                                    <a
+                                      href={`${api.defaults.baseURL}/tenders/${tender._id || id}/zip/csv?entry=${encodeURIComponent(file.path || file.name)}`}
+                                      download
+                                      aria-label={`Download ${file.name} as CSV`}
+                                      title="Cell values only, opens in any app. Bid with the Excel file."
+                                      className="td-btn td-btn--quiet td-btn--sm"
+                                    >
+                                      <Download /> CSV
+                                    </a>
+                                  )}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Legacy extracted work item documents (older data without a ZIP) */}
-            {!zipUrl && workDocs.length > 0 && (
-              <div className="td-fm-group">
-                <div className="td-fm-head">
-                  <h3 className="td-fm-title">
-                    <FolderArchive className="text-emerald-600 dark:text-emerald-400" /> Work Item Documents &amp; Attachments
-                    <span className="td-fm-count">{workDocs.length}</span>
-                  </h3>
-                  <span className="td-fm-note">Extracted Files</span>
-                </div>
-                <ul className="td-docs">
+          {/* Legacy extracted work item documents (older data without a ZIP) */}
+          {!zipUrl && workDocs.length > 0 && (
+            <div className="td-docgroup">
+              <div className="td-docgroup-head">
+                <h3 className="td-docgroup-title">Work Item Documents &amp; Attachments <span>({workDocs.length})</span></h3>
+                <span className="td-docgroup-note">Extracted Files</span>
+              </div>
+              <table className="td-table">
+                <thead>
+                  <tr><th>Name</th><th className="td-c-label">Label</th><th className="td-c-size">Size</th><th className="td-c-actions"><span className="sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
                   {workDocs.map((doc, index) => {
                     const docName = doc.documentName || `Document_${index + 1}`;
                     const lowerName = docName.toLowerCase();
@@ -1053,82 +998,89 @@ export default function TenderDetails() {
                     const isPdf = lowerName.endsWith('.pdf') || doc.documentType === 'TECHNICAL_DOCUMENT';
                     const path = workDocPath(doc, index);
                     return (
-                      <DocRow
-                        key={index}
-                        icon={isXls ? <FileSpreadsheet /> : <FileText />}
-                        tone={isXls ? 'xls' : isPdf ? 'pdf' : 'neutral'}
-                        weight={isXls ? 'strong' : 'normal'}
-                        name={docName}
-                        typeLabel={doc.documentType || (isXls ? 'BOQ' : isPdf ? 'Drawing/Spec' : 'Attachment')}
-                        description={doc.description || (isXls ? 'BOQ Work Schedule' : 'Enclosed Document from Zip Archive')}
-                        size={formatSizeKb(doc.documentSizeKb)}
-                        actions={isPdf ? (
-                          <>
-                            <a href={path} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--primary td-btn--sm">
-                              <Eye /> View Document
-                            </a>
-                            <a href={`${path}?download=1`} download={docName} className="td-btn td-btn--secondary td-btn--icon" title="Download File" aria-label="Download File">
-                              <Download />
-                            </a>
-                          </>
-                        ) : isXls ? (
-                          <>
-                            <a href={path} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--success td-btn--sm">
-                              <FileSpreadsheet /> Excel
-                            </a>
-                            <a
-                              href={`${path}?format=csv`}
-                              download
-                              aria-label={`Download ${docName} as CSV`}
-                              title="Cell values only, opens in any app. Bid with the Excel file."
-                              className="td-btn td-btn--secondary td-btn--sm"
-                            >
-                              <Download /> CSV
-                            </a>
-                          </>
-                        ) : (
-                          <a href={`${path}?download=1`} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--secondary td-btn--sm">
-                            <Download /> Download File
-                          </a>
-                        )}
-                      />
+                      <tr key={index}>
+                        <td className="td-c-main">
+                          <span className={`td-file ${isXls ? 'td-file--sheet' : ''}`}>
+                            {isXls ? <FileSpreadsheet aria-hidden="true" /> : <FileText aria-hidden="true" />}
+                            <span className="min-w-0">
+                              <span className={`td-file-name ${isXls ? 'is-strong' : ''}`} style={{ display: 'block' }}>{docName}</span>
+                              <span className="td-file-desc">{doc.description || (isXls ? 'BOQ Work Schedule' : 'Enclosed Document from Zip Archive')}</span>
+                            </span>
+                          </span>
+                        </td>
+                        <td data-label="Label" className="td-c-label"><Chip>{doc.documentType || (isXls ? 'BOQ' : isPdf ? 'Drawing/Spec' : 'Attachment')}</Chip></td>
+                        <td data-label="Size" className="td-c-size">{formatSizeKb(doc.documentSizeKb) || '—'}</td>
+                        <td className="td-c-actions">
+                          <span className="td-row-actions">
+                            {isPdf ? (
+                              <>
+                                <a href={path} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--quiet td-btn--sm">
+                                  <Eye /> View Document
+                                </a>
+                                <a href={`${path}?download=1`} download={docName} className="td-btn td-btn--quiet td-btn--icon" title="Download File" aria-label="Download File">
+                                  <Download />
+                                </a>
+                              </>
+                            ) : isXls ? (
+                              <>
+                                <a href={path} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--quiet td-btn--sm">
+                                  <FileSpreadsheet /> Excel
+                                </a>
+                                <a
+                                  href={`${path}?format=csv`}
+                                  download
+                                  aria-label={`Download ${docName} as CSV`}
+                                  title="Cell values only, opens in any app. Bid with the Excel file."
+                                  className="td-btn td-btn--quiet td-btn--sm"
+                                >
+                                  <Download /> CSV
+                                </a>
+                              </>
+                            ) : (
+                              <a href={`${path}?download=1`} target="_blank" rel="noopener noreferrer" download={docName} className="td-btn td-btn--quiet td-btn--sm">
+                                <Download /> Download File
+                              </a>
+                            )}
+                          </span>
+                        </td>
+                      </tr>
                     );
                   })}
-                </ul>
-              </div>
-            )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-            {/* 3. Nothing released yet */}
-            {totalDocsCount === 0 && (
-              <div className="td-notice">
-                <div className="flex items-start gap-3">
-                  <FileClock className="w-5 h-5 mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" />
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Tender Documents Not Available Yet</h3>
-                    <p className="td-card-desc mt-1">
-                      Official tender documents (NIT notice, drawings, specifications, and BOQ schedule) have not been released by the department on the portal yet.
-                    </p>
-                    <p className="td-prose-label mt-4">Document Availability Schedule</p>
-                    <p className="td-prose">
-                      {tender.documentDownloadStartDate ? (
-                        <>
-                          The documents will be available on{' '}
-                          <strong className="td-mono text-dalBlue dark:text-blue-300">
-                            {formatDateTimeDisplay(parseDate(tender.documentDownloadStartDate))}
-                          </strong>
-                        </>
-                      ) : (
-                        'The documents will be available as soon as released on the official portal.'
-                      )}
-                    </p>
-                    <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--primary mt-4">
-                      Check Status on Official Portal <ExternalLink />
-                    </button>
-                  </div>
+          {/* 3. Nothing released yet */}
+          {totalDocsCount === 0 && (
+            <div className="td-info">
+              <div className="flex items-start gap-3">
+                <FileClock className="w-5 h-5 mt-0.5 shrink-0" style={{ color: 'var(--td-cobalt)' }} />
+                <div className="min-w-0">
+                  <h3 className="td-info-title">Tender Documents Not Available Yet</h3>
+                  <p className="td-panel-desc mt-1">
+                    Official tender documents (NIT notice, drawings, specifications, and BOQ schedule) have not been released by the department on the portal yet.
+                  </p>
+                  <p className="td-panel-desc mt-4">Document Availability Schedule</p>
+                  <p className="mt-1">
+                    {tender.documentDownloadStartDate ? (
+                      <>
+                        The documents will be available on{' '}
+                        <strong className="td-tnum" style={{ color: 'var(--td-cobalt)' }}>
+                          {formatDateTimeDisplay(parseDate(tender.documentDownloadStartDate))}
+                        </strong>
+                      </>
+                    ) : (
+                      'The documents will be available as soon as released on the official portal.'
+                    )}
+                  </p>
+                  <button type="button" onClick={handleOpenPortalModal} className="td-btn td-btn--primary mt-4">
+                    Check Status on Official Portal <ExternalLink />
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </Section>
 
         {/* Related open tenders: internal links for visitors and crawlers */}

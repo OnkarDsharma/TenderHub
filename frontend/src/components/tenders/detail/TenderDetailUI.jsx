@@ -1,30 +1,24 @@
 /**
  * @file src/components/tenders/detail/TenderDetailUI.jsx
- * @description Layout building blocks for the tender details page: section
- * surfaces, information-sheet groups, label/value fields, stats, badges and
- * document rows. Styles live in tender-details.css under the `td-` prefix.
+ * @description Building blocks for the tender details page ("the bid file"):
+ * panels, spec-sheet groups, label/value fields, Yes/No flags and chips.
+ * Styles live in tender-details.css under the `td-` prefix.
  */
 
 import { isBlank } from './detailFormat';
 
-/**
- * Section surface. `variant` gives each content type its own identity:
- * 'plain' (default white sheet), 'tint' (slate-blue surface), 'navy' (financial anchor).
- */
-export function Section({ title, description, action, icon, id, variant = 'plain', className = '', children }) {
+/** Page-level panel with a plain heading (no icon tile) and an optional action. */
+export function Section({ title, description, action, id, className = '', children }) {
   const headingId = id ? `${id}-heading` : undefined;
   return (
-    <section id={id} aria-labelledby={headingId} className={`td-card td-card--${variant} ${className}`}>
+    <section id={id} aria-labelledby={headingId} className={`td-panel ${className}`}>
       {(title || action) && (
-        <header className="td-card-head">
-          <div className="td-card-heading">
-            {icon && <span className="td-card-icon" aria-hidden="true">{icon}</span>}
-            <div className="min-w-0">
-              {title && <h2 id={headingId} className="td-card-title">{title}</h2>}
-              {description && <p className="td-card-desc">{description}</p>}
-            </div>
+        <header className="td-panel-head">
+          <div className="min-w-0">
+            {title && <h2 id={headingId} className="td-panel-title">{title}</h2>}
+            {description && <p className="td-panel-desc">{description}</p>}
           </div>
-          {action && <div className="td-card-action">{action}</div>}
+          {action && <div className="td-panel-action">{action}</div>}
         </header>
       )}
       {children}
@@ -32,89 +26,60 @@ export function Section({ title, description, action, icon, id, variant = 'plain
   );
 }
 
-/**
- * Information-sheet row: the group name sits in a left rail on wide screens and
- * above its fields on narrow ones.
- */
-export function SheetGroup({ title, icon, children }) {
+/** Spec-sheet row: plain group name in a narrow left column, fields on the right. */
+export function SheetGroup({ title, children }) {
   return (
     <div className="td-sheet">
-      <div className="td-sheet-rail">
-        {icon && <span className="td-sheet-icon" aria-hidden="true">{icon}</span>}
-        <h3 className="td-sheet-title">{title}</h3>
-      </div>
+      <h3 className="td-sheet-title">{title}</h3>
       <div className="td-sheet-body">{children}</div>
     </div>
   );
 }
 
-/** A titled cluster of fields inside a section. */
-export function FieldGroup({ title, children }) {
-  return (
-    <div className="td-group">
-      {title && <h3 className="td-group-title">{title}</h3>}
-      {children}
-    </div>
-  );
-}
-
-/** Label/value list. `columns` controls how many columns it uses on wide screens. */
+/** Two-column definition list separated by hairlines. */
 export function Fields({ columns = 2, children }) {
   return <dl className={`td-fields td-fields--${columns}`}>{children}</dl>;
 }
 
 /**
- * One label/value pair. Blank values are always shown as "N/A" rather than
- * hidden, so a contractor can see the field exists. `wide` spans every column.
+ * One label/value pair. Blank values are shown as "N/A", never hidden.
+ * `wide` spans both columns; `variant` is 'emphasis' | 'prose' | 'prose-strong'.
  */
-export function Field({ label, value, mono = false, wide = false, emphasis = false }) {
-  const blank = typeof value !== 'object' && isBlank(value);
+export function Field({ label, value, mono = false, wide = false, variant, children }) {
+  const content = children ?? value;
+  const blank = typeof content !== 'object' && isBlank(content);
+  const variantClass = variant === 'emphasis' ? 'td-emphasis'
+    : variant === 'prose' ? 'td-prose'
+    : variant === 'prose-strong' ? 'td-prose td-prose--strong' : '';
   return (
     <div className={`td-field ${wide ? 'td-field--wide' : ''}`}>
       <dt>{label}</dt>
-      <dd className={`${mono ? 'td-mono' : ''} ${emphasis ? 'td-emphasis' : ''} ${blank ? 'td-blank' : ''}`}>
-        {blank ? 'N/A' : value}
+      <dd className={`${mono ? 'td-mono' : ''} ${variantClass} ${blank ? 'td-blank' : ''}`}>
+        {blank ? 'N/A' : content}
       </dd>
     </div>
   );
 }
 
-/** A headline number with its label, for values worth reading at a glance. */
-export function Stat({ label, value, hint, tone = 'default' }) {
-  const blank = typeof value !== 'object' && isBlank(value);
-  return (
-    <div className={`td-stat td-stat--${tone}`}>
-      <dt>{label}</dt>
-      <dd className={blank ? 'td-blank' : ''}>{blank ? 'N/A' : value}</dd>
-      {hint && <dd className="td-stat-hint">{hint}</dd>}
-    </div>
-  );
+/** Row of Yes/No chips. */
+export function Flags({ children }) {
+  return <ul className="td-flags">{children}</ul>;
 }
 
-/** Small status / type pill. */
-export function Badge({ tone = 'neutral', className = '', children, ...rest }) {
-  return <span className={`td-badge td-badge--${tone} ${className}`} {...rest}>{children}</span>;
-}
-
-/**
- * One document row in a file list: icon, full file name (wraps, never
- * truncated), type badge, description and size, with actions on the right
- * (below on mobile). `weight` lets primary documents read stronger than
- * supporting ones.
- */
-export function DocRow({ icon, tone = 'neutral', name, typeLabel, description, size, actions, weight = 'normal' }) {
+/** One labelled Yes/No chip. Shows the portal's value verbatim; blanks read "N/A". */
+export function Flag({ label, value }) {
+  const blank = isBlank(value);
+  const text = blank ? 'N/A' : String(value);
+  const tone = blank ? 'na' : /^y(es)?$/i.test(text.trim()) ? 'yes' : 'no';
   return (
-    <li className={`td-doc td-doc--${weight}`}>
-      <div className={`td-doc-icon td-doc-icon--${tone}`}>{icon}</div>
-      <div className="td-doc-body">
-        <p className="td-doc-name">{name}</p>
-        <p className="td-doc-meta">
-          {typeLabel && <Badge tone={tone}>{typeLabel}</Badge>}
-          {description && <span>{description}</span>}
-          {size && <span className="td-doc-size">{size}</span>}
-        </p>
-      </div>
-      {actions && <div className="td-doc-actions">{actions}</div>}
+    <li className={`td-flag td-flag--${tone}`}>
+      <span>{label}</span>
+      <b>{text}</b>
     </li>
   );
+}
+
+/** Small chip. Tones: neutral, code, cobalt, ready, status. */
+export function Chip({ tone = 'neutral', className = '', children, ...rest }) {
+  return <span className={`td-chip td-chip--${tone} ${className}`} {...rest}>{children}</span>;
 }
