@@ -425,3 +425,29 @@
   .td-track-fill { animation: none; }
   .td-page *, .td-scope *, .td-bidbar, .td-bidbar.is-on { transition: none !important; }
 }
+
+/* ==================================================================== */
+/* GeM bid page additions (same system)                                  */
+/* ==================================================================== */
+.td-bidno { display: inline-flex; align-items: center; gap: .4rem; margin-top: 1rem; }
+.td-bidno .td-chip { padding: .3rem .6rem; font-size: .8125rem; }
+.td-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.td-tags li { padding: .2rem .65rem; border-radius: var(--td-r-chip); border: 1px solid var(--td-line-strong); background: var(--td-subtle); font-size: .8125rem; font-weight: 500; color: var(--td-ink); overflow-wrap: anywhere; }
+.td-raw { margin-top: 1rem; padding: .9rem 1rem; border-radius: var(--td-r-block); border: 1px solid var(--td-line); background: var(--td-subtle); font-size: .8125rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--td-text-2); }
+.td-table .td-c-qty { width: 1%; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.td-field dd .td-table { margin-top: .25rem; font-weight: 400; }
+@container (min-width: 480px) { .td-facts--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.td-provenance { margin-top: .75rem; font-size: .8125rem; color: var(--td-text-2); }
+.td-provenance strong { font-weight: 600; color: var(--td-ink); }
+.td-links { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--td-line); }
+.td-links li { border-bottom: 1px solid var(--td-line); }
+.td-links a { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 0 -.5rem; padding: .7rem .5rem; border-radius: 8px; color: var(--td-ink); transition: background var(--td-ease), color var(--td-ease); }
+.td-links a:hover { background: var(--td-subtle); color: var(--td-cobalt); }
+.td-links-go { width: 1rem; height: 1rem; flex-shrink: 0; color: var(--td-cobalt); }
+.td-slip-item--last { padding-bottom: 0; }
+.td-form { display: grid; gap: .6rem; }
+.td-input { width: 100%; padding: .55rem .7rem; border-radius: 10px; border: 1px solid var(--td-line-strong); background: var(--td-surface); font: inherit; font-size: .875rem; color: var(--td-ink); }
+.td-input::placeholder { color: var(--td-text-2); }
+.td-input:focus-visible { outline: 2px solid var(--td-cobalt); outline-offset: 1px; border-color: var(--td-cobalt); }
+.td-form .td-btn { justify-self: start; }
+.td-slip-amount--text { font-family: var(--td-sans); font-size: 1rem; font-weight: 600; letter-spacing: 0; color: #DCE3F1; }

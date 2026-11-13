@@ -2,7 +2,7 @@
  * @file src/components/tenders/detail/BidBar.jsx
  * @description Slim glass bar that appears under the site navigation once the
  * tender header has scrolled away: tender ID, value, EMD, time to close and
- * Save Tender. On phones it keeps ID, time to close and Save.
+ * Save. Labels are configurable so GeM bids can reuse it. On phones it keeps ID, time to close and Save.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Heart } from 'lucide-react';
@@ -22,7 +22,10 @@ export function ScrollSentinel({ onChange }) {
   return <div ref={ref} aria-hidden="true" />;
 }
 
-export function BidBar({ show, tenderId, value, emd, timeToClose, closed, bookmarked, onSave }) {
+export function BidBar({
+  show, tenderId, value, emd, timeToClose, closed, bookmarked, onSave,
+  idLabel = 'Tender ID', saveLabel = 'Save Tender', savedLabel = 'Saved in Watchlist',
+}) {
   // Sit just under the sticky site navigation.
   const [top, setTop] = useState(72);
   useEffect(() => {
@@ -39,13 +42,15 @@ export function BidBar({ show, tenderId, value, emd, timeToClose, closed, bookma
     <div className={`td-bidbar ${show ? 'is-on' : ''}`} style={{ top }} inert={!show}>
       <div className="td-bidbar-inner">
         <div className="td-bidbar-item td-bidbar-item--id">
-          <span>Tender ID</span>
+          <span>{idLabel}</span>
           <strong>{tenderId}</strong>
         </div>
-        <div className="td-bidbar-item td-bidbar-item--hide-sm">
-          <span>Tender value</span>
-          <strong>{value}</strong>
-        </div>
+        {value !== undefined && (
+          <div className="td-bidbar-item td-bidbar-item--hide-sm">
+            <span>Tender value</span>
+            <strong>{value}</strong>
+          </div>
+        )}
         <div className="td-bidbar-item td-bidbar-item--hide-sm">
           <span>EMD deposit</span>
           <strong>{emd}</strong>
@@ -61,7 +66,7 @@ export function BidBar({ show, tenderId, value, emd, timeToClose, closed, bookma
           className={`td-btn td-btn--sm ${bookmarked ? 'td-btn--saved' : 'td-btn--primary'}`}
         >
           <Heart className={bookmarked ? 'fill-current' : ''} />
-          {bookmarked ? 'Saved in Watchlist' : 'Save Tender'}
+          {bookmarked ? savedLabel : saveLabel}
         </button>
       </div>
     </div>

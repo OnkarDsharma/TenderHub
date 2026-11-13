@@ -17,7 +17,11 @@ import { useTender } from '@/hooks/useTenders';
 import { gemApi } from '@/services/gemApi';
 import { formatCurrencyINR, formatDateTimeDisplay } from '@/utils/formatters';
 import { Button } from '@/components/ui/Button';
-import { Tile } from '@/components/shared/BentoTile';
+import { Section, SheetGroup, Fields, Field, Chip } from '@/components/tenders/detail/TenderDetailUI';
+import { CriticalDatesTrack } from '@/components/tenders/detail/CriticalDatesTrack';
+import { BidBar, ScrollSentinel } from '@/components/tenders/detail/BidBar';
+import { toDate, relativeDays } from '@/components/tenders/detail/detailFormat';
+import '@/components/tenders/detail/tender-details.css';
 import { useSeo, isStaleTender } from '@/hooks/useSeo';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
 import { cleanGemText, parseConsigneeRows } from '@/utils/gemDelivery';
@@ -50,13 +54,6 @@ const parseGemDescription = (value) => {
   };
 };
 
-const Field = ({ label, children, big = false, wide = false }) => (
-  <div className={`ai-field ${wide ? 'ai-field--wide' : ''}`}>
-    <dt>{label}</dt>
-    <dd className={big ? 'big' : undefined}>{children}</dd>
-  </div>
-);
-
 
 export default function GeMBidDetails() {
   const { id: routeParam } = useParams();
@@ -68,6 +65,7 @@ export default function GeMBidDetails() {
   const [reportField, setReportField] = useState('officialState');
   const [reportNote, setReportNote] = useState('');
   const [reportMessage, setReportMessage] = useState('');
+  const [showBidBar, setShowBidBar] = useState(false);
   const { data: bid, isLoading, isError, error } = useTender(id);
 
   // Per-bid SEO tags: called before any early return so hook order stays stable.
@@ -164,189 +162,287 @@ export default function GeMBidDetails() {
     }
   };
 
+  // Important dates, in the shape the shared time-scaled track expects.
+  const criticalDates = [
+    { label: 'Published', raw: bid.publishedDate || bid.publishedDateOnly, str: bid.publishedDateStr },
+    { label: 'Download Start', raw: bid.documentDownloadStartDate, str: bid.documentDownloadStartDateStr, optional: true },
+    { label: 'Download End', raw: bid.documentDownloadEndDate, str: bid.documentDownloadEndDateStr, optional: true },
+    { label: 'Bid Closing', raw: bid.closingDate, str: bid.closingDateStr },
+    { label: 'Bid Opening', raw: bid.bidOpeningDate, str: bid.bidOpeningDateStr },
+  ]
+    .filter((d) => !d.optional || d.str || d.raw)
+    .map((d) => {
+      const value = d.str || d.raw;
+      const formatted = value ? formatDateTimeDisplay(value) : 'N/A';
+      const [datePart, timePart] = formatted === 'N/A' ? ['Not specified'] : formatted.split(', ');
+      const when = toDate(d.raw);
+      return { ...d, datePart, timePart, when, passed: Boolean(when && when.getTime() <= nowMs) };
+    });
+  // Next milestone = earliest upcoming one; on a tie the later one in the list wins.
+  const nextIndex = criticalDates.reduce((best, d, i) => {
+    if (!d.when || d.passed) return best;
+    if (best < 0) return i;
+    return d.when.getTime() <= criticalDates[best].when.getTime() ? i : best;
+  }, -1);
+  const nextDate = nextIndex >= 0 ? criticalDates[nextIndex] : null;
+  const closing = criticalDates.find((d) => d.label === 'Bid Closing');
+  const bidClosed = Boolean(closing?.passed);
+  const timeToClose = closing?.when ? (bidClosed ? 'Closed' : relativeDays(closing.when, nowMs)) : 'N/A';
+
+  const emdText = bid.emdAmount === null || bid.emdAmount === undefined ? 'Not confirmed' : (bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero');
+  const feeText = bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero';
+  const statusText = isStale ? 'STALE / UNCONFIRMED' : (bid.gemStatus || 'UNKNOWN');
+  const statusFresh = bid.gemStatus === 'ACTIVE' && !isStale;
+
   return (
-    <div className="gem-detail-page flex-1 w-full bg-slate-50/60 dark:bg-slate-950/60 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
-        <Link to="/gem-tenders" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-dalBlue dark:hover:text-blue-400">
+    <div className="td-page flex-1 w-full min-h-screen py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+      <BidBar
+        show={showBidBar}
+        idLabel="Bid Number"
+        tenderId={bidId}
+        emd={emdText}
+        timeToClose={timeToClose}
+        closed={bidClosed || !closing?.when}
+        bookmarked={bookmarked}
+        onSave={() => toggleBookmark(bid)}
+        saveLabel="Save Bid"
+        savedLabel="Saved Bid"
+      />
+
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <Link to="/gem-tenders" className="td-back">
           <ArrowLeft className="w-4 h-4" /> Back to GeM Bids
         </Link>
 
-        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-7 shadow-xs">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            <div className="min-w-0 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-                  <Landmark className="w-3.5 h-3.5" /> Government e-Marketplace (GeM)
-                </span>
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">{stateLabel}</span>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${bid.gemStatus === 'ACTIVE' && !isStale ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'}`}>{isStale ? 'STALE / UNCONFIRMED' : (bid.gemStatus || 'UNKNOWN')}</span>
+        {/* ── Header: straight on the page ───────────────────────────── */}
+        <header>
+          <div className="td-head">
+            <div className="min-w-0">
+              <div className="td-head-chips">
+                <Chip tone={statusFresh ? 'cobalt' : 'neutral'} className="td-chip--status">{statusText}</Chip>
+                <Chip><Landmark /> Government e-Marketplace (GeM)</Chip>
+                <Chip>{stateLabel}</Chip>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold leading-tight text-slate-900 dark:text-white">{display(bid.title, 'Untitled GeM bid')}</h1>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
-                <span className="inline-flex items-center gap-1.5"><Building2 className="w-4 h-4 text-slate-400" />{display(bid.departmentName || bid.organisationChain)}</span>
-                <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4 text-techCoral" />{locationLabel}</span>
+
+              <h1 className="td-title">{display(bid.title, 'Untitled GeM bid')}</h1>
+
+              <div className="td-head-meta">
+                <span><Building2 />{display(bid.departmentName || bid.organisationChain)}</span>
+                <span><MapPin />{locationLabel}</span>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs font-bold text-dalBlue dark:bg-slate-800 dark:text-blue-300">
-                Bid Number: {bidId}
-                <button type="button" onClick={handleCopyBidId} className="rounded p-1 hover:bg-white dark:hover:bg-slate-700" title="Copy GeM bid number" aria-label="Copy GeM bid number">
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+
+              <div className="td-bidno">
+                <Chip tone="code"><b>Bid Number:</b>{bidId}</Chip>
+                <button type="button" onClick={handleCopyBidId} className="td-btn td-btn--quiet td-btn--icon" title="Copy GeM bid number" aria-label="Copy GeM bid number">
+                  {copied ? <Check style={{ color: 'var(--td-green)' }} /> : <Copy />}
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-              <button type="button" onClick={() => toggleBookmark(bid)} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${bookmarked ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300' : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'}`}>
-                <Heart className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />{bookmarked ? 'Saved Bid' : 'Save Bid'}
+            <div className="td-actions">
+              <button
+                type="button"
+                onClick={() => toggleBookmark(bid)}
+                aria-pressed={bookmarked}
+                className={`td-btn ${bookmarked ? 'td-btn--saved' : 'td-btn--primary'}`}
+              >
+                <Heart className={bookmarked ? 'fill-current' : ''} />
+                {bookmarked ? 'Saved Bid' : 'Save Bid'}
               </button>
-              <a href="https://bidplus.gem.gov.in/all-bids" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-dalBlue hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
-                <ExternalLink className="w-4 h-4" /> Open GeM Portal
+              <a href={downloadUrl} download className="td-btn td-btn--quiet">
+                <Download /> Download Bid Document
               </a>
-              <a href={officialDocumentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-dalBlue hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
-                <FileText className="w-4 h-4" /> Official Bid Document
+              <a href={officialDocumentUrl} target="_blank" rel="noopener noreferrer" className="td-btn td-btn--quiet">
+                <FileText /> Official Bid Document
               </a>
-              <a href={downloadUrl} download className="inline-flex items-center justify-center gap-2 rounded-lg bg-dalBlue px-4 py-2.5 text-sm font-semibold text-white hover:bg-dalBlue/90">
-                <Download className="w-4 h-4" /> Download Bid Document
+              <a href="https://bidplus.gem.gov.in/all-bids" target="_blank" rel="noopener noreferrer" className="td-btn td-btn--quiet">
+                Open GeM Portal <ExternalLink />
               </a>
-              <button type="button" onClick={() => navigate(`/services?tenderId=${encodeURIComponent(bidId)}`)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                <Sparkles className="w-4 h-4" /> Analyze with AI
+              <button type="button" onClick={() => navigate(`/services?tenderId=${encodeURIComponent(bidId)}`)} className="td-btn td-btn--quiet">
+                <Sparkles /> Analyze with AI
               </button>
             </div>
           </div>
-        </section>
 
-        {/* Important dates — horizontal timeline */}
-        <Tile tone="light" order={0} className="ai-tile--full mb-2">
-          <p className="ai-tile-kicker">Important dates</p>
-          <ol className="ai-timeline filter-scrollbar">
-            {[
-              { label: 'Published', raw: bid.publishedDate || bid.publishedDateOnly, str: bid.publishedDateStr },
-              { label: 'Download Start', raw: bid.documentDownloadStartDate, str: bid.documentDownloadStartDateStr, optional: true },
-              { label: 'Download End', raw: bid.documentDownloadEndDate, str: bid.documentDownloadEndDateStr, optional: true },
-              { label: 'Bid Closing', raw: bid.closingDate, str: bid.closingDateStr, tone: 'is-end' },
-              { label: 'Bid Opening', raw: bid.bidOpeningDate, str: bid.bidOpeningDateStr, tone: 'is-open' },
-            ]
-              .filter((d) => !d.optional || d.str || d.raw)
-              .map((d) => {
-                const value = d.str || d.raw;
-                const formatted = value ? formatDateTimeDisplay(value) : 'N/A';
-                const [datePart, timePart] = formatted === 'N/A' ? ['Not specified'] : formatted.split(', ');
-                const when = d.raw ? new Date(d.raw?.$date || d.raw) : null;
-                const passed = when && !isNaN(when.getTime()) && when.getTime() <= nowMs;
-                return (
-                  <li key={d.label} className={`ai-timeline-item ${d.tone || ''} ${passed ? 'is-passed' : ''}`}>
-                    <span className="ai-timeline-label">{d.label}</span>
-                    <span className="ai-timeline-dot" aria-hidden="true" />
-                    <span className="ai-timeline-date">{datePart}</span>
-                    {timePart && <span className="ai-timeline-time">{timePart}</span>}
-                  </li>
-                );
-              })}
-          </ol>
-        </Tile>
+          {/* Key figures: EMD and deadline wide, validity and time-to-close narrow */}
+          <dl className="td-figures">
+            <div className="td-figure td-figure--wide">
+              <dt>EMD Deposit</dt>
+              <dd>{emdText}</dd>
+              <dd className="td-figure-sub">Tender Fee {feeText}</dd>
+            </div>
+            <div className="td-figure">
+              <dt>Bid Validity</dt>
+              <dd>{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</dd>
+            </div>
+            <div className={`td-figure td-figure--wide ${bidClosed || !closing?.when ? '' : 'td-figure--deadline'}`}>
+              <dt>Bid Closing</dt>
+              <dd>{closing?.datePart || 'Not specified'}</dd>
+              {closing?.timePart && <dd className="td-figure-sub">{closing.timePart}</dd>}
+            </div>
+            <div className="td-figure">
+              <dt>Time to close</dt>
+              <dd>{timeToClose}</dd>
+              {closing?.when && bidClosed && <dd className="td-figure-sub">{relativeDays(closing.when, nowMs)}</dd>}
+              {!bidClosed && nextDate && <dd className="td-figure-sub">Next: {nextDate.label}</dd>}
+            </div>
+          </dl>
+          <ScrollSentinel onChange={setShowBidBar} />
+        </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="lg:col-span-2 space-y-2">
-            <Tile tone="light" order={0}>
-              <p className="ai-tile-kicker">Bid details</p>
-              <dl className="ai-fields">
-                <Field label="Issuing Department">{display(bid.departmentName)}</Field>
-                <Field label="Organisation Chain">{display(bid.organisationChain)}</Field>
-                <Field label="Bid Number"><span className="font-mono">{display(bidId)}</span></Field>
-                <Field label="Contract Type">{display(bid.formOfContract, 'Standard GeM Contract')}</Field>
-                <Field label="Product Category">{display(bid.productCategory)}</Field>
-                <Field label="Buyer ministry / state (GeM PDF)">{display(bid.officialState, bid.pdfParseStatus === 'COMPLETED' ? 'Not stated' : 'Bid document not read yet')}</Field>
-                <Field label="Delivery state (GeM consignee search)">{stateLabel}</Field>
-                <Field label="GeM status evidence">{display(bid.gemStatus, 'UNKNOWN')}</Field>
-                <Field label="Bid Validity">{bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'}</Field>
-              </dl>
-            </Tile>
+        {/* ── Important dates ────────────────────────────────────────── */}
+        <Section
+          id="important-dates"
+          title="Important dates"
+          action={nextDate && (
+            <span className="td-next">
+              Next: <strong>{nextDate.label}</strong>
+              <span className="td-tnum">{nextDate.datePart}{nextDate.timePart ? `, ${nextDate.timePart}` : ''}</span>
+              <em>{relativeDays(nextDate.when, nowMs)}</em>
+            </span>
+          )}
+        >
+          <CriticalDatesTrack dates={criticalDates} nowMs={nowMs} />
+        </Section>
 
-            <Tile tone="blue" order={1}>
-              <div className="ai-tile-head">
-                <p className="ai-tile-kicker">Items & specifications</p>
-                {parsed.quantity && <span className="ai-tag"><span className="font-mono">Total Qty: {parsed.quantity}</span></span>}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+          {/* ── Main column ──────────────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-6 min-w-0">
+
+            <Section id="bid-details" title="Bid details">
+              <SheetGroup title="Identification">
+                <Fields>
+                  <Field label="Issuing Department" value={display(bid.departmentName)} />
+                  <Field label="Organisation Chain" value={display(bid.organisationChain)} />
+                  <Field label="Bid Number" value={display(bidId)} mono />
+                  <Field label="Contract Type" value={display(bid.formOfContract, 'Standard GeM Contract')} />
+                  <Field wide label="Product Category" value={display(bid.productCategory)} />
+                </Fields>
+              </SheetGroup>
+              <SheetGroup title="Buyer & delivery">
+                <Fields>
+                  <Field label="Buyer ministry / state (GeM PDF)" value={display(bid.officialState, bid.pdfParseStatus === 'COMPLETED' ? 'Not stated' : 'Bid document not read yet')} />
+                  <Field label="Delivery state (GeM consignee search)" value={stateLabel} />
+                </Fields>
+              </SheetGroup>
+              <SheetGroup title="Status & validity">
+                <Fields>
+                  <Field label="GeM status evidence" value={display(bid.gemStatus, 'UNKNOWN')} />
+                  <Field label="Bid Validity" value={bid.bidValidityDays ? `${bid.bidValidityDays} days` : 'Not specified'} />
+                </Fields>
+              </SheetGroup>
+            </Section>
+
+            <Section
+              id="items"
+              title="Items & specifications"
+              action={parsed.quantity && <Chip tone="code"><b>Total Qty:</b>{parsed.quantity}</Chip>}
+            >
               {itemCategories.length > 0 && (
-                <div className="ai-chip-list">
-                  {itemCategories.map((item, index) => <span key={`${item}-${index}`}>{display(item)}</span>)}
-                </div>
+                <ul className="td-tags">
+                  {itemCategories.map((item, index) => <li key={`${item}-${index}`}>{display(item)}</li>)}
+                </ul>
               )}
               {(bid.rawDeliverySection || parsed.consignee || parsed.stations) && (
-                <dl className="ai-fields">
+                <Fields>
                   {consigneeRows.length > 0 ? (
                     <Field label="Consignees & delivery" wide>
-                      <div className="gem-consignee-table-wrap">
-                        <table className="gem-consignee-table">
-                          <thead>
-                            <tr><th>Item</th><th>Delivery address</th><th className="num">Qty</th><th className="num">Delivery days</th></tr>
-                          </thead>
-                          <tbody>
-                            {consigneeRows.map((row, index) => (
-                              <tr key={`${row.serial}-${row.address}-${index}`}>
-                                <td>{row.item || (index === 0 && itemCategories[0]) || `Item ${index + 1}`}</td>
-                                <td>{row.address}</td>
-                                <td className="num">{row.quantity}</td>
-                                <td className="num">{row.days}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <table className="td-table td-consignees">
+                        <thead>
+                          <tr><th>Item</th><th>Delivery address</th><th className="td-c-qty">Qty</th><th className="td-c-qty">Delivery days</th></tr>
+                        </thead>
+                        <tbody>
+                          {consigneeRows.map((row, index) => (
+                            <tr key={`${row.serial}-${row.address}-${index}`}>
+                              <td data-label="Item" style={{ fontWeight: 600 }}>{row.item || (index === 0 && itemCategories[0]) || `Item ${index + 1}`}</td>
+                              <td data-label="Delivery address">{row.address}</td>
+                              <td data-label="Qty" className="td-c-qty">{row.quantity}</td>
+                              <td data-label="Delivery days" className="td-c-qty">{row.days}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </Field>
-                  ) : (cleanedConsignee && <Field label="Consignee / delivery details" wide>{cleanedConsignee}</Field>)}
-                  {(bid.deliveryStations?.length || parsed.stations) && <Field label="Recognized delivery stations">{display(bid.deliveryStations?.join(', ') || parsed.stations)}</Field>}
-                </dl>
+                  ) : (cleanedConsignee && <Field label="Consignee / delivery details" wide value={cleanedConsignee} variant="prose" />)}
+                  {(bid.deliveryStations?.length || parsed.stations) && <Field wide label="Recognized delivery stations" value={display(bid.deliveryStations?.join(', ') || parsed.stations)} />}
+                </Fields>
               )}
-              {parsed.raw && <div className="ai-tile-raw">{parsed.raw}</div>}
-            </Tile>
+              {parsed.raw && <div className="td-raw">{parsed.raw}</div>}
+            </Section>
+
+            <Section id="delivery-location" title="Delivery location">
+              <div className="td-place">
+                <div className="min-w-0">
+                  <p className="td-place-site"><MapPin aria-hidden="true" />{locationLabel}</p>
+                </div>
+                <div className="min-w-0">
+                  <dl className="td-facts td-facts--2">
+                    <div><dt>Delivery state (GeM consignee search)</dt><dd>{stateLabel}</dd></div>
+                    <div><dt>Status</dt><dd>{bid.gemStatus === 'NOT_LISTED' ? 'No longer listed on GeM (closed, cancelled or withdrawn)' : (bid.gemStatus || 'UNKNOWN')}</dd></div>
+                  </dl>
+                  <p className="td-provenance">
+                    Per official GeM document, fetched {formatDateTimeIST(bid.gemPdfFetchedAt)} · Last checked {formatDateTimeIST(bid.lastCheckedAt)}
+                    {isStale && <> · <strong>Stale</strong></>}
+                  </p>
+                </div>
+              </div>
+            </Section>
 
             {documentLinks.length > 0 && (
-              <Tile tone="light" order={2}>
-                <h2 className="ai-tile-heading">Bid documents</h2>
-                <div className="ai-link-rows">
+              <Section id="documents" title="Bid documents" action={<Chip tone="cobalt">{documentLinks.length} {documentLinks.length === 1 ? 'file' : 'files'}</Chip>}>
+                <ul className="td-links">
                   {documentLinks.map((url, index) => (
-                    <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                      <span>Official GeM document {index + 1}</span>
-                      <ExternalLink className="w-4 h-4 shrink-0" />
-                    </a>
+                    <li key={url}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        <span className="td-file"><FileText aria-hidden="true" /><span className="td-file-name is-strong">Official GeM document {index + 1}</span></span>
+                        <ExternalLink className="td-links-go" aria-hidden="true" />
+                      </a>
+                    </li>
                   ))}
-                </div>
-              </Tile>
+                </ul>
+              </Section>
             )}
           </div>
 
-          <aside className="space-y-2">
-            <Tile tone="dark" order={3}>
-              <p className="ai-tile-kicker">Fee & EMD</p>
-              <dl className="ai-fields">
-                <Field label="EMD Deposit" big wide>{bid.emdAmount === null || bid.emdAmount === undefined ? 'Not confirmed' : (bid.emdAmount > 0 ? formatCurrencyINR(bid.emdAmount) : 'Exempted / Zero')}</Field>
-                <Field label="Tender Fee" big wide>{bid.tenderFee > 0 ? formatCurrencyINR(bid.tenderFee) : 'Not specified / Zero'}</Field>
-                <Field label="Fee Payable To">{display(bid.feePayableTo)}</Field>
-                <Field label="Fee Payable At">{display(bid.feePayableAt)}</Field>
-                <Field label="EMD Payable To">{display(bid.emdPayableTo)}</Field>
-                <Field label="EMD Payable At">{display(bid.emdPayableAt)}</Field>
-              </dl>
-            </Tile>
+          {/* ── Right rail: payment slip + report ─────────────────────── */}
+          <aside className="min-w-0 space-y-6">
+            <section id="fees" aria-labelledby="fees-heading" className="td-slip">
+              <h2 id="fees-heading" className="td-slip-title">Fee &amp; EMD</h2>
 
-            <Tile tone="blue" order={5}>
-              <p className="ai-tile-kicker">Delivery location</p>
-              <p className="ai-tile-big ai-tile-big--sm">{locationLabel}</p>
-              <p className="ai-tile-note"><span>Delivery state (GeM consignee search)</span>{stateLabel}</p>
-              <p className="ai-tile-note">Per official GeM document, fetched {formatDateTimeIST(bid.gemPdfFetchedAt)} · Last checked {formatDateTimeIST(bid.lastCheckedAt)}{isStale ? ' · Stale' : ''}</p>
-              <p className="ai-tile-note">Status: {bid.gemStatus === 'NOT_LISTED' ? 'No longer listed on GeM (closed, cancelled or withdrawn)' : (bid.gemStatus || 'UNKNOWN')}</p>
-            </Tile>
+              <div className="td-slip-item">
+                <div className="td-slip-line">
+                  <span className="td-slip-name">EMD Deposit</span>
+                  <span className={`td-slip-amount ${bid.emdAmount > 0 ? '' : 'td-slip-amount--text'}`}>{emdText}</span>
+                </div>
+                <dl className="td-slip-sub">
+                  <div><dt>EMD Payable To</dt><dd>{display(bid.emdPayableTo)}</dd></div>
+                  <div><dt>EMD Payable At</dt><dd>{display(bid.emdPayableAt)}</dd></div>
+                </dl>
+              </div>
+              <hr className="td-slip-cut" />
+              <div className="td-slip-item td-slip-item--last">
+                <div className="td-slip-line">
+                  <span className="td-slip-name">Tender Fee</span>
+                  <span className={`td-slip-amount ${bid.tenderFee > 0 ? '' : 'td-slip-amount--text'}`}>{feeText}</span>
+                </div>
+                <dl className="td-slip-sub">
+                  <div><dt>Fee Payable To</dt><dd>{display(bid.feePayableTo)}</dd></div>
+                  <div><dt>Fee Payable At</dt><dd>{display(bid.feePayableAt)}</dd></div>
+                </dl>
+              </div>
+            </section>
 
-            <Tile tone="light" order={6}>
-              <p className="ai-tile-kicker">Report incorrect data</p>
-              <form className="space-y-2" onSubmit={submitDataReport}>
-                <select aria-label="Field to report" value={reportField} onChange={(event) => setReportField(event.target.value)} className="w-full rounded border p-2 text-sm">
+            <Section id="report" title="Report incorrect data">
+              <form className="td-form" onSubmit={submitDataReport}>
+                <select aria-label="Field to report" value={reportField} onChange={(event) => setReportField(event.target.value)} className="td-input">
                   <option value="officialState">Official state</option><option value="location">Delivery location</option><option value="departmentName">Department</option><option value="title">Title</option><option value="closingDate">Closing date</option><option value="status">Status</option><option value="other">Other</option>
                 </select>
-                <textarea aria-label="Report note" value={reportNote} onChange={(event) => setReportNote(event.target.value)} maxLength={1000} rows={3} placeholder="What looks incorrect? (optional)" className="w-full rounded border p-2 text-sm" />
-                <Button type="submit">Submit report</Button>
-                {reportMessage && <p role="status" className="text-xs text-slate-600">{reportMessage}</p>}
+                <textarea aria-label="Report note" value={reportNote} onChange={(event) => setReportNote(event.target.value)} maxLength={1000} rows={3} placeholder="What looks incorrect? (optional)" className="td-input" />
+                <button type="submit" className="td-btn td-btn--quiet">Submit report</button>
+                {reportMessage && <p role="status" className="td-panel-desc">{reportMessage}</p>}
               </form>
-            </Tile>
+            </Section>
           </aside>
         </div>
 
